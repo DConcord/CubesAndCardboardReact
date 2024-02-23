@@ -16,5 +16,4 @@ npm run dev
 
 npm run build  
 aws sso login
-
 npx s3-spa-upload dist cdkstack-bucket83908e77-7tr0zgs93uwh
