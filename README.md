@@ -2,12 +2,14 @@
 
 ## Init
 
+Latest version of Node.JS recommended
+
 npm install
 
 ## Local dev webserver
 
 run a local webserver on http://localhost:8080
-`npm run dev`
+npm run dev
 
 ## Build and Deploy to S3
 
