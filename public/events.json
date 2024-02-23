@@ -1,0 +1,107 @@
+[
+    {
+        "date": "Feb 29 2024",
+        "host": "Garrett",
+        "format": "Open",
+        "total_spots": null,
+        "spots_available": null,
+        "game": "TBD",
+        "player_pool": [
+            "Luke",
+            "Eric",
+            "Colten",
+            "Frank",
+            "Wynn",
+            "Scott",
+            "Tim",
+            "Kevin",
+            "Agustin",
+            "Steve",
+            "Brett",
+            "Jake"
+        ],
+        "registered": [
+            "Garrett",
+            "Robert"
+        ]
+    },
+    {
+        "date": "Mar 14 2024",
+        "host": "Luke",
+        "format": "Reserved",
+        "game": "Chinatown",
+        "bgg_id": 47,
+        "total_spots": 5,
+        "spots_available": 4,
+        "player_pool": [
+            "Luke",
+            "Eric",
+            "Colten",
+            "Frank",
+            "Wynn",
+            "Scott",
+            "Tim",
+            "Kevin",
+            "Agustin",
+            "Steve",
+            "Brett",
+            "Jake"
+        ],
+        "registered": [
+            "Luke"
+        ]
+    },
+    {
+        "date": "Mar 28 2024",
+        "host": "Garrett",
+        "format": "Open",
+        "game": "TBD",
+        "total_spots": null,
+        "spots_available": null,
+        "player_pool": [
+            "Luke",
+            "Eric",
+            "Colten",
+            "Frank",
+            "Wynn",
+            "Scott",
+            "Tim",
+            "Kevin",
+            "Agustin",
+            "Steve",
+            "Brett",
+            "Jake"
+        ],
+        "registered": [
+            "Garrett",
+            "Colten"
+        ]
+    },
+    {
+        "date": "Apr 11 2024",
+        "host": "Luke",
+        "format": "Reserved",
+        "game": "Evolution Climate",
+        "bgg_id": 182134,
+        "total_spots": 6,
+        "spots_available": 4,
+        "player_pool": [
+            "Luke",
+            "Eric",
+            "Colten",
+            "Frank",
+            "Wynn",
+            "Scott",
+            "Tim",
+            "Kevin",
+            "Agustin",
+            "Steve",
+            "Brett",
+            "Jake"
+        ],
+        "registered": [
+            "Luke",
+            "Steve"
+        ]
+    }
+]
