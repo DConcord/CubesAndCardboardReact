@@ -1,15 +1,16 @@
 [
     {
-        "date": "Feb 29 2024",
+        "date": "2024-02-29",
         "host": "Garrett",
         "format": "Open",
         "total_spots": null,
-        "spots_available": null,
         "game": "TBD",
         "player_pool": [
             "Luke",
             "Eric",
             "Colten",
+            "Garrett",
+            "Robert",
             "Frank",
             "Wynn",
             "Scott",
@@ -26,17 +27,18 @@
         ]
     },
     {
-        "date": "Mar 14 2024",
+        "date": "2024-03-14",
         "host": "Luke",
         "format": "Reserved",
         "game": "Chinatown",
         "bgg_id": 47,
         "total_spots": 5,
-        "spots_available": 4,
         "player_pool": [
             "Luke",
             "Eric",
             "Colten",
+            "Garrett",
+            "Robert",
             "Frank",
             "Wynn",
             "Scott",
@@ -52,16 +54,17 @@
         ]
     },
     {
-        "date": "Mar 28 2024",
+        "date": "2024-03-28",
         "host": "Garrett",
         "format": "Open",
         "game": "TBD",
         "total_spots": null,
-        "spots_available": null,
         "player_pool": [
             "Luke",
             "Eric",
             "Colten",
+            "Garrett",
+            "Robert",
             "Frank",
             "Wynn",
             "Scott",
@@ -78,17 +81,18 @@
         ]
     },
     {
-        "date": "Apr 11 2024",
+        "date": "2024-04-11",
         "host": "Luke",
         "format": "Reserved",
         "game": "Evolution Climate",
         "bgg_id": 182134,
         "total_spots": 6,
-        "spots_available": 4,
         "player_pool": [
             "Luke",
             "Eric",
             "Colten",
+            "Garrett",
+            "Robert",
             "Frank",
             "Wynn",
             "Scott",
