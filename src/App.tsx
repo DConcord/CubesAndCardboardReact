@@ -17,6 +17,7 @@ import Modal from "react-bootstrap/Modal";
 
 import NavigationBar from "./components/NavigationBar";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
+import { mdiVariable } from "@mdi/js";
 // import { usePasswordless } from "./components/DemoContext";
 // import NavigationBar from "./components/DemoNavigationBar";
 
@@ -47,28 +48,26 @@ export default function App() {
 
   const eventsClient = axios.create({
     baseURL: "https://myapp.dissonantconcord.com",
-    // headers:
-    //   tokens &&
-    //   {
-    //     Authorization: "Bearer " + tokens.idToken,
-    //   },
   });
 
   const [events, setEvents] = useState([]);
   const [playerPool, setPlayerPool] = useState<string[]>([]);
   // GET with Axios
-  const fetchEvents = () => {
-    // let response = await eventsClient.get("events.json");
-    // let response = await apiClient.get("events", {});
-
-    // eventsClient.get("events.json").then(function (response) {
-    apiClient.get("events", {}).then(function (response) {
-      setEvents(response.data);
-    });
+  const fetchEvents = async () => {
+    let response;
+    if (tokensParsed) {
+      // If Authenticated, pull events from the API
+      response = await apiClient.get("events", {});
+    } else {
+      // Otherwise pull from the public events.json
+      response = await eventsClient.get("events.json");
+    }
+    setEvents(response.data);
+    console.log(response.data);
     setPlayerPool(player_pool);
   };
   useEffect(() => {
-    tokens && fetchEvents();
+    fetchEvents();
   }, [tokens]);
 
   // API Client
@@ -135,46 +134,45 @@ export default function App() {
   return (
     <>
       <NavigationBar />
-      {signInStatus === "SIGNED_IN" &&
-        tokensParsed &&
-        first_name == "Colten" && (
-          <>
-            <Button
-              variant="primary"
-              onClick={() =>
-                handleShowManageEvent({
-                  task: "Create",
-                })
-              }
-            >
-              Create Event
-            </Button>
-            <Modal
-              show={showManageEvent}
-              onHide={handleCloseManageEvent}
-              backdrop="static"
-              keyboard={false}
-            >
-              <ManageEventModal
-                playerPool={playerPool}
-                close={handleCloseManageEvent}
-                task={managedEventTask}
-                gameKnightEvent={managedEvent}
-                refreshEvents={fetchEvents}
-              />
-            </Modal>
-            <Modal
-              show={showDeleteEvent}
-              onHide={handleCloseDeleteEvent}
-              // backdrop="static"
-              // keyboard={false}
-            >
-              <DeleteEventModal
-                close={handleCloseDeleteEvent}
-                gameKnightEvent={deleteEvent!}
-                refreshEvents={fetchEvents}
-              />
-            </Modal>
+      {signInStatus === "SIGNED_IN" && tokensParsed && (
+        <>
+          <Button
+            variant="primary"
+            onClick={() =>
+              handleShowManageEvent({
+                task: "Create",
+              })
+            }
+          >
+            Create Event
+          </Button>
+          <Modal
+            show={showManageEvent}
+            onHide={handleCloseManageEvent}
+            backdrop="static"
+            keyboard={false}
+          >
+            <ManageEventModal
+              playerPool={playerPool}
+              close={handleCloseManageEvent}
+              task={managedEventTask}
+              gameKnightEvent={managedEvent}
+              refreshEvents={fetchEvents}
+            />
+          </Modal>
+          <Modal
+            show={showDeleteEvent}
+            onHide={handleCloseDeleteEvent}
+            // backdrop="static"
+            // keyboard={false}
+          >
+            <DeleteEventModal
+              close={handleCloseDeleteEvent}
+              gameKnightEvent={deleteEvent!}
+              refreshEvents={fetchEvents}
+            />
+          </Modal>
+          {first_name == "Colten" && (
             <Accordion>
               <Accordion.Item eventKey="token">
                 <Accordion.Header>TokenInfo</Accordion.Header>
@@ -220,8 +218,9 @@ export default function App() {
                 </Accordion.Body>
               </Accordion.Item>
             </Accordion>
-          </>
-        )}
+          )}
+        </>
+      )}
       <Container fluid>
         <Row
           xs={1}
@@ -244,7 +243,11 @@ export default function App() {
               <Col key={index}>
                 <Card style={{ minWidth: "18rem", maxWidth: "35rem" }}>
                   {event.bgg_id && event.bgg_id > 0 ? (
-                    <Card.Img variant="top" src={"/" + event.bgg_id + ".png"} />
+                    // <Card.Img variant="top" src={"/" + event.bgg_id + ".png"} />
+                    <Card.Img
+                      variant="top"
+                      src={`https://myapp.dissonantconcord.com/${event.bgg_id}.png`}
+                    />
                   ) : (
                     <Card.Img variant="top" src="/Game_TBD.png" />
                   )}
@@ -306,7 +309,6 @@ export default function App() {
                               }
                             >
                               <Button variant="secondary" size="sm" key={index}>
-                                {/* {first_name} */}
                                 {event.registered.includes(first_name) ? (
                                   <div>Unregister</div>
                                 ) : (
@@ -329,54 +331,52 @@ export default function App() {
                     </Card.Text>
                   </Card.Body>
                   {}
-                  {signInStatus === "SIGNED_IN" &&
-                    tokensParsed &&
-                    first_name == "Colten" && (
-                      <Card.Footer>
-                        <Row key={"Row" + index}>
-                          <Col className="d-flex justify-content-end gap-2">
-                            <Button
-                              size="sm"
-                              key={"Modify" + index}
-                              variant="primary"
-                              onClick={() =>
-                                handleShowManageEvent({
-                                  managedEvent: event,
-                                  task: "Modify",
-                                })
-                              }
-                            >
-                              Modify
-                            </Button>
-                            <Button
-                              size="sm"
-                              key={"Delete" + index}
-                              variant="danger"
-                              onClick={() =>
-                                handleShowDeleteEvent({
-                                  deleteEvent: event,
-                                })
-                              }
-                            >
-                              Delete
-                            </Button>
-                            <Button
-                              size="sm"
-                              key={"Clone" + index}
-                              variant="secondary"
-                              onClick={() =>
-                                handleShowManageEvent({
-                                  managedEvent: event,
-                                  task: "Clone",
-                                })
-                              }
-                            >
-                              Clone
-                            </Button>
-                          </Col>
-                        </Row>
-                      </Card.Footer>
-                    )}
+                  {signInStatus === "SIGNED_IN" && tokensParsed && (
+                    <Card.Footer>
+                      <Row key={"Row" + index}>
+                        <Col className="d-flex justify-content-end gap-2">
+                          <Button
+                            size="sm"
+                            key={"Modify" + index}
+                            variant="primary"
+                            onClick={() =>
+                              handleShowManageEvent({
+                                managedEvent: event,
+                                task: "Modify",
+                              })
+                            }
+                          >
+                            Modify
+                          </Button>
+                          <Button
+                            size="sm"
+                            key={"Delete" + index}
+                            variant="danger"
+                            onClick={() =>
+                              handleShowDeleteEvent({
+                                deleteEvent: event,
+                              })
+                            }
+                          >
+                            Delete
+                          </Button>
+                          <Button
+                            size="sm"
+                            key={"Clone" + index}
+                            variant="secondary"
+                            onClick={() =>
+                              handleShowManageEvent({
+                                managedEvent: event,
+                                task: "Clone",
+                              })
+                            }
+                          >
+                            Clone
+                          </Button>
+                        </Col>
+                      </Row>
+                    </Card.Footer>
+                  )}
                 </Card>
               </Col>
             );
@@ -412,17 +412,23 @@ function DeleteEventModal({
     },
   });
 
-  function handleSubmit(event: React.BaseSyntheticEvent) {
+  const [errorMsg, setErrorMsg] = useState("");
+  async function handleSubmit(event: React.BaseSyntheticEvent) {
     setWaiting(true);
     event.preventDefault();
-    apiClient
-      .delete("event", { params: { event_id: gameKnightEvent.event_id } })
-      .then(function (response) {
-        console.log(response.data);
+    try {
+      const response = await apiClient.delete("event", {
+        params: { event_id: gameKnightEvent.event_id },
       });
-    setWaiting(false);
-    refreshEvents();
-    close();
+      console.log(response.data);
+      setWaiting(false);
+      refreshEvents();
+      close();
+    } catch (error) {
+      console.error(error);
+      setErrorMsg(`Delete Event failed`);
+      setWaiting(false);
+    }
   }
 
   return (
@@ -447,14 +453,24 @@ function DeleteEventModal({
           aria-describedby="delete_event"
           onChange={handleInput}
         />
-        <Button variant="danger" type="submit" disabled={notConfirmed}>
+        <Button
+          variant="danger"
+          type="submit"
+          disabled={notConfirmed || waiting}
+        >
+          {waiting && (
+            <span
+              className="spinner-grow spinner-grow-sm text-light"
+              role="status"
+            ></span>
+          )}
           Delete
         </Button>
         <Button variant="secondary" onClick={close} disabled={waiting}>
           Cancel
         </Button>
       </Modal.Body>
-      {/* <Modal.Footer className="text-center">
+      {/* <Modal.F ooter className="text-center">
         {gameKnightEvent.event_id}
       </Modal.Footer> */}
     </Form>
@@ -498,7 +514,11 @@ function ManageEventModal({
         }
   );
   const handleInput = (e: React.BaseSyntheticEvent) => {
-    setEventForm({ ...eventForm, [e.target.id]: e.target.value });
+    if (e.target.id == "bgg_id" || e.target.id == "total_spots") {
+      setEventForm({ ...eventForm, [e.target.id]: parseInt(e.target.value) });
+    } else {
+      setEventForm({ ...eventForm, [e.target.id]: e.target.value });
+    }
     console.log(e.target);
   };
   // return <span>{JSON.stringify(eventForm)}</span>;
@@ -530,22 +550,29 @@ function ManageEventModal({
     },
   });
 
-  const createEvent = (body: GameKnightEvent, method: string) => {
+  const [errorMsg, setErrorMsg] = useState("");
+  const createEvent = async (body: GameKnightEvent, method: string) => {
     setWaiting(true);
     if (task == "Clone") delete body.event_id;
     if (body.total_spots == null) body.total_spots = undefined;
     if (body.bgg_id == null) body.bgg_id = undefined;
     if (!body.event_type) body.event_type = "GameKnight";
-    apiClient({
-      method: method,
-      url: "event",
-      data: body,
-    }).then(function (response) {
+    try {
+      const response = await apiClient({
+        method: method,
+        url: "event",
+        data: body,
+      });
+
       console.log(response.data);
-    });
-    refreshEvents();
-    setWaiting(false);
-    close();
+      refreshEvents();
+      setWaiting(false);
+      close();
+    } catch (error) {
+      console.error(error);
+      setErrorMsg(`${task === "Clone" ? "Create" : task} Event failed`);
+      setWaiting(false);
+    }
   };
 
   function handleSubmit(event: React.BaseSyntheticEvent) {
@@ -683,6 +710,7 @@ function ManageEventModal({
         </Row>
       </Modal.Body>
       <Modal.Footer>
+        <span>{errorMsg}</span>
         <Button variant="primary" type="submit" disabled={waiting}>
           {waiting && (
             <span
