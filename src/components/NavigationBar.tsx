@@ -13,12 +13,7 @@ import { THEME, initTheme, setTheme, resetTheme } from "./Theme";
 
 initTheme();
 import Icon from "@mdi/react";
-import {
-  mdiThemeLightDark,
-  mdiWeatherNight,
-  mdiBrightnessAuto,
-  mdiWeatherSunny,
-} from "@mdi/js";
+import { mdiThemeLightDark, mdiWeatherNight, mdiBrightnessAuto, mdiWeatherSunny } from "@mdi/js";
 
 export default function NavigationBar() {
   const [show, setShow] = useState(false);
@@ -41,7 +36,7 @@ export default function NavigationBar() {
     <>
       <Navbar key={expand} expand={expand} className="bg-body-tertiary mb-3">
         <Container fluid>
-          <Navbar.Brand href="#">Upcoming Events</Navbar.Brand>
+          <Navbar.Brand href="https://cubesandcardboard.net/">Cubes & Cardboard</Navbar.Brand>
           <Navbar.Toggle aria-controls={`offcanvasNavbar-expand-${expand}`} />
           <Navbar.Offcanvas
             id={`offcanvasNavbar-expand-${expand}`}
@@ -49,9 +44,7 @@ export default function NavigationBar() {
             placement="end"
           >
             <Offcanvas.Header closeButton>
-              <Offcanvas.Title id={`offcanvasNavbarLabel-expand-${expand}`}>
-                Menu
-              </Offcanvas.Title>
+              <Offcanvas.Title id={`offcanvasNavbarLabel-expand-${expand}`}>Menu</Offcanvas.Title>
             </Offcanvas.Header>
             <Offcanvas.Body>
               <Nav className="justify-content-end flex-grow-1 pe-3 gap-2">
@@ -84,26 +77,22 @@ export default function NavigationBar() {
                           <div>
                             <div className="passwordless-text-left">
                               <strong>Authentication error.</strong>
-                              <div>
-                                The sign-in link you tried to use is no longer
-                                valid
-                              </div>
+                              <div>The sign-in link you tried to use is no longer valid</div>
                             </div>
                           </div>
                         </div>
                       )
                     )}
-                    <Button variant="primary" onClick={handleShow}>
-                      Sign In
-                    </Button>
+                    <Nav.Link onClick={handleShow} style={{ textDecoration: "none", color: "unset" }}>
+                      Admin
+                    </Nav.Link>
+                    {/* <Button variant="secondary" onClick={handleShow} style={{ textDecoration: "none", color: "unset" }}>
+                      Admin
+                    </Button> */}
                   </>
                 ) : (
                   <>
-                    {tokensParsed && (
-                      <Navbar.Text>
-                        Hello, {String(tokensParsed?.idToken.given_name)}
-                      </Navbar.Text>
-                    )}
+                    {tokensParsed && <Navbar.Text>Hello, {String(tokensParsed?.idToken.given_name)}</Navbar.Text>}
                     <Button variant="primary" onClick={signOut}>
                       Sign Out
                     </Button>
@@ -125,17 +114,11 @@ export default function NavigationBar() {
                   // align={{ sm: "end" }}
                   align="end"
                 >
-                  <a
-                    className="dropdown-item gap-2"
-                    onClick={() => setTheme(THEME.LIGHT)}
-                  >
+                  <a className="dropdown-item gap-2" onClick={() => setTheme(THEME.LIGHT)}>
                     <Icon path={mdiWeatherSunny} size={1} />
                     Light
                   </a>
-                  <a
-                    className="dropdown-item"
-                    onClick={() => setTheme(THEME.DARK)}
-                  >
+                  <a className="dropdown-item" onClick={() => setTheme(THEME.DARK)}>
                     <Icon path={mdiWeatherNight} size={1} />
                     Dark
                   </a>
@@ -150,12 +133,7 @@ export default function NavigationBar() {
         </Container>
       </Navbar>
 
-      <Modal
-        show={show}
-        onHide={handleClose}
-        backdrop="static"
-        keyboard={false}
-      >
+      <Modal show={show} onHide={handleClose} backdrop="static" keyboard={false}>
         <Modal.Body className="text-center">
           <LoginModal onLogin={() => setShow(false)}></LoginModal>
         </Modal.Body>

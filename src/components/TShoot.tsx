@@ -28,7 +28,7 @@ export default function TShoot({ events }: Props) {
   const [eventsTest, setEventsTest] = useState({});
   const fetchTest = async () => {
     try {
-      let response = await apiClient.delete("event", {
+      let response = await apiClient.get("players", {
         params: {
           event_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
           // name: "xxxx",

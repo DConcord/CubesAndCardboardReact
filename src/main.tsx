@@ -1,13 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+// import "./assets/startbootstrap-grayscale-gh-pages/css/styles.css";
+// import "./assets/colormind-material-dashboard.css";
 import "bootstrap/dist/css/bootstrap.css";
 
 import { Passwordless } from "amazon-cognito-passwordless-auth";
-import {
-  PasswordlessContextProvider,
-  Fido2Toast,
-} from "amazon-cognito-passwordless-auth/react";
+import { PasswordlessContextProvider, Fido2Toast } from "amazon-cognito-passwordless-auth/react";
 // } from "./components/DemoContext";
 
 import "amazon-cognito-passwordless-auth/passwordless.css";

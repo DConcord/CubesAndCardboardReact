@@ -2,13 +2,7 @@ import { useState, useEffect } from "react";
 
 import axios from "axios";
 
-import Accordion from "react-bootstrap/Accordion";
-import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
-import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import FloatingLabel from "react-bootstrap/FloatingLabel";
@@ -17,19 +11,14 @@ import Modal from "react-bootstrap/Modal";
 
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
-import { GameKnightEvent, player_pool, formatIsoDate } from "./Events";
-import TShoot from "./TShoot";
+import { GameKnightEvent, formatIsoDate } from "./Events";
 
 interface DeleteEventModalProps {
   close: () => void;
   refreshEvents: () => void;
   gameKnightEvent: GameKnightEvent;
 }
-export function DeleteEventModal({
-  close,
-  refreshEvents,
-  gameKnightEvent,
-}: DeleteEventModalProps) {
+export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: DeleteEventModalProps) {
   const { tokens } = usePasswordless();
   const [notConfirmed, setNotConfirmed] = useState(true);
 
@@ -67,8 +56,7 @@ export function DeleteEventModal({
   return (
     <Form onSubmit={handleSubmit}>
       <Modal.Header className="text-center">
-        Are you sure you want to delete {formatIsoDate(gameKnightEvent.date)}{" "}
-        event?
+        Are you sure you want to delete {formatIsoDate(gameKnightEvent.date)} event?
       </Modal.Header>
       <Modal.Body className="text-center">
         Type DELETE to permanently delete event
@@ -80,23 +68,9 @@ export function DeleteEventModal({
             }
             // onChange={(e) => setGame(e.target.value)}
           /> */}
-        <Form.Control
-          type="textarea"
-          id="delete_event"
-          aria-describedby="delete_event"
-          onChange={handleInput}
-        />
-        <Button
-          variant="danger"
-          type="submit"
-          disabled={notConfirmed || waiting}
-        >
-          {waiting && (
-            <span
-              className="spinner-grow spinner-grow-sm text-light"
-              role="status"
-            ></span>
-          )}
+        <Form.Control type="textarea" id="delete_event" aria-describedby="delete_event" onChange={handleInput} />
+        <Button variant="danger" type="submit" disabled={notConfirmed || waiting}>
+          {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
           Delete
         </Button>
         <Button variant="secondary" onClick={close} disabled={waiting}>
@@ -117,19 +91,8 @@ interface ManageEventModalProps {
   task: string;
   gameKnightEvent?: GameKnightEvent | null;
 }
-export function ManageEventModal({
-  playerPool,
-  close,
-  refreshEvents,
-  task,
-  gameKnightEvent,
-}: ManageEventModalProps) {
-  const method =
-    task == "Create" || task == "Clone"
-      ? "POST"
-      : task == "Modify"
-      ? "PUT"
-      : "";
+export function ManageEventModal({ playerPool, close, refreshEvents, task, gameKnightEvent }: ManageEventModalProps) {
+  const method = task == "Create" || task == "Clone" ? "POST" : task == "Modify" ? "PUT" : "";
   const { tokens } = usePasswordless();
   const [eventForm, setEventForm] = useState<GameKnightEvent>(
     gameKnightEvent
@@ -144,6 +107,7 @@ export function ManageEventModal({
           bgg_id: undefined,
           total_spots: undefined,
           registered: [],
+          not_attending: [],
         }
   );
   const handleInput = (e: React.BaseSyntheticEvent) => {
@@ -156,24 +120,59 @@ export function ManageEventModal({
   };
   // return <span>{JSON.stringify(eventForm)}</span>;
 
-  // Handle Player Checkboxes
-  const [selectedOptions, setSelectedOptions] = useState(eventForm.registered);
+  // Handle Player Attending Checkboxes
+  const [selectedAttendingOptions, setSelectedAttendingOptions] = useState(eventForm.registered);
   const handleOptionChange = (event: React.BaseSyntheticEvent) => {
     const optionId = event.target.value;
     const isChecked = event.target.checked;
 
     if (isChecked) {
-      setSelectedOptions([...selectedOptions, optionId]);
+      setSelectedAttendingOptions([...selectedAttendingOptions, optionId]);
+      // Remove from not_attending:
+      setSelectedNotAttendingOptions(selectedNotAttendingOptions.filter((id) => id !== optionId));
     } else {
-      setSelectedOptions(selectedOptions.filter((id) => id !== optionId));
+      setSelectedAttendingOptions(selectedAttendingOptions.filter((id) => id !== optionId));
     }
-    // setEventForm({ ...eventForm, registered: selectedOptions });
+    // setEventForm({ ...eventForm, registered: selectedAttendingOptions });
   };
 
-  // when selectedOptions changes, update eventForm.registered
+  // // when selectedAttendingOptions changes, update eventForm.registered
+  // useEffect(() => {
+  //   setEventForm({ ...eventForm, registered: selectedAttendingOptions });
+  //   console.log(eventForm.registered);
+  // }, [selectedAttendingOptions]);
+
+  // Handle Player Not Attending Checkboxes
+  const [selectedNotAttendingOptions, setSelectedNotAttendingOptions] = useState(eventForm.not_attending);
+  const handleNAOptionChange = (event: React.BaseSyntheticEvent) => {
+    const optionId = event.target.value;
+    const isChecked = event.target.checked;
+
+    // setEventDebug(String(event)); //JSON.stringify(event, null, 2));
+    // console.log(event);
+    if (isChecked) {
+      setSelectedNotAttendingOptions([...selectedNotAttendingOptions, optionId]);
+      // Remove from registered:
+      setSelectedAttendingOptions(selectedAttendingOptions.filter((id) => id !== optionId));
+    } else {
+      setSelectedNotAttendingOptions(selectedNotAttendingOptions.filter((id) => id !== optionId));
+    }
+    // setEventForm({ ...eventForm, not_attending: selectedNotAttendingOptions });
+  };
+
+  // // when selectedNotAttendingOptions changes, update eventForm.not_attending
+  // useEffect(() => {
+  //   setEventForm({ ...eventForm, not_attending: selectedNotAttendingOptions });
+  //   console.log(eventForm.not_attending);
+  // }, [selectedNotAttendingOptions]);
+
+  // when selectedAttendingOptions changes, update eventForm.registered
+  // when selectedNotAttendingOptions changes, update eventForm.not_attending
   useEffect(() => {
-    setEventForm({ ...eventForm, registered: selectedOptions });
-  }, [selectedOptions]);
+    setEventForm({ ...eventForm, registered: selectedAttendingOptions, not_attending: selectedNotAttendingOptions });
+    // console.log(eventForm.registered);
+    // console.log(eventForm.not_attending);
+  }, [selectedAttendingOptions, selectedNotAttendingOptions]);
 
   const [waiting, setWaiting] = useState(false);
   const apiClient = axios.create({
@@ -203,7 +202,7 @@ export function ManageEventModal({
       close();
     } catch (error) {
       console.error(error);
-      setErrorMsg(`${task === "Clone" ? "Create" : task} Event failed`);
+      setErrorMsg(`${task === "Clone" ? "Create" : task} Event Failed`);
       setWaiting(false);
     }
   };
@@ -222,11 +221,7 @@ export function ManageEventModal({
               <Form.Select
                 aria-label="Choose Host"
                 onChange={handleInput}
-                defaultValue={
-                  task == "Modify" || task == "Clone"
-                    ? eventForm.host
-                    : "default"
-                }
+                defaultValue={task == "Modify" || task == "Clone" ? eventForm.host : "default"}
               >
                 <option hidden disabled value="default">
                   {" "}
@@ -245,9 +240,7 @@ export function ManageEventModal({
               <Form.Control
                 type="date"
                 onChange={handleInput}
-                defaultValue={
-                  task == "Modify" || task == "Clone" ? eventForm.date : ""
-                }
+                defaultValue={task == "Modify" || task == "Clone" ? eventForm.date : ""}
               />
             </FloatingLabel>
           </Col>
@@ -257,9 +250,7 @@ export function ManageEventModal({
               <Form.Control
                 as="textarea"
                 onChange={handleInput}
-                defaultValue={
-                  task == "Modify" || task == "Clone" ? eventForm.game : "TBD"
-                }
+                defaultValue={task == "Modify" || task == "Clone" ? eventForm.game : "TBD"}
                 // onChange={(e) => setGame(e.target.value)}
               />
             </FloatingLabel>
@@ -270,11 +261,7 @@ export function ManageEventModal({
                 type="number"
                 disabled={eventForm.game == "TBD"}
                 onChange={handleInput}
-                defaultValue={
-                  (task == "Modify" || task == "Clone") && eventForm.bgg_id
-                    ? eventForm.bgg_id
-                    : undefined
-                }
+                defaultValue={(task == "Modify" || task == "Clone") && eventForm.bgg_id ? eventForm.bgg_id : undefined}
               />
             </FloatingLabel>
           </Col>
@@ -283,11 +270,7 @@ export function ManageEventModal({
               <Form.Select
                 aria-label="Choose Format"
                 onChange={handleInput}
-                defaultValue={
-                  task == "Modify" || task == "Clone"
-                    ? eventForm.format
-                    : "default"
-                }
+                defaultValue={task == "Modify" || task == "Clone" ? eventForm.format : "default"}
               >
                 <option hidden disabled value="default">
                   {" "}
@@ -299,29 +282,19 @@ export function ManageEventModal({
             </FloatingLabel>
           </Col>
           <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem" }}>
-            <FloatingLabel
-              controlId="total_spots"
-              label="Total Spots"
-              className="mb-3"
-            >
+            <FloatingLabel controlId="total_spots" label="Total Spots" className="mb-3">
               <Form.Control
                 disabled={eventForm.format == "Open"}
                 onChange={handleInput}
                 defaultValue={
-                  (task == "Modify" || task == "Clone") && eventForm.total_spots
-                    ? eventForm.total_spots
-                    : undefined
+                  (task == "Modify" || task == "Clone") && eventForm.total_spots ? eventForm.total_spots : undefined
                 }
               />
             </FloatingLabel>
           </Col>
           <Col med="true" style={{ minWidth: "18rem" }}>
-            {/* {playerPool && <MultiSelect players={playerPool} />} */}
-
-            <Form.Group controlId="choosePlayers" className="mb-3">
-              <Form.Label aria-label="Choose Players">
-                Choose Players
-              </Form.Label>
+            <Form.Group controlId="chooseAttendingPlayers" className="mb-3">
+              <Form.Label aria-label="Choose Attending Players">Choose Attending Players</Form.Label>
               <Row>
                 {playerPool.map((player: string, index: number) => (
                   <Col key={index} style={{ minWidth: "min-content" }}>
@@ -331,8 +304,29 @@ export function ManageEventModal({
                       type="checkbox"
                       id={`option_${index}`}
                       label={player}
-                      checked={selectedOptions.includes(player)}
+                      checked={selectedAttendingOptions.includes(player)}
                       onChange={handleOptionChange}
+                      value={player}
+                    />
+                  </Col>
+                ))}
+              </Row>
+            </Form.Group>
+          </Col>
+          <Col med="true" style={{ minWidth: "18rem" }}>
+            <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
+              <Form.Label aria-label="Choose Not Attending Players">Choose Not Attending Players</Form.Label>
+              <Row>
+                {playerPool.map((player: string, index: number) => (
+                  <Col key={index} style={{ minWidth: "min-content" }}>
+                    <Form.Check
+                      // style={{ marginLeft: "10%" }}
+                      key={index}
+                      type="checkbox"
+                      id={`option_${index}`}
+                      label={player}
+                      checked={selectedNotAttendingOptions.includes(player)}
+                      onChange={handleNAOptionChange}
                       value={player}
                     />
                   </Col>
@@ -343,14 +337,12 @@ export function ManageEventModal({
         </Row>
       </Modal.Body>
       <Modal.Footer>
+        {/* <pre>{JSON.stringify(eventForm, null, 4)}</pre> */}
+        {/* <pre>{JSON.stringify(selectedAttendingOptions, null, 4)}</pre> */}
+        {/* <pre>{JSON.stringify(selectedNotAttendingOptions, null, 4)}</pre> */}
         <span>{errorMsg}</span>
         <Button variant="primary" type="submit" disabled={waiting}>
-          {waiting && (
-            <span
-              className="spinner-grow spinner-grow-sm text-light"
-              role="status"
-            ></span>
-          )}
+          {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
           {task == "Modify" ? "Update Event" : "Create Event"}
         </Button>
         <Button variant="secondary" onClick={close} disabled={waiting}>
