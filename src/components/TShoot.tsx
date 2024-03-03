@@ -8,9 +8,20 @@ import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 interface Props {
   events: never[];
+  playersDict: Object;
+  players: string[];
+  organizers: string[];
+  hosts: string[];
 }
-export default function TShoot({ events }: Props) {
+export default function TShoot({ events, playersDict, players, organizers, hosts }: Props) {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
+  const data_types = {
+    events: events,
+    playersDict: playersDict,
+    players: players,
+    organizers: organizers,
+    hosts: hosts,
+  };
 
   let first_name = "";
   if (signInStatus === "SIGNED_IN" && tokensParsed) {
@@ -28,12 +39,13 @@ export default function TShoot({ events }: Props) {
   const [eventsTest, setEventsTest] = useState({});
   const fetchTest = async () => {
     try {
-      let response = await apiClient.get("players", {
-        params: {
-          event_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-          // name: "xxxx",
-          // date: "yyyy",
-        },
+      let response = await apiClient.get("/players", {
+        // params: {
+        //   event_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        //   name: "Colten",
+        //   // name: "xxxx",
+        //   // date: "yyyy",
+        // },
       });
 
       console.log(response.data);
@@ -75,13 +87,14 @@ export default function TShoot({ events }: Props) {
                 <pre>{JSON.stringify(eventsTest, null, 2)}</pre>
               </Accordion.Body>
             </Accordion.Item>
-            <Accordion.Item eventKey="EVENT_JSON">
-              <Accordion.Header>events.json</Accordion.Header>
-              <Accordion.Body>
-                {/* <Button onClick={fetchTest}>Show</Button> */}
-                <pre>{JSON.stringify(events, null, 2)}</pre>
-              </Accordion.Body>
-            </Accordion.Item>
+            {Object.keys(data_types).map((type, index) => (
+              <Accordion.Item key={type} eventKey={type}>
+                <Accordion.Header>{type}</Accordion.Header>
+                <Accordion.Body>
+                  <pre>{JSON.stringify(data_types[type as keyof typeof data_types], null, 2)}</pre>
+                </Accordion.Body>
+              </Accordion.Item>
+            ))}
           </Accordion>
         </Accordion.Body>
       </Accordion.Item>

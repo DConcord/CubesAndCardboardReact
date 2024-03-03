@@ -3,9 +3,9 @@ import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import axios from "axios";
 
 // import Accordion from "react-bootstrap/Accordion";
-import Badge from "react-bootstrap/Badge";
+// import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
+// import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
@@ -14,12 +14,15 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 
+import { useNavigate } from "react-router-dom";
+
 import TShoot from "./TShoot";
-import { ManageEventModal, DeleteEventModal } from "./EventManagement";
+import { ManageEventModal, DeleteEventModal, RsvpFooter } from "./EventManagement";
 import Authenticated from "./Authenticated";
 
 export default function UpcomingEvents() {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
+  const navigate = useNavigate();
 
   let first_name = "";
   if (signInStatus === "SIGNED_IN" && tokensParsed) {
@@ -28,7 +31,7 @@ export default function UpcomingEvents() {
 
   // API Client
   const apiClient = axios.create({
-    baseURL: "https://myapp.dissonantconcord.com/api",
+    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
     headers: tokens && {
       Authorization: "Bearer " + tokens.idToken,
     },
@@ -43,14 +46,38 @@ export default function UpcomingEvents() {
       response = await apiClient.get("events", {});
     } else {
       // Otherwise pull from the public events.json
-      response = await axios.get("https://myapp.dissonantconcord.com/events.json");
+      response = await axios.get(`https://${import.meta.env.VITE_API_URL}/events.json`);
     }
     setEvents(response.data);
     console.log(response.data);
     setPlayerPool(player_pool);
   };
+
+  const [playersDict, setPlayersDict] = useState([]);
+  const [players, setPlayers] = useState([]);
+  const [organizers, setOrganizers] = useState([]);
+  const [hosts, setHosts] = useState([]);
+  const fetchPlayersGroups = async () => {
+    let response;
+    if (tokensParsed) {
+      // If Authenticated, pull players from the API
+      response = await apiClient.get("players", {});
+    } else {
+      // Otherwise pull from the public players_groups.json
+      response = await axios.get(`https://${import.meta.env.VITE_API_URL}/players_groups.json`);
+    }
+    setPlayersDict(response.data.Users);
+    setPlayers(response.data.Groups.player);
+    setOrganizers(response.data.Groups.organizer);
+    setHosts(response.data.Groups.host);
+    // console.log(response.data);
+    // console.log(players);
+    // console.log(organizers);
+    // console.log(hosts);
+  };
   useEffect(() => {
     fetchEvents();
+    fetchPlayersGroups();
   }, [tokens]);
 
   // Create "Delete Event" PopUp ("Modal")
@@ -82,13 +109,19 @@ export default function UpcomingEvents() {
       <Container fluid>
         <Row>
           <Col>
-            <h2>Upcoming Events</h2>
+            {/* <h2>Upcoming Events</h2> */}
+            <h2>{import.meta.env.VITE_EVENTS_TITLE}</h2>
           </Col>
           <Authenticated group={["admin"]}>
             {/* <Authenticated given_name={["Colten", "Luke"]}> */}
-            <Col style={{ textAlign: "right" }}>
+            <Col xs="auto" style={{ textAlign: "right" }}>
               <Button variant="primary" onClick={() => handleShowManageEvent({ task: "Create" })}>
                 Create Event
+              </Button>
+            </Col>
+            <Col xs="auto" style={{ textAlign: "right" }}>
+              <Button variant="secondary" onClick={() => navigate("/tbd")}>
+                TBD Gallery
               </Button>
             </Col>
           </Authenticated>
@@ -98,10 +131,15 @@ export default function UpcomingEvents() {
         <Modal show={showManageEvent} onHide={handleCloseManageEvent} backdrop="static" keyboard={false}>
           <ManageEventModal
             playerPool={playerPool}
+            playersDict={playersDict}
+            players={players}
+            organizers={organizers}
+            hosts={hosts}
             close={handleCloseManageEvent}
             task={managedEventTask}
             gameKnightEvent={managedEvent}
             refreshEvents={fetchEvents}
+            events={events}
           />
         </Modal>
         <Modal
@@ -113,7 +151,7 @@ export default function UpcomingEvents() {
           <DeleteEventModal close={handleCloseDeleteEvent} gameKnightEvent={deleteEvent!} refreshEvents={fetchEvents} />
         </Modal>
         <Authenticated given_name={["Colten"]}>
-          <TShoot events={events} />
+          <TShoot events={events} playersDict={playersDict} players={players} organizers={organizers} hosts={hosts} />
         </Authenticated>
       </Authenticated>
 
@@ -122,15 +160,16 @@ export default function UpcomingEvents() {
         <Row xs={1} sm={2} md={2} lg={3} xl={4} xxl={4} className="g-4 justify-content-center">
           {events.map((event: GameKnightEvent, index) => {
             const spots_available = event.format == "Open" ? null : event.total_spots! - event.registered.length;
-            const date_obj = new Date(event.date);
+            // const date_obj = new Date(event.date);
             const event_date = formatIsoDate(event.date);
             return (
               <Col key={index}>
-                <Card style={{ minWidth: "18rem", maxWidth: "35rem" }}>
+                <Card style={{ minWidth: "20rem", maxWidth: "40rem", height: "100%" }}>
                   {event.bgg_id && event.bgg_id > 0 ? (
-                    <Card.Img variant="top" src={`https://myapp.dissonantconcord.com/${event.bgg_id}.png`} />
+                    <Card.Img variant="top" src={`https://${import.meta.env.VITE_API_URL}/${event.bgg_id}.png`} />
                   ) : (
-                    <Card.Img variant="top" src="/Game_TBD.png" />
+                    // <Card.Img variant="top" src="/Game_TBD.png" />
+                    <Card.Img variant="top" src={"/" + event.tbd_pic} />
                   )}
                   <Card.Body>
                     <Card.Title key={index}>
@@ -151,12 +190,18 @@ export default function UpcomingEvents() {
                               </Tooltip>
                             }
                           >
-                            <Button size="sm" variant="secondary" key={index}>
-                              {event.format == "Open" ? "Open Event" : event.format}
-                              <Badge bg={spots_available && spots_available > 2 ? "primary" : "danger"} key={index}>
+                            <span key={index}>
+                              {event.format == "Open"
+                                ? "Open Event"
+                                : event.format == "Reserved" && spots_available! > 1
+                                ? "Spots: " + spots_available
+                                : event.format == "Reserved" && spots_available! < 1
+                                ? "Full"
+                                : ""}
+                              {/* <Badge bg={spots_available && spots_available > 2 ? "primary" : "danger"} key={index}>
                                 {spots_available}
-                              </Badge>
-                            </Button>
+                              </Badge> */}
+                            </span>
                           </OverlayTrigger>
                         </Col>
                       </Row>
@@ -164,11 +209,12 @@ export default function UpcomingEvents() {
                     <Card.Subtitle className="mb-2 text-muted">
                       <Row>
                         <Col className="d-flex align-items-center justify-content-start">{event.game}</Col>
-                        <Authenticated group={["player"]}>
-                          <Col className="d-flex align-items-center justify-content-end">RSVP:</Col>
-                          <Col className="d-flex align-items-center justify-content-end ">
+                        {/* <Authenticated group={["player"]}>
+                          <Col xs="auto" className="d-flex align-items-center justify-content-end">
+                            RSVP:
+                          </Col>
+                          <Col xs="auto" className="d-flex align-items-center justify-content-end ">
                             <ButtonGroup key={index} aria-label="RSVP">
-                              {/* <RsvpOverlay> */}
                               <Button
                                 size="sm"
                                 key={"yes" + index}
@@ -176,9 +222,6 @@ export default function UpcomingEvents() {
                               >
                                 Yes
                               </Button>
-                              {/* </RsvpOverlay>
-
-                              <RsvpOverlay> */}
                               <Button
                                 size="sm"
                                 key={"no" + index}
@@ -186,23 +229,49 @@ export default function UpcomingEvents() {
                               >
                                 No
                               </Button>
-                              {/* </RsvpOverlay> */}
                             </ButtonGroup>
-                            {/* </OverlayTrigger> */}
                           </Col>
-                        </Authenticated>
+                        </Authenticated> */}
                       </Row>
                     </Card.Subtitle>
                     <Card.Text as="div">
                       <div>Host: {event.host}</div>
-                      {event.format != "Open" && <div>Total Spots: {event.total_spots}</div>}
+                      {event.format != "Open" && (
+                        <>
+                          <div>Max Players: {event.total_spots}</div>
+                          {/* <div>Spots Remaining: {event.total_spots}</div> */}
+                        </>
+                      )}
                       <div>
                         Attending: {event.registered.join(", ")}
-                        {event.format == "Open" && <div>Not Attending: {event.not_attending}</div>}
+                        {event.format == "Open" && <div>Not Attending: {event.not_attending.join(", ")}</div>}
                       </div>
                     </Card.Text>
                   </Card.Body>
-                  {/* <Authenticated given_name={["Colten", "Luke"]}> */}
+                  <Authenticated group={["player"]}>
+                    <Card.Footer>
+                      <RsvpFooter event={event} index={index} />
+                      {/* <Row>
+                        <Col className="d-flex align-items-center justify-content-start">Can you make it?:</Col>
+                        <Col xs="auto" className="d-flex align-items-center justify-content-end ">
+                          <ButtonGroup key={index} aria-label="RSVP">
+                            <Button
+                              key={"yes" + index}
+                              variant={event.registered.includes(first_name) ? "success" : "outline-secondary"}
+                            >
+                              Yes
+                            </Button>
+                            <Button
+                              key={"no" + index}
+                              variant={event.not_attending.includes(first_name) ? "secondary" : "outline-secondary"}
+                            >
+                              No
+                            </Button>
+                          </ButtonGroup>
+                        </Col>
+                      </Row> */}
+                    </Card.Footer>
+                  </Authenticated>
                   <Authenticated group={["admin"]}>
                     <Card.Footer>
                       <Row key={"Row" + index}>
@@ -211,12 +280,7 @@ export default function UpcomingEvents() {
                             size="sm"
                             key={"Modify" + index}
                             variant="primary"
-                            onClick={() =>
-                              handleShowManageEvent({
-                                managedEvent: event,
-                                task: "Modify",
-                              })
-                            }
+                            onClick={() => handleShowManageEvent({ managedEvent: event, task: "Modify" })}
                           >
                             Modify
                           </Button>
@@ -224,11 +288,7 @@ export default function UpcomingEvents() {
                             size="sm"
                             key={"Delete" + index}
                             variant="danger"
-                            onClick={() =>
-                              handleShowDeleteEvent({
-                                deleteEvent: event,
-                              })
-                            }
+                            onClick={() => handleShowDeleteEvent({ deleteEvent: event })}
                           >
                             Delete
                           </Button>
@@ -236,12 +296,7 @@ export default function UpcomingEvents() {
                             size="sm"
                             key={"Clone" + index}
                             variant="secondary"
-                            onClick={() =>
-                              handleShowManageEvent({
-                                managedEvent: event,
-                                task: "Clone",
-                              })
-                            }
+                            onClick={() => handleShowManageEvent({ managedEvent: event, task: "Clone" })}
                           >
                             Clone
                           </Button>
@@ -279,6 +334,7 @@ export type GameKnightEvent = {
   event_type?: string;
   date: string;
   host: string;
+  organizer?: string;
   format: string;
   game: string;
   bgg_id?: number;
@@ -286,6 +342,7 @@ export type GameKnightEvent = {
   registered: string[];
   not_attending: string[];
   player_pool?: string[];
+  tbd_pic?: string;
 };
 
 // Temp static placeholder

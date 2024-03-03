@@ -4,10 +4,12 @@ import App from "./App";
 // import "./assets/startbootstrap-grayscale-gh-pages/css/styles.css";
 // import "./assets/colormind-material-dashboard.css";
 import "bootstrap/dist/css/bootstrap.css";
+import "./App.scss";
 
 import { Passwordless } from "amazon-cognito-passwordless-auth";
 import { PasswordlessContextProvider, Fido2Toast } from "amazon-cognito-passwordless-auth/react";
 // } from "./components/DemoContext";
+import ThemeProvider from "react-bootstrap/ThemeProvider";
 
 import "amazon-cognito-passwordless-auth/passwordless.css";
 
@@ -26,7 +28,12 @@ Passwordless.configure({
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <PasswordlessContextProvider enableLocalUserCache={true}>
     <React.StrictMode>
-      <App data-bs-theme="dark" />
+      <ThemeProvider
+      // breakpoints={["xxxl", "1400px", "1200px", "992px", "768px", "576px", "xs", "xxs"]}
+      // minBreakpoint="xl"
+      >
+        <App data-bs-theme="dark" />
+      </ThemeProvider>
     </React.StrictMode>
     <Fido2Toast />
   </PasswordlessContextProvider>

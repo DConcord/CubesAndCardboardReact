@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 
 import Button from "react-bootstrap/Button";
+import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import FloatingLabel from "react-bootstrap/FloatingLabel";
@@ -12,6 +13,10 @@ import Modal from "react-bootstrap/Modal";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 import { GameKnightEvent, formatIsoDate } from "./Events";
+
+const apiClient = axios.create({
+  baseURL: "https://myapp.dissonantconcord.com/api",
+});
 
 interface DeleteEventModalProps {
   close: () => void;
@@ -27,12 +32,12 @@ export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: Dele
   }
 
   const [waiting, setWaiting] = useState(false);
-  const apiClient = axios.create({
-    baseURL: "https://myapp.dissonantconcord.com/api",
-    headers: tokens && {
-      Authorization: "Bearer " + tokens.idToken,
-    },
-  });
+  // const apiClient = axios.create({
+  //   baseURL: "https://myapp.dissonantconcord.com/api",
+  //   headers: tokens && {
+  //     Authorization: "Bearer " + tokens.idToken,
+  //   },
+  // });
 
   const [errorMsg, setErrorMsg] = useState("");
   async function handleSubmit(event: React.BaseSyntheticEvent) {
@@ -41,6 +46,9 @@ export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: Dele
     try {
       const response = await apiClient.delete("event", {
         params: { event_id: gameKnightEvent.event_id },
+        headers: tokens && {
+          Authorization: "Bearer " + tokens.idToken,
+        },
       });
       console.log(response.data);
       setWaiting(false);
@@ -60,14 +68,6 @@ export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: Dele
       </Modal.Header>
       <Modal.Body className="text-center">
         Type DELETE to permanently delete event
-        {/* <Form.Control
-            as="textarea"
-            onChange={handleInput}
-            defaultValue={
-              task == "Modify" || task == "Clone" ? eventForm.game : "TBD"
-            }
-            // onChange={(e) => setGame(e.target.value)}
-          /> */}
         <Form.Control type="textarea" id="delete_event" aria-describedby="delete_event" onChange={handleInput} />
         <Button variant="danger" type="submit" disabled={notConfirmed || waiting}>
           {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
@@ -86,12 +86,28 @@ export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: Dele
 
 interface ManageEventModalProps {
   playerPool: string[];
+  playersDict: Object;
+  players: string[];
+  organizers: string[];
+  hosts: string[];
   close: () => void;
   refreshEvents: () => void;
   task: string;
   gameKnightEvent?: GameKnightEvent | null;
+  events: GameKnightEvent[];
 }
-export function ManageEventModal({ playerPool, close, refreshEvents, task, gameKnightEvent }: ManageEventModalProps) {
+export function ManageEventModal({
+  playerPool,
+  playersDict,
+  players,
+  organizers,
+  hosts,
+  close,
+  refreshEvents,
+  task,
+  gameKnightEvent,
+  events,
+}: ManageEventModalProps) {
   const method = task == "Create" || task == "Clone" ? "POST" : task == "Modify" ? "PUT" : "";
   const { tokens } = usePasswordless();
   const [eventForm, setEventForm] = useState<GameKnightEvent>(
@@ -102,6 +118,7 @@ export function ManageEventModal({ playerPool, close, refreshEvents, task, gameK
           event_type: "GameKnight",
           date: "",
           host: "",
+          organizer: "",
           format: "Open",
           game: "TBD",
           bgg_id: undefined,
@@ -118,7 +135,6 @@ export function ManageEventModal({ playerPool, close, refreshEvents, task, gameK
     }
     console.log(e.target);
   };
-  // return <span>{JSON.stringify(eventForm)}</span>;
 
   // Handle Player Attending Checkboxes
   const [selectedAttendingOptions, setSelectedAttendingOptions] = useState(eventForm.registered);
@@ -133,23 +149,13 @@ export function ManageEventModal({ playerPool, close, refreshEvents, task, gameK
     } else {
       setSelectedAttendingOptions(selectedAttendingOptions.filter((id) => id !== optionId));
     }
-    // setEventForm({ ...eventForm, registered: selectedAttendingOptions });
   };
-
-  // // when selectedAttendingOptions changes, update eventForm.registered
-  // useEffect(() => {
-  //   setEventForm({ ...eventForm, registered: selectedAttendingOptions });
-  //   console.log(eventForm.registered);
-  // }, [selectedAttendingOptions]);
 
   // Handle Player Not Attending Checkboxes
   const [selectedNotAttendingOptions, setSelectedNotAttendingOptions] = useState(eventForm.not_attending);
   const handleNAOptionChange = (event: React.BaseSyntheticEvent) => {
     const optionId = event.target.value;
     const isChecked = event.target.checked;
-
-    // setEventDebug(String(event)); //JSON.stringify(event, null, 2));
-    // console.log(event);
     if (isChecked) {
       setSelectedNotAttendingOptions([...selectedNotAttendingOptions, optionId]);
       // Remove from registered:
@@ -157,40 +163,48 @@ export function ManageEventModal({ playerPool, close, refreshEvents, task, gameK
     } else {
       setSelectedNotAttendingOptions(selectedNotAttendingOptions.filter((id) => id !== optionId));
     }
-    // setEventForm({ ...eventForm, not_attending: selectedNotAttendingOptions });
   };
-
-  // // when selectedNotAttendingOptions changes, update eventForm.not_attending
-  // useEffect(() => {
-  //   setEventForm({ ...eventForm, not_attending: selectedNotAttendingOptions });
-  //   console.log(eventForm.not_attending);
-  // }, [selectedNotAttendingOptions]);
 
   // when selectedAttendingOptions changes, update eventForm.registered
   // when selectedNotAttendingOptions changes, update eventForm.not_attending
   useEffect(() => {
     setEventForm({ ...eventForm, registered: selectedAttendingOptions, not_attending: selectedNotAttendingOptions });
-    // console.log(eventForm.registered);
-    // console.log(eventForm.not_attending);
   }, [selectedAttendingOptions, selectedNotAttendingOptions]);
 
   const [waiting, setWaiting] = useState(false);
-  const apiClient = axios.create({
-    baseURL: "https://myapp.dissonantconcord.com/api",
-    headers: tokens && {
-      Authorization: "Bearer " + tokens.idToken,
-    },
-  });
+  // const apiClient = axios.create({
+  //   baseURL: "https://myapp.dissonantconcord.com/api",
+  //   headers: tokens && {
+  //     Authorization: "Bearer " + tokens.idToken,
+  //   },
+  // });
 
   const [errorMsg, setErrorMsg] = useState("");
+  // const [timeDiff, setTimeDiff] = useState(0);
   const createEvent = async (body: GameKnightEvent, method: string) => {
     setWaiting(true);
+    // const start = Date.parse(new Date().toISOString());
     if (task == "Clone") delete body.event_id;
     if (body.total_spots == null) body.total_spots = undefined;
     if (body.bgg_id == null) body.bgg_id = undefined;
     if (!body.event_type) body.event_type = "GameKnight";
+    if (body.game == "TBD" && gameKnightEvent && gameKnightEvent.tbd_pic && task !== "Clone") {
+      body.tbd_pic = gameKnightEvent.tbd_pic;
+    } else if (body.game == "TBD" && (!body.tbd_pic || body.tbd_pic != "")) {
+      let active_tbd_pics: string[] = []; // as GameKnightEvent[];
+      for (let game_event of events) {
+        if (game_event.game == "TBD" && game_event.tbd_pic && game_event.tbd_pic != "") {
+          active_tbd_pics.push(game_event.tbd_pic);
+        }
+      }
+      let available_tbd_pics = tbd_pics.filter((n) => !active_tbd_pics.includes(n));
+      body.tbd_pic = available_tbd_pics[~~(Math.random() * available_tbd_pics.length)];
+    } else if (body.game !== "TBD" && body.tbd_pic) body.tbd_pic = "";
     try {
       const response = await apiClient({
+        headers: tokens && {
+          Authorization: "Bearer " + tokens.idToken,
+        },
         method: method,
         url: "event",
         data: body,
@@ -199,11 +213,15 @@ export function ManageEventModal({ playerPool, close, refreshEvents, task, gameK
       console.log(response.data);
       refreshEvents();
       setWaiting(false);
+      // const current_time = Date.parse(new Date().toISOString());
+      // setTimeDiff(current_time - start);
       close();
     } catch (error) {
       console.error(error);
       setErrorMsg(`${task === "Clone" ? "Create" : task} Event Failed`);
       setWaiting(false);
+      // const current_time = Date.parse(new Date().toISOString());
+      // setTimeDiff(current_time - start);
     }
   };
 
@@ -334,9 +352,35 @@ export function ManageEventModal({ playerPool, close, refreshEvents, task, gameK
               </Row>
             </Form.Group>
           </Col>
+          <Col med="true" style={{ minWidth: "13rem" }}>
+            <FloatingLabel controlId="organizer" label="Organizer" className="mb-3">
+              <Form.Select
+                aria-label="Choose Organizer (manually for now)"
+                onChange={handleInput}
+                defaultValue={
+                  task == "Modify" || task == "Clone"
+                    ? eventForm.organizer == ""
+                      ? "default"
+                      : eventForm.organizer
+                    : "default"
+                }
+              >
+                <option hidden disabled value="default">
+                  {" "}
+                  -- choose an organizer --{" "}
+                </option>
+                {playerPool.map((player: string, index: number) => (
+                  <option key={index} value={player}>
+                    {player}
+                  </option>
+                ))}
+              </Form.Select>
+            </FloatingLabel>
+          </Col>
         </Row>
       </Modal.Body>
       <Modal.Footer>
+        {/* <pre>{timeDiff}</pre> */}
         {/* <pre>{JSON.stringify(eventForm, null, 4)}</pre> */}
         {/* <pre>{JSON.stringify(selectedAttendingOptions, null, 4)}</pre> */}
         {/* <pre>{JSON.stringify(selectedNotAttendingOptions, null, 4)}</pre> */}
@@ -352,3 +396,73 @@ export function ManageEventModal({ playerPool, close, refreshEvents, task, gameK
     </Form>
   );
 }
+
+interface RsvpFooterProps {
+  event: GameKnightEvent;
+  index: number;
+}
+export function RsvpFooter({ event, index }: RsvpFooterProps) {
+  const { signInStatus, tokensParsed, tokens } = usePasswordless();
+
+  const handleYes = () => {
+    // const body = {
+    //   event_id: event.event_id,
+    //   registered: [String(tokensParsed.idToken.given_name)],
+    //   not_attending: [],
+    // };
+    // apiClient({
+    //   headers: tokens && {
+    //     Authorization: "Bearer " + tokens.idToken,
+    //   },
+    //   method: "post",
+    //   url: "event/rsvp",
+    //   data: body,
+    // }).then((response) => {
+    //   console.log(response.data);
+    //   refreshEvents();
+    // });
+  };
+
+  let first_name = "";
+  if (signInStatus === "SIGNED_IN" && tokensParsed) {
+    first_name = String(tokensParsed.idToken.given_name);
+  }
+  return (
+    <Row>
+      <Col className="d-flex align-items-center justify-content-start">Can you make it?:</Col>
+      <Col xs="auto" className="d-flex align-items-center justify-content-end ">
+        <ButtonGroup key={index} aria-label="RSVP">
+          <Button key={"yes" + index} variant={event.registered.includes(first_name) ? "success" : "outline-secondary"}>
+            Yes
+          </Button>
+          <Button
+            key={"no" + index}
+            variant={event.not_attending.includes(first_name) ? "secondary" : "outline-secondary"}
+          >
+            No
+          </Button>
+        </ButtonGroup>
+      </Col>
+    </Row>
+  );
+}
+
+export const tbd_pics = [
+  "Game_TBD_17.jpeg",
+  "Game_TBD_24.jpeg",
+  "Game_TBD_23.jpeg",
+  "Game_TBD_22.jpeg",
+  "Game_TBD_21.jpeg",
+  "Game_TBD_20.jpeg",
+  "Game_TBD_19.jpeg",
+  "Game_TBD_18.jpeg",
+  "Game_TBD_27.jpeg",
+  "Game_TBD_26.jpeg",
+  "Game_TBD_28.jpeg",
+  "Game_TBD_29.jpeg",
+  "Game_TBD_30.jpeg",
+  "Game_TBD_31.jpeg",
+  "Game_TBD_32.jpeg",
+  "Game_TBD_34.jpeg",
+  "Game_TBD_33.jpeg",
+];

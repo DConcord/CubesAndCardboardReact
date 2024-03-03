@@ -6,23 +6,27 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy-prod": "tsc && vite build && npx s3-spa-upload dist cdkstack-bucket83908e77-7tr0zgs93uwh",
+    "deploy-dev": "tsc && vite build --mode development && npx s3-spa-upload dist cdkstack-bucketdevff8a9acd-pine3ubqpres"
   },
   "dependencies": {
-    "amazon-cognito-passwordless-auth": "^0.12.1",
-    "axios": "^1.6.7",
-    "react": "^18.2.0",
-    "react-bootstrap": "^2.10.1",
-    "react-dom": "^18.2.0",
     "@mdi/js": "^7.4.47",
     "@mdi/react": "^1.6.1",
-    "bootstrap": "^5.3.2"
+    "amazon-cognito-passwordless-auth": "^0.12.1",
+    "axios": "^1.6.7",
+    "bootstrap": "^5.3.2",
+    "react": "^18.2.0",
+    "react-bootstrap": "^2.10.1",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@modyfi/vite-plugin-yaml": "^1.1.0",
     "@types/react": "^18.0.27",
     "@types/react-dom": "^18.0.10",
     "@vitejs/plugin-react": "^3.1.0",
+    "react-router-dom": "^6.22.2",
+    "sass": "^1.71.1",
     "typescript": "^4.9.3",
     "vite": "^4.1.0"
   }
