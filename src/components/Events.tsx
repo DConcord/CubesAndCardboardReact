@@ -17,7 +17,7 @@ import Modal from "react-bootstrap/Modal";
 import { useNavigate } from "react-router-dom";
 
 import TShoot from "./TShoot";
-import { ManageEventModal, DeleteEventModal, RsvpFooter } from "./EventManagement";
+import { ManageEventModal, DeleteEventModal, TransferDevEventsModal, RsvpFooter } from "./EventManagement";
 import Authenticated from "./Authenticated";
 
 export default function UpcomingEvents() {
@@ -39,9 +39,14 @@ export default function UpcomingEvents() {
 
   const [events, setEvents] = useState([]);
   const [playerPool, setPlayerPool] = useState<string[]>([]);
-  const fetchEvents = async () => {
+  // interface fetchEventsProps {
+  //   use_api?: boolean;
+  // }
+  // async function fetchEvents({ use_api = false }: fetchEventsProps) {
+  async function fetchEvents(use_api = false) {
+    // if (use_api === undefined) use_api = false;
     let response;
-    if (tokensParsed) {
+    if (use_api) {
       // If Authenticated, pull events from the API
       response = await apiClient.get("events", {});
     } else {
@@ -51,7 +56,7 @@ export default function UpcomingEvents() {
     setEvents(response.data);
     console.log(response.data);
     setPlayerPool(player_pool);
-  };
+  }
 
   const [playersDict, setPlayersDict] = useState([]);
   const [players, setPlayers] = useState([]);
@@ -76,7 +81,8 @@ export default function UpcomingEvents() {
     // console.log(hosts);
   };
   useEffect(() => {
-    fetchEvents();
+    // fetchEvents({ use_api: false });
+    fetchEvents(false);
     fetchPlayersGroups();
   }, [tokens]);
 
@@ -104,6 +110,12 @@ export default function UpcomingEvents() {
     setShowManageEvent(true);
   };
 
+  const [showTransferDevEvents, setShowTransferDevEvents] = useState(false);
+  const handleCloseTransferDevEvents = () => setShowTransferDevEvents(false);
+  const handleShowTransferDevEvents = () => {
+    setShowTransferDevEvents(true);
+  };
+
   return (
     <>
       <Container fluid>
@@ -114,6 +126,14 @@ export default function UpcomingEvents() {
           </Col>
           <Authenticated group={["admin"]}>
             {/* <Authenticated given_name={["Colten", "Luke"]}> */}
+
+            {import.meta.env.MODE == "development" && (
+              <Col xs="auto" style={{ textAlign: "right" }}>
+                <Button variant="secondary" onClick={handleShowTransferDevEvents}>
+                  Transfer (Dev)
+                </Button>
+              </Col>
+            )}
             <Col xs="auto" style={{ textAlign: "right" }}>
               <Button variant="primary" onClick={() => handleShowManageEvent({ task: "Create" })}>
                 Create Event
@@ -142,13 +162,11 @@ export default function UpcomingEvents() {
             events={events}
           />
         </Modal>
-        <Modal
-          show={showDeleteEvent}
-          onHide={handleCloseDeleteEvent}
-          // backdrop="static"
-          // keyboard={false}
-        >
+        <Modal show={showDeleteEvent} onHide={handleCloseDeleteEvent}>
           <DeleteEventModal close={handleCloseDeleteEvent} gameKnightEvent={deleteEvent!} refreshEvents={fetchEvents} />
+        </Modal>
+        <Modal show={showTransferDevEvents} onHide={handleCloseTransferDevEvents} backdrop="static" keyboard={false}>
+          <TransferDevEventsModal close={handleCloseTransferDevEvents} events={events} refreshEvents={fetchEvents} />
         </Modal>
         <Authenticated given_name={["Colten"]}>
           <TShoot events={events} playersDict={playersDict} players={players} organizers={organizers} hosts={hosts} />
@@ -329,6 +347,13 @@ function RsvpOverlay({ children }: RsvpOverlayProps) {
   );
 }
 
+export interface EventDict {
+  [key: ExistingGameKnightEvent["event_id"]]: ExistingGameKnightEvent;
+}
+
+export interface ExistingGameKnightEvent extends GameKnightEvent {
+  event_id: string;
+}
 export type GameKnightEvent = {
   event_id?: string;
   event_type?: string;

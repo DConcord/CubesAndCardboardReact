@@ -12,15 +12,16 @@ import Modal from "react-bootstrap/Modal";
 
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
-import { GameKnightEvent, formatIsoDate } from "./Events";
+import { GameKnightEvent, ExistingGameKnightEvent, EventDict, formatIsoDate } from "./Events";
 
 const apiClient = axios.create({
-  baseURL: "https://myapp.dissonantconcord.com/api",
+  baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
 });
+const base_url = `https://${import.meta.env.VITE_API_URL}/api`;
 
 interface DeleteEventModalProps {
   close: () => void;
-  refreshEvents: () => void;
+  refreshEvents: (use_api: boolean) => void;
   gameKnightEvent: GameKnightEvent;
 }
 export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: DeleteEventModalProps) {
@@ -33,7 +34,7 @@ export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: Dele
 
   const [waiting, setWaiting] = useState(false);
   // const apiClient = axios.create({
-  //   baseURL: "https://myapp.dissonantconcord.com/api",
+  //   baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
   //   headers: tokens && {
   //     Authorization: "Bearer " + tokens.idToken,
   //   },
@@ -52,7 +53,7 @@ export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: Dele
       });
       console.log(response.data);
       setWaiting(false);
-      refreshEvents();
+      refreshEvents(true);
       close();
     } catch (error) {
       console.error(error);
@@ -84,6 +85,110 @@ export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: Dele
   );
 }
 
+interface TransferDevEventsModalProps {
+  close: () => void;
+  events: ExistingGameKnightEvent[];
+  refreshEvents: (use_api: boolean) => void;
+}
+export function TransferDevEventsModal({ close, events, refreshEvents }: TransferDevEventsModalProps) {
+  const { tokens } = usePasswordless();
+
+  let eventDict: EventDict = {};
+  for (let event of events) {
+    eventDict[event["event_id"]] = event;
+  }
+
+  // Handle Transfer Event Checkboxes
+  const [selectedTransferOptions, setSelectedTransferOptions] = useState<string[]>(Object.keys(eventDict));
+  const handleOptionChange = (event: React.BaseSyntheticEvent) => {
+    const event_id = event.target.value;
+    const isChecked = event.target.checked;
+
+    if (isChecked) {
+      setSelectedTransferOptions([...selectedTransferOptions, event_id]);
+    } else {
+      setSelectedTransferOptions(selectedTransferOptions.filter((id) => id !== event_id));
+    }
+  };
+
+  const apiClient = axios.create({
+    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
+    headers: tokens && {
+      Authorization: "Bearer " + tokens.idToken,
+    },
+  });
+  const [waiting, setWaiting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  async function handleSubmit(event: React.BaseSyntheticEvent) {
+    setWaiting(true);
+    event.preventDefault();
+    for (let event_id of selectedTransferOptions) {
+      const body = eventDict[event_id];
+
+      try {
+        const response = await apiClient.post(`${base_url}/event`, {
+          data: JSON.stringify(body),
+        });
+        // const response = await apiClient.post("event", {
+        //   data: body,
+        //   headers: tokens && {
+        //     Authorization: "Bearer " + tokens.idToken,
+        //   },
+        // });
+        console.log(response.data);
+      } catch (error) {
+        console.error(error);
+        setErrorMsg(`Transfer Events failed`);
+        // setWaiting(false);
+      }
+    }
+    setWaiting(false);
+    refreshEvents(true);
+    if (errorMsg == "") close();
+  }
+
+  return (
+    <Form onSubmit={handleSubmit}>
+      <Modal.Header className="text-center">
+        {/* Are you sure you want to  {formatIsoDate(gameKnightEvent.date)} event? */}
+        Transfer selected events to the Dev DB:
+      </Modal.Header>
+      <Modal.Body className="text-center">
+        {/* <Col med="true" style={{ minWidth: "18rem" }}> */}
+        <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
+          {events.map((event: ExistingGameKnightEvent, index: number) => (
+            <Row key={index} style={{ minWidth: "min-content" }}>
+              <Form.Check
+                // style={{ marginLeft: "10%" }}
+                key={index}
+                type="checkbox"
+                id={`option_${index}`}
+                label={`${event.date} (${event.event_id})`}
+                checked={selectedTransferOptions.includes(event.event_id)}
+                // {selectedNotAttendingOptions.includes(player)}
+                onChange={handleOptionChange}
+                value={event.event_id}
+              />
+            </Row>
+          ))}
+        </Form.Group>
+        {/* </Col> */}
+      </Modal.Body>
+      <Modal.Footer>
+        <span>{errorMsg}</span>
+        <pre>{JSON.stringify(selectedTransferOptions, null, 2)}</pre>
+        <Button variant="danger" type="submit" disabled={waiting}>
+          {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
+          Transfer
+        </Button>
+        <Button variant="secondary" onClick={close} disabled={waiting}>
+          Cancel
+        </Button>
+      </Modal.Footer>
+    </Form>
+  );
+}
+
 interface ManageEventModalProps {
   playerPool: string[];
   playersDict: Object;
@@ -91,7 +196,7 @@ interface ManageEventModalProps {
   organizers: string[];
   hosts: string[];
   close: () => void;
-  refreshEvents: () => void;
+  refreshEvents: (use_api: boolean) => void;
   task: string;
   gameKnightEvent?: GameKnightEvent | null;
   events: GameKnightEvent[];
@@ -108,7 +213,7 @@ export function ManageEventModal({
   gameKnightEvent,
   events,
 }: ManageEventModalProps) {
-  const method = task == "Create" || task == "Clone" ? "POST" : task == "Modify" ? "PUT" : "";
+  const method = ["Create", "Clone", "Transfer"].includes(task) ? "POST" : task == "Modify" ? "PUT" : "";
   const { tokens } = usePasswordless();
   const [eventForm, setEventForm] = useState<GameKnightEvent>(
     gameKnightEvent
@@ -173,7 +278,7 @@ export function ManageEventModal({
 
   const [waiting, setWaiting] = useState(false);
   // const apiClient = axios.create({
-  //   baseURL: "https://myapp.dissonantconcord.com/api",
+  //   baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
   //   headers: tokens && {
   //     Authorization: "Bearer " + tokens.idToken,
   //   },
@@ -211,7 +316,7 @@ export function ManageEventModal({
       });
 
       console.log(response.data);
-      refreshEvents();
+      refreshEvents(true);
       setWaiting(false);
       // const current_time = Date.parse(new Date().toISOString());
       // setTimeDiff(current_time - start);
