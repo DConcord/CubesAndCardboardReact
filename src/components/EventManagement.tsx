@@ -15,7 +15,7 @@ import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import { GameKnightEvent, formatIsoDate } from "./Events";
 
 const apiClient = axios.create({
-  baseURL: "https://myapp.dissonantconcord.com/api",
+  baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
 });
 
 interface DeleteEventModalProps {
@@ -33,7 +33,7 @@ export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: Dele
 
   const [waiting, setWaiting] = useState(false);
   // const apiClient = axios.create({
-  //   baseURL: "https://myapp.dissonantconcord.com/api",
+  //   baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
   //   headers: tokens && {
   //     Authorization: "Bearer " + tokens.idToken,
   //   },
@@ -172,12 +172,12 @@ export function ManageEventModal({
   }, [selectedAttendingOptions, selectedNotAttendingOptions]);
 
   const [waiting, setWaiting] = useState(false);
-  // const apiClient = axios.create({
-  //   baseURL: "https://myapp.dissonantconcord.com/api",
-  //   headers: tokens && {
-  //     Authorization: "Bearer " + tokens.idToken,
-  //   },
-  // });
+  const apiClient = axios.create({
+    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
+    headers: tokens && {
+      Authorization: "Bearer " + tokens.idToken,
+    },
+  });
 
   const [errorMsg, setErrorMsg] = useState("");
   // const [timeDiff, setTimeDiff] = useState(0);
