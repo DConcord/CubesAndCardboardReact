@@ -14,6 +14,7 @@ import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 import { GameKnightEvent, ExistingGameKnightEvent, EventDict, formatIsoDate } from "./Events";
 
+
 interface DeleteEventModalProps {
   close: () => void;
   refreshEvents: (use_api: boolean) => void;
@@ -28,6 +29,7 @@ export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: Dele
   }
 
   const [waiting, setWaiting] = useState(false);
+
   const apiClient = axios.create({
     baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
     headers: tokens && {
