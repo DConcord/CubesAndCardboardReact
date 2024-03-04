@@ -17,8 +17,17 @@ import Modal from "react-bootstrap/Modal";
 import { useNavigate } from "react-router-dom";
 
 import TShoot from "./TShoot";
-import { ManageEventModal, DeleteEventModal, RsvpFooter } from "./EventManagement";
+import {
+  ManageEventModal,
+  DeleteEventModal,
+  // MigrateEventsModal,
+  TransferDevEventsModal,
+  RsvpFooter,
+  ManagedEventTask,
+  PlayersDict,
+} from "./EventManagement";
 import Authenticated from "./Authenticated";
+import { Badge } from "react-bootstrap";
 
 export default function UpcomingEvents() {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
@@ -39,9 +48,14 @@ export default function UpcomingEvents() {
 
   const [events, setEvents] = useState([]);
   const [playerPool, setPlayerPool] = useState<string[]>([]);
-  const fetchEvents = async () => {
+  // interface fetchEventsProps {
+  //   use_api?: boolean;
+  // }
+  // async function fetchEvents({ use_api = false }: fetchEventsProps) {
+  async function fetchEvents(use_api = false) {
+    // if (use_api === undefined) use_api = false;
     let response;
-    if (tokensParsed) {
+    if (tokens || use_api) {
       // If Authenticated, pull events from the API
       response = await apiClient.get("events", {});
     } else {
@@ -51,9 +65,9 @@ export default function UpcomingEvents() {
     setEvents(response.data);
     console.log(response.data);
     setPlayerPool(player_pool);
-  };
+  }
 
-  const [playersDict, setPlayersDict] = useState([]);
+  const [playersDict, setPlayersDict] = useState<PlayersDict>();
   const [players, setPlayers] = useState([]);
   const [organizers, setOrganizers] = useState([]);
   const [hosts, setHosts] = useState([]);
@@ -76,7 +90,8 @@ export default function UpcomingEvents() {
     // console.log(hosts);
   };
   useEffect(() => {
-    fetchEvents();
+    // fetchEvents({ use_api: false });
+    fetchEvents(false);
     fetchPlayersGroups();
   }, [tokens]);
 
@@ -91,17 +106,29 @@ export default function UpcomingEvents() {
 
   // Create "Manage Event" PopUp ("Modal")
   const [managedEvent, setManagedEvent] = useState<GameKnightEvent | null>(null);
-  const [managedEventTask, setManagedEventTask] = useState("");
+  const [managedEventTask, setManagedEventTask] = useState<ManagedEventTask>("Clone");
   const [showManageEvent, setShowManageEvent] = useState(false);
   const handleCloseManageEvent = () => setShowManageEvent(false);
   interface ShowManageEventProps {
     managedEvent?: GameKnightEvent;
-    task: "Modify" | "Create" | "Clone";
+    task: ManagedEventTask;
   }
   const handleShowManageEvent = ({ managedEvent, task }: ShowManageEventProps) => {
     setManagedEvent(managedEvent ? managedEvent : null);
     setManagedEventTask(task);
     setShowManageEvent(true);
+  };
+
+  const [showTransferDevEvents, setShowTransferDevEvents] = useState(false);
+  const handleCloseTransferDevEvents = () => setShowTransferDevEvents(false);
+  const handleShowTransferDevEvents = () => {
+    setShowTransferDevEvents(true);
+  };
+
+  const [showMigrateEvents, setShowMigrateEvents] = useState(false);
+  const handleCloseMigrateEvents = () => setShowMigrateEvents(false);
+  const handleShowMigrateEvents = () => {
+    setShowMigrateEvents(true);
   };
 
   return (
@@ -114,6 +141,17 @@ export default function UpcomingEvents() {
           </Col>
           <Authenticated group={["admin"]}>
             {/* <Authenticated given_name={["Colten", "Luke"]}> */}
+
+            {import.meta.env.MODE == "development" &&
+              import.meta.env.VITE_API_URL == "eventsdev.dissonantconcord.com" && (
+                <>
+                  <Col xs="auto" style={{ textAlign: "right" }}>
+                    <Button variant="secondary" onClick={handleShowTransferDevEvents}>
+                      Transfer
+                    </Button>
+                  </Col>
+                </>
+              )}
             <Col xs="auto" style={{ textAlign: "right" }}>
               <Button variant="primary" onClick={() => handleShowManageEvent({ task: "Create" })}>
                 Create Event
@@ -131,7 +169,7 @@ export default function UpcomingEvents() {
         <Modal show={showManageEvent} onHide={handleCloseManageEvent} backdrop="static" keyboard={false}>
           <ManageEventModal
             playerPool={playerPool}
-            playersDict={playersDict}
+            playersDict={playersDict!}
             players={players}
             organizers={organizers}
             hosts={hosts}
@@ -142,16 +180,25 @@ export default function UpcomingEvents() {
             events={events}
           />
         </Modal>
-        <Modal
-          show={showDeleteEvent}
-          onHide={handleCloseDeleteEvent}
-          // backdrop="static"
-          // keyboard={false}
-        >
+        <Modal show={showDeleteEvent} onHide={handleCloseDeleteEvent}>
           <DeleteEventModal close={handleCloseDeleteEvent} gameKnightEvent={deleteEvent!} refreshEvents={fetchEvents} />
         </Modal>
+        <Modal show={showTransferDevEvents} onHide={handleCloseTransferDevEvents} backdrop="static" keyboard={false}>
+          <TransferDevEventsModal close={handleCloseTransferDevEvents} events={events} refreshEvents={fetchEvents} />
+        </Modal>
+        {/* <Modal show={showTransferDevEvents} onHide={handleCloseMigrateEvents} backdrop="static" keyboard={false}>
+          <MigrateEventsModal
+            playersDict={playersDict}
+            players={players}
+            organizers={organizers}
+            hosts={hosts}
+            close={handleCloseMigrateEvents}
+            events={events}
+            refreshEvents={fetchEvents}
+          />
+        </Modal> */}
         <Authenticated given_name={["Colten"]}>
-          <TShoot events={events} playersDict={playersDict} players={players} organizers={organizers} hosts={hosts} />
+          <TShoot events={events} playersDict={playersDict!} players={players} organizers={organizers} hosts={hosts} />
         </Authenticated>
       </Authenticated>
 
@@ -162,6 +209,21 @@ export default function UpcomingEvents() {
             const spots_available = event.format == "Open" ? null : event.total_spots! - event.registered.length;
             // const date_obj = new Date(event.date);
             const event_date = formatIsoDate(event.date);
+
+            var registered_names: string[] = [];
+            var not_attending_names: string[] = [];
+
+            if ("migrated" in event && event.migrated && playersDict) {
+              console.log(event);
+              try {
+                registered_names = event.registered.map((player_id) => playersDict[player_id].attrib.given_name);
+                not_attending_names = event.not_attending.map((player_id) => playersDict[player_id].attrib.given_name);
+              } catch (error) {
+                console.error(event);
+                console.error(playersDict);
+                throw error;
+              }
+            }
             return (
               <Col key={index}>
                 <Card style={{ minWidth: "20rem", maxWidth: "40rem", height: "100%" }}>
@@ -172,109 +234,134 @@ export default function UpcomingEvents() {
                     <Card.Img variant="top" src={"/" + event.tbd_pic} />
                   )}
                   <Card.Body>
-                    <Card.Title key={index}>
-                      <Row>
-                        <Col className="d-flex justify-content-start">
-                          {event_date}
-                          {/* {event.date} */}
-                        </Col>
-                        <Col className="d-flex justify-content-end gap-1">
-                          <OverlayTrigger
-                            placement="left"
-                            delay={{ show: 250, hide: 400 }}
-                            overlay={
-                              <Tooltip id="button-tooltip">
-                                {event.format == "Open"
-                                  ? "Open event! Let " + event.host + " know if you can make it"
-                                  : spots_available + " spots remaining"}
-                              </Tooltip>
-                            }
-                          >
-                            <span key={index}>
-                              {event.format == "Open"
-                                ? "Open Event"
-                                : event.format == "Reserved" && spots_available! > 1
-                                ? "Spots: " + spots_available
-                                : event.format == "Reserved" && spots_available! < 1
-                                ? "Full"
-                                : ""}
-                              {/* <Badge bg={spots_available && spots_available > 2 ? "primary" : "danger"} key={index}>
+                    {event.migrated && playersDict ? (
+                      <>
+                        <Card.Title key={index}>
+                          <Row>
+                            <Col className="d-flex justify-content-start">{event_date}</Col>
+                            <Col className="d-flex justify-content-end gap-1">
+                              <OverlayTrigger
+                                placement="left"
+                                delay={{ show: 250, hide: 400 }}
+                                overlay={
+                                  <Tooltip id="button-tooltip">
+                                    {event.format == "Open"
+                                      ? "Open event! Let " + event.host + " know if you can make it"
+                                      : spots_available + " spots remaining"}
+                                  </Tooltip>
+                                }
+                              >
+                                <span key={index}>
+                                  {event.format == "Open"
+                                    ? "Open Event"
+                                    : event.format == "Reserved" && spots_available! > 1
+                                    ? "Spots: " + spots_available
+                                    : event.format == "Reserved" && spots_available! < 1
+                                    ? "Full"
+                                    : ""}
+                                </span>
+                              </OverlayTrigger>
+                            </Col>
+                          </Row>
+                        </Card.Title>
+                        <Card.Subtitle className="mb-2 text-muted">
+                          <Row>
+                            <Col className="d-flex align-items-center justify-content-start">{event.game}</Col>
+                          </Row>
+                        </Card.Subtitle>
+                        <Card.Text as="div">
+                          <div>Host: {playersDict[event.host].attrib.given_name}</div>
+                          {event.format != "Open" && (
+                            <>
+                              <div>Max Players: {event.total_spots}</div>
+                              {/* <div>Spots Remaining: {event.total_spots}</div> */}
+                            </>
+                          )}
+                          <div>
+                            Attending: {registered_names.join(", ")}
+                            {event.format == "Open" && <div>Not Attending: {not_attending_names.join(", ")}</div>}
+                          </div>
+                        </Card.Text>
+                      </>
+                    ) : (
+                      <>
+                        <Card.Title key={index}>
+                          <Row>
+                            <Col className="d-flex justify-content-start">
+                              {event_date}
+                              {/* {event.date} */}
+                            </Col>
+                            <Col className="d-flex justify-content-end gap-1">
+                              <OverlayTrigger
+                                placement="left"
+                                delay={{ show: 250, hide: 400 }}
+                                overlay={
+                                  <Tooltip id="button-tooltip">
+                                    {event.format == "Open"
+                                      ? "Open event! Let " + event.host + " know if you can make it"
+                                      : spots_available + " spots remaining"}
+                                  </Tooltip>
+                                }
+                              >
+                                <span key={index}>
+                                  {event.format == "Open"
+                                    ? "Open Event"
+                                    : event.format == "Reserved" && spots_available! > 1
+                                    ? "Spots: " + spots_available
+                                    : event.format == "Reserved" && spots_available! < 1
+                                    ? "Full"
+                                    : ""}
+                                  {/* <Badge bg={spots_available && spots_available > 2 ? "primary" : "danger"} key={index}>
                                 {spots_available}
                               </Badge> */}
-                            </span>
-                          </OverlayTrigger>
-                        </Col>
-                      </Row>
-                    </Card.Title>
-                    <Card.Subtitle className="mb-2 text-muted">
-                      <Row>
-                        <Col className="d-flex align-items-center justify-content-start">{event.game}</Col>
-                        {/* <Authenticated group={["player"]}>
-                          <Col xs="auto" className="d-flex align-items-center justify-content-end">
-                            RSVP:
-                          </Col>
-                          <Col xs="auto" className="d-flex align-items-center justify-content-end ">
-                            <ButtonGroup key={index} aria-label="RSVP">
-                              <Button
-                                size="sm"
-                                key={"yes" + index}
-                                variant={event.registered.includes(first_name) ? "success" : "outline-secondary"}
-                              >
-                                Yes
-                              </Button>
-                              <Button
-                                size="sm"
-                                key={"no" + index}
-                                variant={event.not_attending.includes(first_name) ? "secondary" : "outline-secondary"}
-                              >
-                                No
-                              </Button>
-                            </ButtonGroup>
-                          </Col>
-                        </Authenticated> */}
-                      </Row>
-                    </Card.Subtitle>
-                    <Card.Text as="div">
-                      <div>Host: {event.host}</div>
-                      {event.format != "Open" && (
-                        <>
-                          <div>Max Players: {event.total_spots}</div>
-                          {/* <div>Spots Remaining: {event.total_spots}</div> */}
-                        </>
-                      )}
-                      <div>
-                        Attending: {event.registered.join(", ")}
-                        {event.format == "Open" && <div>Not Attending: {event.not_attending.join(", ")}</div>}
-                      </div>
-                    </Card.Text>
+                                </span>
+                              </OverlayTrigger>
+                            </Col>
+                          </Row>
+                        </Card.Title>
+                        <Card.Subtitle className="mb-2 text-muted">
+                          <Row>
+                            <Col className="d-flex align-items-center justify-content-start">{event.game}</Col>
+                          </Row>
+                        </Card.Subtitle>
+                        <Card.Text as="div">
+                          <div>Host: {event.host}</div>
+                          {event.format != "Open" && (
+                            <>
+                              <div>Max Players: {event.total_spots}</div>
+                              {/* <div>Spots Remaining: {event.total_spots}</div> */}
+                            </>
+                          )}
+                          <div>
+                            Attending: {event.registered.join(", ")}
+                            {event.format == "Open" && <div>Not Attending: {event.not_attending.join(", ")}</div>}
+                          </div>
+                        </Card.Text>
+                      </>
+                    )}
                   </Card.Body>
                   <Authenticated group={["player"]}>
                     <Card.Footer>
                       <RsvpFooter event={event} index={index} />
-                      {/* <Row>
-                        <Col className="d-flex align-items-center justify-content-start">Can you make it?:</Col>
-                        <Col xs="auto" className="d-flex align-items-center justify-content-end ">
-                          <ButtonGroup key={index} aria-label="RSVP">
-                            <Button
-                              key={"yes" + index}
-                              variant={event.registered.includes(first_name) ? "success" : "outline-secondary"}
-                            >
-                              Yes
-                            </Button>
-                            <Button
-                              key={"no" + index}
-                              variant={event.not_attending.includes(first_name) ? "secondary" : "outline-secondary"}
-                            >
-                              No
-                            </Button>
-                          </ButtonGroup>
-                        </Col>
-                      </Row> */}
                     </Card.Footer>
                   </Authenticated>
                   <Authenticated group={["admin"]}>
                     <Card.Footer>
                       <Row key={"Row" + index}>
+                        {/* {event.migrated != undefined && event.migrated ? (
+                            <Col className="d-flex justify-content-start gap-2">
+                              <Button variant="success" />
+                            </Col>
+                          ) : (
+                            <Button
+                              size="sm"
+                              key={"Migrate" + index}
+                              variant="primary"
+                              onClick={() => handleShowManageEvent({ managedEvent: event, task: "Migrate" })}
+                            >
+                              Migrate
+                            </Button>
+                          )} */}
                         <Col className="d-flex justify-content-end gap-2">
                           <Button
                             size="sm"
@@ -329,6 +416,13 @@ function RsvpOverlay({ children }: RsvpOverlayProps) {
   );
 }
 
+export interface EventDict {
+  [key: ExistingGameKnightEvent["event_id"]]: ExistingGameKnightEvent;
+}
+
+export interface ExistingGameKnightEvent extends GameKnightEvent {
+  event_id: string;
+}
 export type GameKnightEvent = {
   event_id?: string;
   event_type?: string;
@@ -343,6 +437,8 @@ export type GameKnightEvent = {
   not_attending: string[];
   player_pool?: string[];
   tbd_pic?: string;
+  migrated?: boolean;
+  // attending: string[];
 };
 
 // Temp static placeholder

@@ -5,10 +5,12 @@ import axios from "axios";
 import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
+import { AccordionBody } from "react-bootstrap";
+import { PlayersDict } from "./EventManagement";
 
 interface Props {
   events: never[];
-  playersDict: Object;
+  playersDict: PlayersDict;
   players: string[];
   organizers: string[];
   hosts: string[];
@@ -30,23 +32,32 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
 
   // API Client
   const apiClient = axios.create({
-    baseURL: "https://myapp.dissonantconcord.com/api",
-    headers: tokens && {
-      Authorization: "Bearer " + tokens.idToken,
-    },
+    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
+    // headers: tokens && {
+    //   Authorization: "Bearer " + tokens.idToken,
+    // },
   });
 
   const [eventsTest, setEventsTest] = useState({});
   const fetchTest = async () => {
     try {
-      let response = await apiClient.get("/players", {
-        // params: {
-        //   event_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-        //   name: "Colten",
-        //   // name: "xxxx",
-        //   // date: "yyyy",
-        // },
+      let base_url = `https://${import.meta.env.VITE_API_URL}/api`;
+      let response = await axios.get(`${base_url}/events`, {
+        headers: tokens && {
+          Authorization: "Bearer " + tokens.idToken,
+        },
       });
+      // let response = await axios.post("/event", {
+      //   headers: tokens && {
+      //     Authorization: "Bearer " + tokens.idToken,
+      //   },
+      //   // params: {
+      //   //   event_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+      //   //   name: "Colten",
+      //   //   // name: "xxxx",
+      //   //   // date: "yyyy",
+      //   // },
+      // });
 
       console.log(response.data);
       setEventsTest(response.data);
@@ -95,6 +106,17 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
                 </Accordion.Body>
               </Accordion.Item>
             ))}
+            {/* <Accordion.Item eventKey="Vite_Vars">
+              <Accordion.Header>Vite Vars</Accordion.Header>
+              <AccordionBody>
+                <div>import.meta.env.DEV: {import.meta.env.DEV}</div>
+                <div>import.meta.env.PROD: {import.meta.env.PROD}</div>
+                <div>import.meta.env.VITE_API_URL: {import.meta.env.VITE_API_URL}</div>
+                <div>import.meta.env.MODE: {import.meta.env.MODE}</div>
+                <div>typeof import.meta.env.MODE: {typeof import.meta.env.MODE}</div>
+                <div>import.meta.env.VITE_EVENTS_TITLE: {import.meta.env.VITE_EVENTS_TITLE}</div>
+              </AccordionBody>
+            </Accordion.Item> */}
           </Accordion>
         </Accordion.Body>
       </Accordion.Item>
