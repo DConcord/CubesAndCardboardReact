@@ -6,10 +6,11 @@ import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import { AccordionBody } from "react-bootstrap";
+import { PlayersDict } from "./EventManagement";
 
 interface Props {
   events: never[];
-  playersDict: Object;
+  playersDict: PlayersDict;
   players: string[];
   organizers: string[];
   hosts: string[];
@@ -105,7 +106,7 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
                 </Accordion.Body>
               </Accordion.Item>
             ))}
-            <Accordion.Item eventKey="Vite_Vars">
+            {/* <Accordion.Item eventKey="Vite_Vars">
               <Accordion.Header>Vite Vars</Accordion.Header>
               <AccordionBody>
                 <div>import.meta.env.DEV: {import.meta.env.DEV}</div>
@@ -115,7 +116,7 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
                 <div>typeof import.meta.env.MODE: {typeof import.meta.env.MODE}</div>
                 <div>import.meta.env.VITE_EVENTS_TITLE: {import.meta.env.VITE_EVENTS_TITLE}</div>
               </AccordionBody>
-            </Accordion.Item>
+            </Accordion.Item> */}
           </Accordion>
         </Accordion.Body>
       </Accordion.Item>
