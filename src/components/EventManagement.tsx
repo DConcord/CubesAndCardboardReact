@@ -14,7 +14,6 @@ import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 import { GameKnightEvent, ExistingGameKnightEvent, EventDict, formatIsoDate } from "./Events";
 
-
 interface DeleteEventModalProps {
   close: () => void;
   refreshEvents: (use_api: boolean) => void;
@@ -182,127 +181,8 @@ export function TransferDevEventsModal({ close, events, refreshEvents }: Transfe
   );
 }
 
-// interface MigrateEventsModalProps {
-//   playerPool: string[];
-//   playersDict: Object;
-//   players: string[];
-//   organizers: string[];
-//   hosts: string[];
-//   close: () => void;
-//   events: ExistingGameKnightEvent[];
-//   refreshEvents: (use_api: boolean) => void;
-// }
-// export function MigrateEventsModal({
-//   playerPool,
-//   playersDict,
-//   players,
-//   organizers,
-//   hosts,
-//   close,
-//   events,
-//   refreshEvents,
-// }: MigrateEventsModalProps) {
-//   const { tokens } = usePasswordless();
-
-//   let eventDict: EventDict = {};
-//   for (let event of events) {
-//     eventDict[event["event_id"]] = event;
-//   }
-
-//   // Handle Transfer Event Checkboxes
-//   const [selectedTransferOptions, setSelectedTransferOptions] = useState<string[]>(Object.keys(eventDict));
-//   const handleOptionChange = (event: React.BaseSyntheticEvent) => {
-//     const event_id = event.target.value;
-//     const isChecked = event.target.checked;
-
-//     if (isChecked) {
-//       setSelectedTransferOptions([...selectedTransferOptions, event_id]);
-//     } else {
-//       setSelectedTransferOptions(selectedTransferOptions.filter((id) => id !== event_id));
-//     }
-//   };
-
-//   const apiClient = axios.create({
-//     baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
-//     headers: tokens && {
-//       Authorization: "Bearer " + tokens.idToken,
-//     },
-//   });
-//   const [waiting, setWaiting] = useState(false);
-//   const [errorMsg, setErrorMsg] = useState("");
-//   async function handleSubmit(event: React.BaseSyntheticEvent) {
-//     setWaiting(true);
-//     event.preventDefault();
-//     for (let event_id of selectedTransferOptions) {
-//       const body = eventDict[event_id];
-
-//       try {
-//         const response = await apiClient({
-//           method: "POST",
-//           url: "event",
-//           data: body,
-//         });
-//         console.log(response.data);
-//       } catch (error) {
-//         console.error(error);
-//         setErrorMsg(`Transfer Events failed`);
-//         // setWaiting(false);
-//       }
-//     }
-//     setWaiting(false);
-//     refreshEvents(true);
-//     if (errorMsg == "") close();
-//   }
-
-//   return (
-//     <Form onSubmit={handleSubmit}>
-//       <Modal.Header className="text-center">
-//         {/* Are you sure you want to  {formatIsoDate(gameKnightEvent.date)} event? */}
-//         Transfer selected events to the Dev DB:
-//       </Modal.Header>
-//       <Modal.Body className="text-center">
-//         {/* <Col med="true" style={{ minWidth: "18rem" }}> */}
-//         <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
-//           {events.map((event: ExistingGameKnightEvent, index: number) => (
-//             <Row key={index} style={{ minWidth: "min-content" }}>
-//               <Form.Check
-//                 // style={{ marginLeft: "10%" }}
-//                 key={index}
-//                 type="checkbox"
-//                 id={`option_${index}`}
-//                 label={`${event.date} (${event.event_id})`}
-//                 checked={selectedTransferOptions.includes(event.event_id)}
-//                 // {selectedNotAttendingOptions.includes(player)}
-//                 onChange={handleOptionChange}
-//                 value={event.event_id}
-//               />
-//             </Row>
-//           ))}
-//         </Form.Group>
-//         {/* </Col> */}
-//       </Modal.Body>
-//       <Modal.Footer>
-//         <span>{errorMsg}</span>
-//         <pre>{JSON.stringify(selectedTransferOptions, null, 2)}</pre>
-//         <Button variant="danger" type="submit" disabled={waiting}>
-//           {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
-//           Transfer
-//         </Button>
-//         <Button variant="secondary" onClick={close} disabled={waiting}>
-//           Cancel
-//         </Button>
-//       </Modal.Footer>
-//     </Form>
-//   );
-// }
 export type ManagedEventTask = "Clone" | "Create" | "Modify" | "Migrate";
-
-// export interface playerNameDict {
-//   [key: ExistingGameKnightEvent["given_name"]]: ExistingGameKnightEvent;
-// }
-
 interface ManageEventModalProps {
-  playerPool: string[];
   playersDict: PlayersDict;
   players: string[];
   organizers: string[];
@@ -314,7 +194,6 @@ interface ManageEventModalProps {
   events: GameKnightEvent[];
 }
 export function ManageEventModal({
-  playerPool,
   playersDict,
   players,
   organizers,
@@ -340,8 +219,10 @@ export function ManageEventModal({
           game: "TBD",
           bgg_id: undefined,
           total_spots: undefined,
-          registered: [],
+          attending: [],
           not_attending: [],
+          player_pool: [],
+          organizer_pool: [],
         }
   );
   const handleInput = (e: React.BaseSyntheticEvent) => {
@@ -360,7 +241,7 @@ export function ManageEventModal({
   // console.log(playerNameDict);
 
   // Handle Player Attending Checkboxes
-  const [selectedAttendingOptions, setSelectedAttendingOptions] = useState(eventForm.registered);
+  const [selectedAttendingOptions, setSelectedAttendingOptions] = useState(eventForm.attending);
   const handleOptionChange = (event: React.BaseSyntheticEvent) => {
     const optionId = event.target.value;
     const isChecked = event.target.checked;
@@ -381,17 +262,17 @@ export function ManageEventModal({
     const isChecked = event.target.checked;
     if (isChecked) {
       setSelectedNotAttendingOptions([...selectedNotAttendingOptions, optionId]);
-      // Remove from registered:
+      // Remove from attending:
       setSelectedAttendingOptions(selectedAttendingOptions.filter((id) => id !== optionId));
     } else {
       setSelectedNotAttendingOptions(selectedNotAttendingOptions.filter((id) => id !== optionId));
     }
   };
 
-  // when selectedAttendingOptions changes, update eventForm.registered
+  // when selectedAttendingOptions changes, update eventForm.attending
   // when selectedNotAttendingOptions changes, update eventForm.not_attending
   useEffect(() => {
-    setEventForm({ ...eventForm, registered: selectedAttendingOptions, not_attending: selectedNotAttendingOptions });
+    setEventForm({ ...eventForm, attending: selectedAttendingOptions, not_attending: selectedNotAttendingOptions });
   }, [selectedAttendingOptions, selectedNotAttendingOptions]);
 
   const [waiting, setWaiting] = useState(false);
@@ -410,7 +291,7 @@ export function ManageEventModal({
     if (task == "Clone") delete body.event_id;
     if (body.total_spots == null) body.total_spots = undefined;
     if (body.bgg_id == null) body.bgg_id = undefined;
-    if (!body.event_type) body.event_type = "GameKnight";
+    // if (!body.event_type) body.event_type = "GameKnight";
     if (body.game == "TBD" && gameKnightEvent && gameKnightEvent.tbd_pic && task !== "Clone") {
       body.tbd_pic = gameKnightEvent.tbd_pic;
     } else if (body.game == "TBD" && (!body.tbd_pic || body.tbd_pic != "")) {
@@ -425,12 +306,12 @@ export function ManageEventModal({
     } else if (body.game !== "TBD" && body.tbd_pic) body.tbd_pic = "";
 
     if (task == "Migrate") {
-      let new_registered = [];
-      for (let name of body.registered) {
-        if (name in playerNameDict) new_registered.push(playerNameDict[name]);
+      let new_attending = [];
+      for (let name of body.attending) {
+        if (name in playerNameDict) new_attending.push(playerNameDict[name]);
       }
-      console.log({ registered: body.registered, new_registered: new_registered });
-      body.registered = new_registered;
+      console.log({ attending: body.attending, new_attending: new_attending });
+      body.attending = new_attending;
 
       let new_not_attending = [];
       for (let name of body.not_attending) {
@@ -479,303 +360,152 @@ export function ManageEventModal({
   return (
     <Form onSubmit={handleSubmit}>
       <Modal.Body className="text-center">
-        {gameKnightEvent && gameKnightEvent.migrated == true ? (
-          <Row>
-            <Col med="true" style={{ minWidth: "13rem" }}>
-              <FloatingLabel controlId="host" label="Host" className="mb-3">
-                <Form.Select
-                  aria-label="Choose Host"
-                  onChange={handleInput}
-                  defaultValue={task == "Modify" || task == "Clone" ? eventForm.host : "default"}
-                >
-                  <option hidden disabled value="default">
-                    {" "}
-                    -- choose a host --{" "}
+        <Row>
+          <Col med="true" style={{ minWidth: "13rem" }}>
+            <FloatingLabel controlId="host" label="Host" className="mb-3">
+              <Form.Select
+                aria-label="Choose Host"
+                onChange={handleInput}
+                defaultValue={task == "Modify" || task == "Clone" ? eventForm.host : "default"}
+              >
+                <option hidden disabled value="default">
+                  {" "}
+                  -- choose a host --{" "}
+                </option>
+                {hosts.map((player_id: string, index: number) => (
+                  <option key={index} value={player_id}>
+                    {playersDict[player_id].attrib.given_name}
                   </option>
-                  {hosts.map((player_id: string, index: number) => (
-                    <option key={index} value={player_id}>
-                      {playersDict[player_id].attrib.given_name}
-                    </option>
-                  ))}
-                </Form.Select>
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "8rem", maxWidth: "11rem" }}>
-              <FloatingLabel controlId="date" label="Date">
-                <Form.Control
-                  type="date"
-                  onChange={handleInput}
-                  defaultValue={task == "Modify" || task == "Clone" ? eventForm.date : ""}
-                />
-              </FloatingLabel>
-            </Col>
+                ))}
+              </Form.Select>
+            </FloatingLabel>
+          </Col>
+          <Col med="true" style={{ minWidth: "8rem", maxWidth: "11rem" }}>
+            <FloatingLabel controlId="date" label="Date">
+              <Form.Control
+                type="date"
+                onChange={handleInput}
+                defaultValue={task == "Modify" || task == "Clone" ? eventForm.date : ""}
+              />
+            </FloatingLabel>
+          </Col>
 
-            <Col med="true" style={{ minWidth: "13rem" }}>
-              <FloatingLabel controlId="game" label="Game" className="mb-3">
-                <Form.Control
-                  as="textarea"
-                  onChange={handleInput}
-                  defaultValue={task == "Modify" || task == "Clone" ? eventForm.game : "TBD"}
-                  // onChange={(e) => setGame(e.target.value)}
-                />
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem" }}>
-              <FloatingLabel controlId="bgg_id" label="BGG ID" className="mb-3">
-                <Form.Control
-                  type="number"
-                  disabled={eventForm.game == "TBD"}
-                  onChange={handleInput}
-                  defaultValue={
-                    (task == "Modify" || task == "Clone") && eventForm.bgg_id ? eventForm.bgg_id : undefined
-                  }
-                />
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "13rem" }}>
-              <FloatingLabel controlId="format" label="Format" className="mb-3">
-                <Form.Select
-                  aria-label="Choose Format"
-                  onChange={handleInput}
-                  defaultValue={task == "Modify" || task == "Clone" ? eventForm.format : "default"}
-                >
-                  <option hidden disabled value="default">
-                    {" "}
-                    -- choose the format --{" "}
+          <Col med="true" style={{ minWidth: "13rem" }}>
+            <FloatingLabel controlId="game" label="Game" className="mb-3">
+              <Form.Control
+                as="textarea"
+                onChange={handleInput}
+                defaultValue={task == "Modify" || task == "Clone" ? eventForm.game : "TBD"}
+                // onChange={(e) => setGame(e.target.value)}
+              />
+            </FloatingLabel>
+          </Col>
+          <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem" }}>
+            <FloatingLabel controlId="bgg_id" label="BGG ID" className="mb-3">
+              <Form.Control
+                type="number"
+                disabled={eventForm.game == "TBD"}
+                onChange={handleInput}
+                defaultValue={(task == "Modify" || task == "Clone") && eventForm.bgg_id ? eventForm.bgg_id : undefined}
+              />
+            </FloatingLabel>
+          </Col>
+          <Col med="true" style={{ minWidth: "13rem" }}>
+            <FloatingLabel controlId="format" label="Format" className="mb-3">
+              <Form.Select
+                aria-label="Choose Format"
+                onChange={handleInput}
+                defaultValue={task == "Modify" || task == "Clone" ? eventForm.format : "default"}
+              >
+                <option hidden disabled value="default">
+                  {" "}
+                  -- choose the format --{" "}
+                </option>
+                <option value="Open">Open</option>
+                <option value="Reserved">Reserved</option>
+                <option value="Private">Private</option>
+              </Form.Select>
+            </FloatingLabel>
+          </Col>
+          <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem" }}>
+            <FloatingLabel controlId="total_spots" label="Total Spots" className="mb-3">
+              <Form.Control
+                disabled={eventForm.format == "Open"}
+                onChange={handleInput}
+                defaultValue={
+                  (task == "Modify" || task == "Clone") && eventForm.total_spots ? eventForm.total_spots : undefined
+                }
+              />
+            </FloatingLabel>
+          </Col>
+          <Col med="true" style={{ minWidth: "18rem" }}>
+            <Form.Group controlId="chooseAttendingPlayers" className="mb-3">
+              <Form.Label aria-label="Choose Attending Players">Choose Attending Players</Form.Label>
+              <Row>
+                {players.map((player_id: string, index: number) => (
+                  <Col key={player_id} style={{ minWidth: "min-content" }}>
+                    <Form.Check
+                      // style={{ marginLeft: "10%" }}
+                      key={index}
+                      type="checkbox"
+                      id={`option_${index}`}
+                      label={playersDict[player_id].attrib.given_name}
+                      checked={selectedAttendingOptions.includes(player_id)}
+                      onChange={handleOptionChange}
+                      value={player_id}
+                    />
+                  </Col>
+                ))}
+              </Row>
+            </Form.Group>
+          </Col>
+          <Col med="true" style={{ minWidth: "18rem" }}>
+            <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
+              <Form.Label aria-label="Choose Not Attending Players">Choose Not Attending Players</Form.Label>
+              <Row>
+                {players.map((player_id: string, index: number) => (
+                  <Col key={index} style={{ minWidth: "min-content" }}>
+                    <Form.Check
+                      // style={{ marginLeft: "10%" }}
+                      key={index}
+                      type="checkbox"
+                      id={`option_${index}`}
+                      label={playersDict[player_id].attrib.given_name}
+                      checked={selectedNotAttendingOptions.includes(player_id)}
+                      onChange={handleNAOptionChange}
+                      value={player_id}
+                    />
+                  </Col>
+                ))}
+              </Row>
+            </Form.Group>
+          </Col>
+          <Col med="true" style={{ minWidth: "13rem" }}>
+            <FloatingLabel controlId="organizer" label="Organizer" className="mb-3">
+              <Form.Select
+                aria-label="Choose Organizer (manually for now)"
+                onChange={handleInput}
+                defaultValue={
+                  task == "Modify" || task == "Clone"
+                    ? eventForm.organizer == ""
+                      ? "default"
+                      : eventForm.organizer
+                    : "default"
+                }
+              >
+                <option hidden disabled value="default">
+                  {" "}
+                  -- choose an organizer --{" "}
+                </option>
+                {organizers.map((player_id: string, index: number) => (
+                  <option key={index} value={player_id}>
+                    {playersDict[player_id].attrib.given_name}
                   </option>
-                  <option value="Open">Open</option>
-                  <option value="Reserved">Reserved</option>
-                </Form.Select>
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem" }}>
-              <FloatingLabel controlId="total_spots" label="Total Spots" className="mb-3">
-                <Form.Control
-                  disabled={eventForm.format == "Open"}
-                  onChange={handleInput}
-                  defaultValue={
-                    (task == "Modify" || task == "Clone") && eventForm.total_spots ? eventForm.total_spots : undefined
-                  }
-                />
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "18rem" }}>
-              <Form.Group controlId="chooseAttendingPlayers" className="mb-3">
-                <Form.Label aria-label="Choose Attending Players">Choose Attending Players</Form.Label>
-                <Row>
-                  {players.map((player_id: string, index: number) => (
-                    <Col key={player_id} style={{ minWidth: "min-content" }}>
-                      <Form.Check
-                        // style={{ marginLeft: "10%" }}
-                        key={index}
-                        type="checkbox"
-                        id={`option_${index}`}
-                        label={playersDict[player_id].attrib.given_name}
-                        checked={selectedAttendingOptions.includes(player_id)}
-                        onChange={handleOptionChange}
-                        value={player_id}
-                      />
-                    </Col>
-                  ))}
-                </Row>
-              </Form.Group>
-            </Col>
-            <Col med="true" style={{ minWidth: "18rem" }}>
-              <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
-                <Form.Label aria-label="Choose Not Attending Players">Choose Not Attending Players</Form.Label>
-                <Row>
-                  {players.map((player_id: string, index: number) => (
-                    <Col key={index} style={{ minWidth: "min-content" }}>
-                      <Form.Check
-                        // style={{ marginLeft: "10%" }}
-                        key={index}
-                        type="checkbox"
-                        id={`option_${index}`}
-                        label={playersDict[player_id].attrib.given_name}
-                        checked={selectedNotAttendingOptions.includes(player_id)}
-                        onChange={handleNAOptionChange}
-                        value={player_id}
-                      />
-                    </Col>
-                  ))}
-                </Row>
-              </Form.Group>
-            </Col>
-            <Col med="true" style={{ minWidth: "13rem" }}>
-              <FloatingLabel controlId="organizer" label="Organizer" className="mb-3">
-                <Form.Select
-                  aria-label="Choose Organizer (manually for now)"
-                  onChange={handleInput}
-                  defaultValue={
-                    task == "Modify" || task == "Clone"
-                      ? eventForm.organizer == ""
-                        ? "default"
-                        : eventForm.organizer
-                      : "default"
-                  }
-                >
-                  <option hidden disabled value="default">
-                    {" "}
-                    -- choose an organizer --{" "}
-                  </option>
-                  {organizers.map((player_id: string, index: number) => (
-                    <option key={index} value={player_id}>
-                      {playersDict[player_id].attrib.given_name}
-                    </option>
-                  ))}
-                </Form.Select>
-              </FloatingLabel>
-            </Col>
-          </Row>
-        ) : (
-          <Row>
-            <Col med="true" style={{ minWidth: "13rem" }}>
-              <FloatingLabel controlId="host" label="Host" className="mb-3">
-                <Form.Select
-                  aria-label="Choose Host"
-                  onChange={handleInput}
-                  defaultValue={task == "Modify" || task == "Clone" ? eventForm.host : "default"}
-                >
-                  <option hidden disabled value="default">
-                    {" "}
-                    -- choose a host --{" "}
-                  </option>
-                  {playerPool.map((player: string, index: number) => (
-                    <option key={index} value={player}>
-                      {player}
-                    </option>
-                  ))}
-                </Form.Select>
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "8rem", maxWidth: "11rem" }}>
-              <FloatingLabel controlId="date" label="Date">
-                <Form.Control
-                  type="date"
-                  onChange={handleInput}
-                  defaultValue={task == "Modify" || task == "Clone" ? eventForm.date : ""}
-                />
-              </FloatingLabel>
-            </Col>
-
-            <Col med="true" style={{ minWidth: "13rem" }}>
-              <FloatingLabel controlId="game" label="Game" className="mb-3">
-                <Form.Control
-                  as="textarea"
-                  onChange={handleInput}
-                  defaultValue={task == "Modify" || task == "Clone" ? eventForm.game : "TBD"}
-                  // onChange={(e) => setGame(e.target.value)}
-                />
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem" }}>
-              <FloatingLabel controlId="bgg_id" label="BGG ID" className="mb-3">
-                <Form.Control
-                  type="number"
-                  disabled={eventForm.game == "TBD"}
-                  onChange={handleInput}
-                  defaultValue={
-                    (task == "Modify" || task == "Clone") && eventForm.bgg_id ? eventForm.bgg_id : undefined
-                  }
-                />
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "13rem" }}>
-              <FloatingLabel controlId="format" label="Format" className="mb-3">
-                <Form.Select
-                  aria-label="Choose Format"
-                  onChange={handleInput}
-                  defaultValue={task == "Modify" || task == "Clone" ? eventForm.format : "default"}
-                >
-                  <option hidden disabled value="default">
-                    {" "}
-                    -- choose the format --{" "}
-                  </option>
-                  <option value="Open">Open</option>
-                  <option value="Reserved">Reserved</option>
-                </Form.Select>
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem" }}>
-              <FloatingLabel controlId="total_spots" label="Total Spots" className="mb-3">
-                <Form.Control
-                  disabled={eventForm.format == "Open"}
-                  onChange={handleInput}
-                  defaultValue={
-                    (task == "Modify" || task == "Clone") && eventForm.total_spots ? eventForm.total_spots : undefined
-                  }
-                />
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "18rem" }}>
-              <Form.Group controlId="chooseAttendingPlayers" className="mb-3">
-                <Form.Label aria-label="Choose Attending Players">Choose Attending Players</Form.Label>
-                <Row>
-                  {playerPool.map((player: string, index: number) => (
-                    <Col key={player} style={{ minWidth: "min-content" }}>
-                      <Form.Check
-                        // style={{ marginLeft: "10%" }}
-                        key={index}
-                        type="checkbox"
-                        id={`option_${index}`}
-                        label={player}
-                        checked={selectedAttendingOptions.includes(player)}
-                        onChange={handleOptionChange}
-                        value={player}
-                      />
-                    </Col>
-                  ))}
-                </Row>
-              </Form.Group>
-            </Col>
-            <Col med="true" style={{ minWidth: "18rem" }}>
-              <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
-                <Form.Label aria-label="Choose Not Attending Players">Choose Not Attending Players</Form.Label>
-                <Row>
-                  {playerPool.map((player: string, index: number) => (
-                    <Col key={index} style={{ minWidth: "min-content" }}>
-                      <Form.Check
-                        // style={{ marginLeft: "10%" }}
-                        key={index}
-                        type="checkbox"
-                        id={`option_${index}`}
-                        label={player}
-                        checked={selectedNotAttendingOptions.includes(player)}
-                        onChange={handleNAOptionChange}
-                        value={player}
-                      />
-                    </Col>
-                  ))}
-                </Row>
-              </Form.Group>
-            </Col>
-            <Col med="true" style={{ minWidth: "13rem" }}>
-              <FloatingLabel controlId="organizer" label="Organizer" className="mb-3">
-                <Form.Select
-                  aria-label="Choose Organizer (manually for now)"
-                  onChange={handleInput}
-                  defaultValue={
-                    task == "Modify" || task == "Clone"
-                      ? eventForm.organizer == ""
-                        ? "default"
-                        : eventForm.organizer
-                      : "default"
-                  }
-                >
-                  <option hidden disabled value="default">
-                    {" "}
-                    -- choose an organizer --{" "}
-                  </option>
-                  {playerPool.map((player: string, index: number) => (
-                    <option key={index} value={player}>
-                      {player}
-                    </option>
-                  ))}
-                </Form.Select>
-              </FloatingLabel>
-            </Col>
-          </Row>
-        )}
+                ))}
+              </Form.Select>
+            </FloatingLabel>
+          </Col>
+        </Row>
       </Modal.Body>
       <Modal.Footer>
         {/* <pre>{timeDiff}</pre> */}
@@ -805,7 +535,7 @@ export function RsvpFooter({ event, index }: RsvpFooterProps) {
   const handleYes = () => {
     // const body = {
     //   event_id: event.event_id,
-    //   registered: [String(tokensParsed.idToken.given_name)],
+    //   attending: [String(tokensParsed.idToken.given_name)],
     //   not_attending: [],
     // };
     // apiClient({
@@ -830,7 +560,7 @@ export function RsvpFooter({ event, index }: RsvpFooterProps) {
       <Col className="d-flex align-items-center justify-content-start">Can you make it?:</Col>
       <Col xs="auto" className="d-flex align-items-center justify-content-end ">
         <ButtonGroup key={index} aria-label="RSVP">
-          <Button key={"yes" + index} variant={event.registered.includes(player_id) ? "success" : "outline-secondary"}>
+          <Button key={"yes" + index} variant={event.attending.includes(player_id) ? "success" : "outline-secondary"}>
             Yes
           </Button>
           <Button
