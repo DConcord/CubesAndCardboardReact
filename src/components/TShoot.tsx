@@ -124,5 +124,7 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
         </Accordion.Item>
       </Accordion>
     );
+  } else {
+    return <></>;
   }
 }
