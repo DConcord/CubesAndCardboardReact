@@ -452,8 +452,10 @@ export function ManageEventModal({
                       label={playersDict[player_id].attrib.given_name}
                       checked={selectedAttendingOptions.includes(player_id)}
                       disabled={
+                        // !gameKnightEvent!.player_pool.includes(player_id) &&
+                        // !gameKnightEvent!.organizer_pool.includes(player_id)
                         !gameKnightEvent!.player_pool.includes(player_id) &&
-                        !gameKnightEvent!.organizer_pool.includes(player_id)
+                        !(gameKnightEvent!.organizer_pool.includes(player_id) && gameKnightEvent!.organizer == "")
                       }
                       onChange={handleOptionChange}
                       value={player_id}
@@ -532,46 +534,122 @@ export function ManageEventModal({
 interface RsvpFooterProps {
   event: GameKnightEvent;
   index: number;
+  refreshEvents: (use_api: boolean) => void;
 }
-export function RsvpFooter({ event, index }: RsvpFooterProps) {
+export function RsvpFooter({ event, index, refreshEvents }: RsvpFooterProps) {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
-
-  const handleYes = () => {
-    // const body = {
-    //   event_id: event.event_id,
-    //   attending: [String(tokensParsed.idToken.given_name)],
-    //   not_attending: [],
-    // };
-    // apiClient({
-    //   headers: tokens && {
-    //     Authorization: "Bearer " + tokens.idToken,
-    //   },
-    //   method: "post",
-    //   url: "event/rsvp",
-    //   data: body,
-    // }).then((response) => {
-    //   console.log(response.data);
-    //   refreshEvents();
-    // });
-  };
+  const apiClient = axios.create({
+    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
+    headers: tokens && {
+      Authorization: "Bearer " + tokens.idToken,
+    },
+  });
 
   let player_id = "";
   if (signInStatus === "SIGNED_IN" && tokensParsed) {
     player_id = String(tokensParsed.idToken.sub);
+  }
+
+  const [yesWaiting, setYesWaiting] = useState(false);
+  const [noWaiting, setNoWaiting] = useState(false);
+  const handleYes = () => {
+    setYesWaiting(true);
+    if (event.attending.includes(player_id)) {
+      const body = {
+        event_id: event.event_id,
+        user_id: player_id,
+        rsvp: "attending",
+      };
+      send({ params: body, method: "DELETE" });
+    } else {
+      const body = {
+        event_id: event.event_id,
+        user_id: player_id,
+        rsvp: "attending",
+      };
+      send({ body: body, method: "POST" });
+    }
+  };
+  const handleNo = () => {
+    setNoWaiting(true);
+    if (event.not_attending.includes(player_id)) {
+      const body = {
+        event_id: event.event_id,
+        user_id: player_id,
+        rsvp: "not_attending",
+      };
+      send({ params: body, method: "DELETE" });
+      // send(body, "DELETE");
+    } else {
+      const body = {
+        event_id: event.event_id,
+        user_id: player_id,
+        rsvp: "not_attending",
+      };
+      send({ body: body, method: "POST" });
+    }
+  };
+
+  interface SendProps {
+    body?: Object | null;
+    params?: Object | null;
+    method: string;
+  }
+  const send = async ({ body = null, params = null, method }: SendProps) => {
+    const response = await apiClient({
+      headers: tokens && {
+        Authorization: "Bearer " + tokens.idToken,
+      },
+      params: params,
+      method: method,
+      url: "event/rsvp",
+      data: body,
+    });
+    console.log(response.data);
+    refreshEvents(true);
+    setYesWaiting(false);
+    setNoWaiting(false);
+  };
+
+  if (!event.player_pool.includes(player_id) && !(event.organizer_pool.includes(player_id) && event.organizer == "")) {
+    return (
+      <Row>
+        <Col className="d-flex align-items-center">
+          You have a previous RSVP, but all remaining slots will open at midnight the Sunday prior to the event!
+        </Col>
+      </Row>
+    );
   }
   return (
     <Row>
       <Col className="d-flex align-items-center justify-content-start">Can you make it?:</Col>
       <Col xs="auto" className="d-flex align-items-center justify-content-end ">
         <ButtonGroup key={index} aria-label="RSVP">
-          <Button key={"yes" + index} variant={event.attending.includes(player_id) ? "success" : "outline-secondary"}>
-            Yes
+          <Button
+            onClick={handleYes}
+            key={"yes" + index}
+            variant={event.attending.includes(player_id) ? "success" : "outline-secondary"}
+            disabled={
+              noWaiting ||
+              yesWaiting ||
+              (!event.player_pool.includes(player_id) &&
+                !(event.organizer_pool.includes(player_id) && event.organizer == ""))
+            }
+          >
+            {yesWaiting ? <span className="spinner-grow spinner-grow-sm" role="status"></span> : "Yes"}
           </Button>
           <Button
+            onClick={handleNo}
             key={"no" + index}
             variant={event.not_attending.includes(player_id) ? "secondary" : "outline-secondary"}
+            disabled={
+              noWaiting ||
+              yesWaiting ||
+              (!event.player_pool.includes(player_id) &&
+                !(event.organizer_pool.includes(player_id) && event.organizer == ""))
+            }
           >
-            No
+            {noWaiting ? <span className="spinner-grow spinner-grow-sm " role="status"></span> : "No"}
           </Button>
         </ButtonGroup>
       </Col>
