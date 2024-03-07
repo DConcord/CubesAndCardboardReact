@@ -67,46 +67,48 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
     }
   };
 
-  return (
-    <Accordion>
-      <Accordion.Item eventKey="token">
-        <Accordion.Header>TokenInfo</Accordion.Header>
-        <Accordion.Body>
-          <Accordion>
-            <Accordion.Item eventKey="idToken">
-              <Accordion.Header>idToken</Accordion.Header>
-              <Accordion.Body>
-                <pre>{JSON.stringify(tokensParsed?.idToken, null, 2)}</pre>
-              </Accordion.Body>
-            </Accordion.Item>
-            <Accordion.Item eventKey="accessToken">
-              <Accordion.Header>accessToken</Accordion.Header>
-              <Accordion.Body>
-                <pre>{JSON.stringify(tokensParsed?.accessToken, null, 2)}</pre>
-              </Accordion.Body>
-            </Accordion.Item>
-            <Accordion.Item eventKey="raw">
-              <Accordion.Header>raw</Accordion.Header>
-              <Accordion.Body>
-                <pre>{JSON.stringify(tokens, null, 2)}</pre>
-              </Accordion.Body>
-            </Accordion.Item>
-            <Accordion.Item eventKey="API">
-              <Accordion.Header>API Get</Accordion.Header>
-              <Accordion.Body>
-                <Button onClick={fetchTest}>Test</Button>
-                <pre>{JSON.stringify(eventsTest, null, 2)}</pre>
-              </Accordion.Body>
-            </Accordion.Item>
-            {Object.keys(data_types).map((type, index) => (
-              <Accordion.Item key={type} eventKey={type}>
-                <Accordion.Header>{type}</Accordion.Header>
+  if (signInStatus === "SIGNED_IN" && tokensParsed) {
+    return (
+      <Accordion>
+        <Accordion.Item eventKey="token">
+          <Accordion.Header>TokenInfo</Accordion.Header>
+          <Accordion.Body>
+            {"signInStatus: " + signInStatus}
+            <Accordion>
+              <Accordion.Item eventKey="idToken">
+                <Accordion.Header>idToken</Accordion.Header>
                 <Accordion.Body>
-                  <pre>{JSON.stringify(data_types[type as keyof typeof data_types], null, 2)}</pre>
+                  <pre>{JSON.stringify(tokensParsed.idToken, null, 2)}</pre>
                 </Accordion.Body>
               </Accordion.Item>
-            ))}
-            {/* <Accordion.Item eventKey="Vite_Vars">
+              <Accordion.Item eventKey="accessToken">
+                <Accordion.Header>accessToken</Accordion.Header>
+                <Accordion.Body>
+                  <pre>{JSON.stringify(tokensParsed.accessToken, null, 2)}</pre>
+                </Accordion.Body>
+              </Accordion.Item>
+              <Accordion.Item eventKey="raw">
+                <Accordion.Header>raw</Accordion.Header>
+                <Accordion.Body>
+                  <pre>{JSON.stringify(tokens, null, 2)}</pre>
+                </Accordion.Body>
+              </Accordion.Item>
+              <Accordion.Item eventKey="API">
+                <Accordion.Header>API Get</Accordion.Header>
+                <Accordion.Body>
+                  <Button onClick={fetchTest}>Test</Button>
+                  <pre>{JSON.stringify(eventsTest, null, 2)}</pre>
+                </Accordion.Body>
+              </Accordion.Item>
+              {Object.keys(data_types).map((type, index) => (
+                <Accordion.Item key={type} eventKey={type}>
+                  <Accordion.Header>{type}</Accordion.Header>
+                  <Accordion.Body>
+                    <pre>{JSON.stringify(data_types[type as keyof typeof data_types], null, 2)}</pre>
+                  </Accordion.Body>
+                </Accordion.Item>
+              ))}
+              {/* <Accordion.Item eventKey="Vite_Vars">
               <Accordion.Header>Vite Vars</Accordion.Header>
               <AccordionBody>
                 <div>import.meta.env.DEV: {import.meta.env.DEV}</div>
@@ -117,9 +119,10 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
                 <div>import.meta.env.VITE_EVENTS_TITLE: {import.meta.env.VITE_EVENTS_TITLE}</div>
               </AccordionBody>
             </Accordion.Item> */}
-          </Accordion>
-        </Accordion.Body>
-      </Accordion.Item>
-    </Accordion>
-  );
+            </Accordion>
+          </Accordion.Body>
+        </Accordion.Item>
+      </Accordion>
+    );
+  }
 }

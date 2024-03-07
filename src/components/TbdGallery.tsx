@@ -17,7 +17,7 @@ export default function TbdGallery() {
             <h2>TBD Image Gallery</h2>
           </Col>
           <Col style={{ textAlign: "right" }}>
-            <Button variant="secondary" onClick={() => navigate("/")}>
+            <Button size="sm" variant="secondary" onClick={() => navigate("/")}>
               Close Gallery
             </Button>
           </Col>
