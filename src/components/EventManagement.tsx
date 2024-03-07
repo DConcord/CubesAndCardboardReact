@@ -451,6 +451,10 @@ export function ManageEventModal({
                       id={`option_${index}`}
                       label={playersDict[player_id].attrib.given_name}
                       checked={selectedAttendingOptions.includes(player_id)}
+                      disabled={
+                        !gameKnightEvent!.player_pool.includes(player_id) &&
+                        !gameKnightEvent!.organizer_pool.includes(player_id)
+                      }
                       onChange={handleOptionChange}
                       value={player_id}
                     />
