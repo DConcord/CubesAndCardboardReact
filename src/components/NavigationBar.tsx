@@ -93,7 +93,7 @@ export default function NavigationBar() {
                 ) : (
                   <>
                     {tokensParsed && <Navbar.Text>Hello, {String(tokensParsed?.idToken.given_name)}</Navbar.Text>}
-                    <Button variant="primary" onClick={signOut}>
+                    <Button size="sm" variant="primary" onClick={signOut}>
                       Sign Out
                     </Button>
                     <div />
@@ -101,6 +101,7 @@ export default function NavigationBar() {
                       variant="secondary"
                       onClick={toggleShowAuthenticatorManager}
                       disabled={showAuthenticatorManager}
+                      size="sm"
                     >
                       Manage Credentials
                     </Button>

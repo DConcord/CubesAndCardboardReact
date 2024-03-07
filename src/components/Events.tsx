@@ -27,7 +27,6 @@ import {
   PlayersDict,
 } from "./EventManagement";
 import Authenticated from "./Authenticated";
-import { Badge } from "react-bootstrap";
 
 export default function UpcomingEvents() {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
@@ -51,10 +50,11 @@ export default function UpcomingEvents() {
   //   use_api?: boolean;
   // }
   // async function fetchEvents({ use_api = false }: fetchEventsProps) {
-  async function fetchEvents(use_api = false) {
+  // async function fetchEvents(use_api = false) {
+  const fetchEvents = async (use_api = false) => {
     // if (use_api === undefined) use_api = false;
     let response;
-    if (tokens || use_api) {
+    if (events.length !== 0 && signInStatus === "SIGNED_IN" && use_api) {
       // If Authenticated, pull events from the API
       response = await apiClient.get("events", {});
     } else {
@@ -62,16 +62,17 @@ export default function UpcomingEvents() {
       response = await axios.get(`https://${import.meta.env.VITE_API_URL}/events.json`);
     }
     setEvents(response.data);
-  }
+  };
 
   const [playersDict, setPlayersDict] = useState<PlayersDict>();
   const [players, setPlayers] = useState([]);
   const [organizers, setOrganizers] = useState([]);
   const [hosts, setHosts] = useState([]);
-  const fetchPlayersGroups = async () => {
+  const fetchPlayersGroups = async (use_api = false) => {
     let response;
-    if (tokensParsed) {
+    if (players.length != 0 && signInStatus === "SIGNED_IN" && use_api) {
       // If Authenticated, pull players from the API
+      console.log(players.length, players, signInStatus);
       response = await apiClient.get("players", {});
     } else {
       // Otherwise pull from the public players_groups.json
@@ -89,7 +90,7 @@ export default function UpcomingEvents() {
   useEffect(() => {
     // fetchEvents({ use_api: false });
     fetchEvents(false);
-    fetchPlayersGroups();
+    fetchPlayersGroups(false);
   }, [tokens]);
 
   // Create "Delete Event" PopUp ("Modal")
@@ -143,19 +144,19 @@ export default function UpcomingEvents() {
               import.meta.env.VITE_API_URL == "eventsdev.dissonantconcord.com" && (
                 <>
                   <Col xs="auto" style={{ textAlign: "right" }}>
-                    <Button variant="secondary" onClick={handleShowTransferDevEvents}>
+                    <Button size="sm" variant="secondary" onClick={handleShowTransferDevEvents}>
                       Transfer
                     </Button>
                   </Col>
                 </>
               )}
             <Col xs="auto" style={{ textAlign: "right" }}>
-              <Button variant="primary" onClick={() => handleShowManageEvent({ task: "Create" })}>
+              <Button size="sm" variant="primary" onClick={() => handleShowManageEvent({ task: "Create" })}>
                 Create Event
               </Button>
             </Col>
             <Col xs="auto" style={{ textAlign: "right" }}>
-              <Button variant="secondary" onClick={() => navigate("/tbd")}>
+              <Button size="sm" variant="secondary" onClick={() => navigate("/tbd")}>
                 TBD Gallery
               </Button>
             </Col>
@@ -202,10 +203,11 @@ export default function UpcomingEvents() {
       <Container fluid>
         <Row xs={1} sm={2} md={2} lg={3} xl={4} xxl={4} className="g-4 justify-content-center">
           {events.map((event: GameKnightEvent, index) => {
-            if (event.format == "Private" && !tokensParsed) {
+            if (event.format == "Private" && signInStatus !== "SIGNED_IN") {
               return null; // skip
             } else if (
               event.format == "Private" &&
+              signInStatus === "SIGNED_IN" &&
               tokensParsed &&
               event.player_pool.includes(tokensParsed.idToken.sub) == false
             ) {
