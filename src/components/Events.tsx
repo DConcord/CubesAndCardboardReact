@@ -47,7 +47,6 @@ export default function UpcomingEvents() {
   });
 
   const [events, setEvents] = useState([]);
-  const [playerPool, setPlayerPool] = useState<string[]>([]);
   // interface fetchEventsProps {
   //   use_api?: boolean;
   // }
@@ -63,8 +62,6 @@ export default function UpcomingEvents() {
       response = await axios.get(`https://${import.meta.env.VITE_API_URL}/events.json`);
     }
     setEvents(response.data);
-    console.log(response.data);
-    setPlayerPool(player_pool);
   }
 
   const [playersDict, setPlayersDict] = useState<PlayersDict>();
@@ -125,11 +122,11 @@ export default function UpcomingEvents() {
     setShowTransferDevEvents(true);
   };
 
-  const [showMigrateEvents, setShowMigrateEvents] = useState(false);
-  const handleCloseMigrateEvents = () => setShowMigrateEvents(false);
-  const handleShowMigrateEvents = () => {
-    setShowMigrateEvents(true);
-  };
+  // const [showMigrateEvents, setShowMigrateEvents] = useState(false);
+  // const handleCloseMigrateEvents = () => setShowMigrateEvents(false);
+  // const handleShowMigrateEvents = () => {
+  //   setShowMigrateEvents(true);
+  // };
 
   return (
     <>
@@ -168,7 +165,6 @@ export default function UpcomingEvents() {
       <Authenticated>
         <Modal show={showManageEvent} onHide={handleCloseManageEvent} backdrop="static" keyboard={false}>
           <ManageEventModal
-            playerPool={playerPool}
             playersDict={playersDict!}
             players={players}
             organizers={organizers}
@@ -206,194 +202,130 @@ export default function UpcomingEvents() {
       <Container fluid>
         <Row xs={1} sm={2} md={2} lg={3} xl={4} xxl={4} className="g-4 justify-content-center">
           {events.map((event: GameKnightEvent, index) => {
-            const spots_available = event.format == "Open" ? null : event.total_spots! - event.registered.length;
+            if (event.format == "Private" && !tokensParsed) {
+              return null; // skip
+            } else if (
+              event.format == "Private" &&
+              tokensParsed &&
+              event.player_pool.includes(tokensParsed.idToken.sub) == false
+            ) {
+              return null; // skip
+            }
+
+            const spots_available = event.format == "Open" ? null : event.total_spots! - event.attending.length;
             // const date_obj = new Date(event.date);
             const event_date = formatIsoDate(event.date);
 
-            var registered_names: string[] = [];
+            var attending_names: string[] = [];
             var not_attending_names: string[] = [];
 
-            if ("migrated" in event && event.migrated && playersDict) {
-              console.log(event);
+            if (playersDict) {
               try {
-                registered_names = event.registered.map((player_id) => playersDict[player_id].attrib.given_name);
+                attending_names = event.attending.map((player_id) => playersDict[player_id].attrib.given_name);
                 not_attending_names = event.not_attending.map((player_id) => playersDict[player_id].attrib.given_name);
               } catch (error) {
                 console.error(event);
                 console.error(playersDict);
                 throw error;
               }
-            }
-            return (
-              <Col key={index}>
-                <Card style={{ minWidth: "20rem", maxWidth: "40rem", height: "100%" }}>
-                  {event.bgg_id && event.bgg_id > 0 ? (
-                    <Card.Img variant="top" src={`https://${import.meta.env.VITE_API_URL}/${event.bgg_id}.png`} />
-                  ) : (
-                    // <Card.Img variant="top" src="/Game_TBD.png" />
-                    <Card.Img variant="top" src={"/" + event.tbd_pic} />
-                  )}
-                  <Card.Body>
-                    {event.migrated && playersDict ? (
-                      <>
-                        <Card.Title key={index}>
-                          <Row>
-                            <Col className="d-flex justify-content-start">{event_date}</Col>
-                            <Col className="d-flex justify-content-end gap-1">
-                              <OverlayTrigger
-                                placement="left"
-                                delay={{ show: 250, hide: 400 }}
-                                overlay={
-                                  <Tooltip id="button-tooltip">
-                                    {event.format == "Open"
-                                      ? "Open event! Let " + event.host + " know if you can make it"
-                                      : spots_available + " spots remaining"}
-                                  </Tooltip>
-                                }
-                              >
-                                <span key={index}>
-                                  {event.format == "Open"
-                                    ? "Open Event"
-                                    : event.format == "Reserved" && spots_available! > 1
-                                    ? "Spots: " + spots_available
-                                    : event.format == "Reserved" && spots_available! < 1
-                                    ? "Full"
-                                    : ""}
-                                </span>
-                              </OverlayTrigger>
-                            </Col>
-                          </Row>
-                        </Card.Title>
-                        <Card.Subtitle className="mb-2 text-muted">
-                          <Row>
-                            <Col className="d-flex align-items-center justify-content-start">{event.game}</Col>
-                          </Row>
-                        </Card.Subtitle>
-                        <Card.Text as="div">
-                          <div>Host: {playersDict[event.host].attrib.given_name}</div>
-                          {event.format != "Open" && (
-                            <>
-                              <div>Max Players: {event.total_spots}</div>
-                              {/* <div>Spots Remaining: {event.total_spots}</div> */}
-                            </>
-                          )}
-                          <div>
-                            Attending: {registered_names.join(", ")}
-                            {event.format == "Open" && <div>Not Attending: {not_attending_names.join(", ")}</div>}
-                          </div>
-                        </Card.Text>
-                      </>
+              return (
+                <Col key={index}>
+                  <Card style={{ minWidth: "20rem", maxWidth: "40rem", height: "100%" }}>
+                    {event.bgg_id && event.bgg_id > 0 ? (
+                      <Card.Img variant="top" src={`https://${import.meta.env.VITE_API_URL}/${event.bgg_id}.png`} />
                     ) : (
-                      <>
-                        <Card.Title key={index}>
-                          <Row>
-                            <Col className="d-flex justify-content-start">
-                              {event_date}
-                              {/* {event.date} */}
-                            </Col>
-                            <Col className="d-flex justify-content-end gap-1">
-                              <OverlayTrigger
-                                placement="left"
-                                delay={{ show: 250, hide: 400 }}
-                                overlay={
-                                  <Tooltip id="button-tooltip">
-                                    {event.format == "Open"
-                                      ? "Open event! Let " + event.host + " know if you can make it"
-                                      : spots_available + " spots remaining"}
-                                  </Tooltip>
-                                }
-                              >
-                                <span key={index}>
-                                  {event.format == "Open"
-                                    ? "Open Event"
-                                    : event.format == "Reserved" && spots_available! > 1
-                                    ? "Spots: " + spots_available
-                                    : event.format == "Reserved" && spots_available! < 1
-                                    ? "Full"
-                                    : ""}
-                                  {/* <Badge bg={spots_available && spots_available > 2 ? "primary" : "danger"} key={index}>
-                                {spots_available}
-                              </Badge> */}
-                                </span>
-                              </OverlayTrigger>
-                            </Col>
-                          </Row>
-                        </Card.Title>
-                        <Card.Subtitle className="mb-2 text-muted">
-                          <Row>
-                            <Col className="d-flex align-items-center justify-content-start">{event.game}</Col>
-                          </Row>
-                        </Card.Subtitle>
-                        <Card.Text as="div">
-                          <div>Host: {event.host}</div>
-                          {event.format != "Open" && (
-                            <>
-                              <div>Max Players: {event.total_spots}</div>
-                              {/* <div>Spots Remaining: {event.total_spots}</div> */}
-                            </>
-                          )}
-                          <div>
-                            Attending: {event.registered.join(", ")}
-                            {event.format == "Open" && <div>Not Attending: {event.not_attending.join(", ")}</div>}
-                          </div>
-                        </Card.Text>
-                      </>
+                      // <Card.Img variant="top" src="/Game_TBD.png" />
+                      <Card.Img variant="top" src={"/" + event.tbd_pic} />
                     )}
-                  </Card.Body>
-                  <Authenticated group={["player"]}>
-                    <Card.Footer>
-                      <RsvpFooter event={event} index={index} />
-                    </Card.Footer>
-                  </Authenticated>
-                  <Authenticated group={["admin"]}>
-                    <Card.Footer>
-                      <Row key={"Row" + index}>
-                        {/* {event.migrated != undefined && event.migrated ? (
-                            <Col className="d-flex justify-content-start gap-2">
-                              <Button variant="success" />
-                            </Col>
-                          ) : (
+                    <Card.Body>
+                      <Card.Title key={index}>
+                        <Row>
+                          <Col className="d-flex justify-content-start">{event_date}</Col>
+                          <Col className="d-flex justify-content-end gap-1">
+                            <OverlayTrigger
+                              placement="left"
+                              delay={{ show: 250, hide: 400 }}
+                              overlay={
+                                <Tooltip id="button-tooltip">
+                                  {event.format == "Open"
+                                    ? "Open event! Let " + event.host + " know if you can make it"
+                                    : spots_available + " spots remaining"}
+                                </Tooltip>
+                              }
+                            >
+                              <span key={index}>
+                                {event.format == "Open"
+                                  ? "Open Event"
+                                  : event.format == "Reserved" && spots_available! > 1
+                                  ? "Spots: " + spots_available
+                                  : event.format == "Reserved" && spots_available! < 1
+                                  ? "Full"
+                                  : event.format}
+                              </span>
+                            </OverlayTrigger>
+                          </Col>
+                        </Row>
+                      </Card.Title>
+                      <Card.Subtitle className="mb-2 text-muted">
+                        <Row>
+                          <Col className="d-flex align-items-center justify-content-start">{event.game}</Col>
+                        </Row>
+                      </Card.Subtitle>
+                      <Card.Text as="div">
+                        <div>Host: {playersDict[event.host].attrib.given_name}</div>
+                        {event.format != "Open" && (
+                          <>
+                            <div>Max Players: {event.total_spots}</div>
+                            {/* <div>Spots Remaining: {event.total_spots}</div> */}
+                          </>
+                        )}
+                        <div>
+                          Attending: {attending_names.join(", ")}
+                          {event.format == "Open" && <div>Not Attending: {not_attending_names.join(", ")}</div>}
+                        </div>
+                      </Card.Text>
+                    </Card.Body>
+                    <Authenticated group={["player"]}>
+                      <Card.Footer>
+                        <RsvpFooter event={event} index={index} />
+                      </Card.Footer>
+                    </Authenticated>
+                    <Authenticated group={["admin"]}>
+                      <Card.Footer>
+                        <Row key={"Row" + index}>
+                          <Col className="d-flex justify-content-end gap-2">
                             <Button
                               size="sm"
-                              key={"Migrate" + index}
+                              key={"Modify" + index}
                               variant="primary"
-                              onClick={() => handleShowManageEvent({ managedEvent: event, task: "Migrate" })}
+                              onClick={() => handleShowManageEvent({ managedEvent: event, task: "Modify" })}
                             >
-                              Migrate
+                              Modify
                             </Button>
-                          )} */}
-                        <Col className="d-flex justify-content-end gap-2">
-                          <Button
-                            size="sm"
-                            key={"Modify" + index}
-                            variant="primary"
-                            onClick={() => handleShowManageEvent({ managedEvent: event, task: "Modify" })}
-                          >
-                            Modify
-                          </Button>
-                          <Button
-                            size="sm"
-                            key={"Delete" + index}
-                            variant="danger"
-                            onClick={() => handleShowDeleteEvent({ deleteEvent: event })}
-                          >
-                            Delete
-                          </Button>
-                          <Button
-                            size="sm"
-                            key={"Clone" + index}
-                            variant="secondary"
-                            onClick={() => handleShowManageEvent({ managedEvent: event, task: "Clone" })}
-                          >
-                            Clone
-                          </Button>
-                        </Col>
-                      </Row>
-                    </Card.Footer>
-                  </Authenticated>
-                </Card>
-              </Col>
-            );
+                            <Button
+                              size="sm"
+                              key={"Delete" + index}
+                              variant="danger"
+                              onClick={() => handleShowDeleteEvent({ deleteEvent: event })}
+                            >
+                              Delete
+                            </Button>
+                            <Button
+                              size="sm"
+                              key={"Clone" + index}
+                              variant="secondary"
+                              onClick={() => handleShowManageEvent({ managedEvent: event, task: "Clone" })}
+                            >
+                              Clone
+                            </Button>
+                          </Col>
+                        </Row>
+                      </Card.Footer>
+                    </Authenticated>
+                  </Card>
+                </Col>
+              );
+            }
           })}
         </Row>
       </Container>
@@ -425,20 +357,21 @@ export interface ExistingGameKnightEvent extends GameKnightEvent {
 }
 export type GameKnightEvent = {
   event_id?: string;
-  event_type?: string;
+  event_type: string;
   date: string;
   host: string;
-  organizer?: string;
-  format: string;
+  organizer: string;
+  format: "Open" | "Reserved" | "Private";
   game: string;
   bgg_id?: number;
   total_spots?: number;
-  registered: string[];
+  registered?: string[];
+  attending: string[];
   not_attending: string[];
-  player_pool?: string[];
+  player_pool: string[];
+  organizer_pool: string[];
   tbd_pic?: string;
   migrated?: boolean;
-  // attending: string[];
 };
 
 // Temp static placeholder
