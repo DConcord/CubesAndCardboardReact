@@ -83,10 +83,11 @@ export default function NavigationBar() {
                         </div>
                       )
                     )}
-                    <Nav.Link onClick={handleShow} style={{ textDecoration: "none", color: "unset" }}>
+                    {/* <Nav.Link onClick={handleShow} style={{ textDecoration: "none", color: "unset" }}> */}
+                    <Button className="passwordless-link" onClick={handleShow} style={{ textDecoration: "none" }}>
                       Admin
-                    </Nav.Link>
-                    {/* <Button variant="secondary" onClick={handleShow} style={{ textDecoration: "none", color: "unset" }}>
+                    </Button>
+                    {/* <Button variant="link" onClick={handleShow} style={{ textDecoration: "none", color: "unset" }}>
                       Admin
                     </Button> */}
                   </>
