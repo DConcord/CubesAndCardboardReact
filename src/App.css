@@ -1,43 +1,32 @@
-#root {
-    max-width: 1280px;
-    margin: 0 auto;
-    padding: 2rem;
-    text-align: center;
-  }
-  
-  .logo {
-    height: 6em;
-    padding: 1.5em;
-    will-change: filter;
-    transition: filter 300ms;
-  }
-  .logo:hover {
-    filter: drop-shadow(0 0 2em #646cffaa);
-  }
-  .logo.react:hover {
-    filter: drop-shadow(0 0 2em #61dafbaa);
-  }
-  
-  @keyframes logo-spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  
-  @media (prefers-reduced-motion: no-preference) {
-    a:nth-of-type(2) .logo {
-      animation: logo-spin infinite 20s linear;
-    }
-  }
-  
-  .card {
-    padding: 2em;
-  }
-  
-  .read-the-docs {
-    color: #888;
-  }
-  
+/* Overrides and customizations */
+
+.passwordless-link {
+  text-decoration: underline;
+  color: unset;
+  cursor: pointer;
+  /* color: var(--bs-primary-text-emphasis); */
+  /* color: var(--passwordless-secondary-text); */
+}
+
+button.passwordless-link {
+  background: none;
+  border: none;
+  text-decoration: underline;
+  cursor: pointer;
+  padding-right: 0.375rem;
+  padding-left: 0.375rem;
+  /* padding-top: 0.375rem;
+  padding-bottom: 0.375rem; */
+  /* padding: 0; */
+}
+
+.passwordless-link:hover {
+  /* color: var(--passwordless-primary); */
+  color: white;
+}
+
+.passwordless-link-clicked {
+  text-decoration: underline;
+  color: unset;
+  cursor: unset;
+}

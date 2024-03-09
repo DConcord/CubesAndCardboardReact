@@ -294,15 +294,16 @@ export default function UpcomingEvents() {
                         </Card.Text>
                       </Card.Body>
                       <Authenticated group={["player"]}>
-                        {!(
-                          event.format == "Reserved" &&
-                          spots_available! < 1 &&
-                          !event.attending.includes(tokensParsed!.idToken.sub)
-                        ) && (
-                          <Card.Footer>
-                            <RsvpFooter event={event} index={index} refreshEvents={fetchEvents} />
-                          </Card.Footer>
-                        )}
+                        {tokensParsed &&
+                          !(
+                            event.format == "Reserved" &&
+                            spots_available! < 1 &&
+                            !event.attending.includes(tokensParsed.idToken.sub)
+                          ) && (
+                            <Card.Footer>
+                              <RsvpFooter event={event} index={index} refreshEvents={fetchEvents} />
+                            </Card.Footer>
+                          )}
                       </Authenticated>
                       <Authenticated group={["admin"]}>
                         <Card.Footer>

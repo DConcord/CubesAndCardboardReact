@@ -610,15 +610,22 @@ export function RsvpFooter({ event, index, refreshEvents }: RsvpFooterProps) {
     setYesWaiting(false);
     setNoWaiting(false);
   };
-
-  if (!event.player_pool.includes(player_id) && !(event.organizer_pool.includes(player_id) && event.organizer == "")) {
-    return (
-      <Row>
-        <Col className="d-flex align-items-center">
-          You have a previous RSVP, but all remaining slots will open at midnight the Sunday prior to the event!
-        </Col>
-      </Row>
-    );
+  try {
+    if (
+      !event.player_pool.includes(player_id) &&
+      !(event.organizer_pool.includes(player_id) && event.organizer == "")
+    ) {
+      return (
+        <Row>
+          <Col className="d-flex align-items-center">
+            You have a previous RSVP, but all remaining slots will open at midnight the Sunday prior to the event!
+          </Col>
+        </Row>
+      );
+    }
+  } catch (error) {
+    console.log(event);
+    return <></>;
   }
   return (
     <Row>
