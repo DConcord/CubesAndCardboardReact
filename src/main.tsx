@@ -6,12 +6,13 @@ import App from "./App";
 import "bootstrap/dist/css/bootstrap.css";
 import "./App.scss";
 
+import "amazon-cognito-passwordless-auth/passwordless.css";
+import "./App.css";
+
 import { Passwordless } from "amazon-cognito-passwordless-auth";
 import { PasswordlessContextProvider, Fido2Toast } from "amazon-cognito-passwordless-auth/react";
 // } from "./components/DemoContext";
 import ThemeProvider from "react-bootstrap/ThemeProvider";
-
-import "amazon-cognito-passwordless-auth/passwordless.css";
 
 Passwordless.configure({
   clientId: "15bcvkbaclouojbupbsqa9ttfd",
