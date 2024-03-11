@@ -30,3 +30,45 @@ button.passwordless-link {
   color: unset;
   cursor: unset;
 }
+
+.menu-link {
+  color: unset;
+  cursor: pointer;
+
+}
+
+.nav-link:hover {
+  /* color: var(--passwordless-primary); */
+  /* color: white; */
+  text-decoration: underline;
+}
+
+.navLink.dropdown-item.active {
+  color: unset;
+  /* text-decoration: underline; */
+  background-color: unset;
+  /* background-color: #1877F2; */
+}
+/* .navbar {
+  font-family: 'Roboto', sans-serif;
+  background-color: #1877F2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+} */
+
+.navLink {
+  color: #c9c1c1;
+  font-weight: 300;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  transition: color 0.3s, background-color 0.3s;
+  text-decoration: none;
+  border-radius: 5px;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.navLink:hover {
+  /* background-color: #fff; */
+  /* color: unset; */
+  color: var(--bs-secondary-text-emphasis);
+}

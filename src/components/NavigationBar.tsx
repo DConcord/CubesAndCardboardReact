@@ -7,19 +7,32 @@ import NavDropdown from "react-bootstrap/NavDropdown";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
-import LoginModal from "./LoginModal";
+
+import { useNavigate, NavLink } from "react-router-dom";
 
 import { THEME, initTheme, setTheme, resetTheme } from "./Theme";
+import LoginModal from "./LoginModal";
+import Authenticated, { authenticated } from "./Authenticated";
 
 initTheme();
 import Icon from "@mdi/react";
 import { mdiThemeLightDark, mdiWeatherNight, mdiBrightnessAuto, mdiWeatherSunny } from "@mdi/js";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
+
+import { matchRoutes, useLocation, Location } from "react-router-dom";
 
 export default function NavigationBar() {
-  const [show, setShow] = useState(false);
+  const navigate = useNavigate();
 
-  const handleClose = () => setShow(false);
-  const handleShow = () => setShow(true);
+  const [showLogin, setShowLogin] = useState(false);
+  const handleCloseLogin = () => setShowLogin(false);
+  const handleShowLogin = () => setShowLogin(true);
+
+  const [showMenu, setShowMenu] = useState(false);
+  const handleCloseMenu = () => setShowMenu(false);
+  const handleShowMenu = () => setShowMenu(true);
+  const toggleMenu = () => setShowMenu(!showMenu);
 
   const {
     signInStatus,
@@ -30,24 +43,80 @@ export default function NavigationBar() {
     tokensParsed,
   } = usePasswordless();
 
-  // if (signInStatus === "SIGNED_IN") handleClose(); //setShow(false);
-  const expand = "md";
+  const handleManageCredentials = () => {
+    setShowMenu(false);
+    toggleShowAuthenticatorManager();
+  };
+
+  let expand = "";
+  if (authenticated({ group: ["admin"] })) {
+    expand = "md";
+  } else if (authenticated({})) {
+    expand = "md";
+  }
+  const location = useLocation();
   return (
     <>
-      <Navbar key={expand} expand={expand} className="bg-body-tertiary mb-3">
+      {/* <h2>{location.pathname}</h2>
+      <h2>{pathMap[location.pathname].title}</h2> */}
+      <Navbar expand={expand ? expand : true} onSelect={handleCloseMenu} className="bg-body-tertiary mb-3">
+        {/* collapseOnSelect */}
         <Container fluid>
           <Navbar.Brand href="https://cubesandcardboard.net/">Cubes & Cardboard</Navbar.Brand>
-          <Navbar.Toggle aria-controls={`offcanvasNavbar-expand-${expand}`} />
+          <Navbar.Toggle className="order-3" aria-controls={`offcanvasNavbar-expand-${expand}`} onClick={toggleMenu} />
           <Navbar.Offcanvas
             id={`offcanvasNavbar-expand-${expand}`}
             aria-labelledby={`offcanvasNavbarLabel-expand-${expand}`}
             placement="end"
+            show={showMenu}
+            onHide={handleCloseMenu}
+            // onShow={handleShowMenu}
           >
             <Offcanvas.Header closeButton>
               <Offcanvas.Title id={`offcanvasNavbarLabel-expand-${expand}`}>Menu</Offcanvas.Title>
             </Offcanvas.Header>
             <Offcanvas.Body>
-              <Nav className="justify-content-end flex-grow-1 pe-3 gap-2">
+              {/* <h2 className="d-block d-lg-none">XS to LG</h2>
+              <h2 className="d-none d-lg-block">LG+</h2> */}
+              <Authenticated group={["admin"]}>
+                {/* XL+ */}
+                <div className="d-block d-md-none d-lg-block">
+                  <Nav className="order-0 navbar-nav-left-side flex-grow-1">
+                    <Nav.Link as={NavLink} to="/" className="navLink">
+                      Events
+                    </Nav.Link>
+                    <Nav.Link as={NavLink} to="/players" className="navLink">
+                      Players
+                    </Nav.Link>
+                    <Nav.Link as={NavLink} to="tbd" className="navLink">
+                      TBD Gallery
+                    </Nav.Link>
+                  </Nav>
+                </div>
+                {/* <div className="d-block d-lg-none"> */}
+                <div className="d-none d-md-block d-lg-none">
+                  <Nav className="order-0 navbar-nav-left-side flex-grow-1">
+                    <NavDropdown
+                      title={pathMap[location.pathname as keyof typeof pathMap].title}
+                      id="basic-nav-dropdown"
+                    >
+                      {/* <NavDropdown.Item href="#action/3.1">Action</NavDropdown.Item> */}
+                      <NavDropdown.Item as={NavLink} to="/" className="navLink">
+                        Events
+                      </NavDropdown.Item>
+                      <NavDropdown.Item as={NavLink} to="/players" className="navLink">
+                        Players
+                      </NavDropdown.Item>
+                      <NavDropdown.Item as={NavLink} to="tbd" className="navLink">
+                        TBD Gallery
+                      </NavDropdown.Item>
+                    </NavDropdown>
+                  </Nav>
+                </div>
+              </Authenticated>
+              {/* <Nav className="justify-content-end flex-grow-1 pe-3 gap-2 order-1"> */}
+              {/* <Nav className="navbar-nav-right-side"> */}
+              <Nav className="justify-content-end flex-grow-1">
                 {signInStatus !== "SIGNED_IN" ? (
                   <>
                     {signingInStatus === "SIGNING_IN_WITH_LINK" ? (
@@ -61,7 +130,7 @@ export default function NavigationBar() {
                         <div>Signing out, please wait...</div>
                       </div>
                     ) : (
-                      !show &&
+                      !showLogin &&
                       signingInStatus === "SIGNIN_LINK_EXPIRED" && (
                         <div className="passwordless-flex passwordless-flex-align-start">
                           <svg
@@ -83,29 +152,28 @@ export default function NavigationBar() {
                         </div>
                       )
                     )}
-                    {/* <Nav.Link onClick={handleShow} style={{ textDecoration: "none", color: "unset" }}> */}
-                    <Button className="passwordless-link" onClick={handleShow} style={{ textDecoration: "none" }}>
+                    <Nav.Link onClick={handleShowLogin} eventKey="Admin">
                       Admin
-                    </Button>
-                    {/* <Button variant="link" onClick={handleShow} style={{ textDecoration: "none", color: "unset" }}>
-                      Admin
-                    </Button> */}
+                    </Nav.Link>
                   </>
                 ) : (
                   <>
-                    {tokensParsed && <Navbar.Text>Hello, {String(tokensParsed?.idToken.given_name)}</Navbar.Text>}
-                    <Button size="sm" variant="primary" onClick={signOut}>
+                    {tokensParsed && <Navbar.Text>Hello, {String(tokensParsed.idToken.given_name)}</Navbar.Text>}
+                    <Nav.Link eventKey="SignOut" onClick={signOut}>
                       Sign Out
-                    </Button>
-                    <div />
-                    <Button
-                      variant="secondary"
-                      onClick={toggleShowAuthenticatorManager}
+                    </Nav.Link>
+                    <Nav.Link
+                      onClick={handleManageCredentials}
+                      eventKey="ManageCreds"
                       disabled={showAuthenticatorManager}
-                      size="sm"
                     >
                       Manage Credentials
-                    </Button>
+                    </Nav.Link>
+                    {/* <Authenticated group={["admin"]}>
+                      <Nav.Link eventKey="TBDGallery" onClick={() => navigate("/tbd")}>
+                        TBD Gallery
+                      </Nav.Link>
+                    </Authenticated> */}
                   </>
                 )}
                 <NavDropdown
@@ -135,12 +203,12 @@ export default function NavigationBar() {
         </Container>
       </Navbar>
 
-      <Modal show={show} onHide={handleClose} backdrop="static" keyboard={false}>
+      <Modal show={showLogin} onHide={handleCloseLogin} backdrop="static" keyboard={false}>
         <Modal.Body className="text-center">
-          <LoginModal onLogin={() => setShow(false)}></LoginModal>
+          <LoginModal onLogin={() => setShowLogin(false)}></LoginModal>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose}>
+          <Button variant="secondary" onClick={handleCloseLogin}>
             Close
           </Button>
         </Modal.Footer>
@@ -148,3 +216,9 @@ export default function NavigationBar() {
     </>
   );
 }
+
+const pathMap = {
+  "/": { title: "Events" },
+  "/players": { title: "Players" },
+  "/tbd": { title: "TBD Gallery" },
+};

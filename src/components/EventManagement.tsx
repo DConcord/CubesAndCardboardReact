@@ -13,6 +13,7 @@ import Modal from "react-bootstrap/Modal";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 import { GameKnightEvent, ExistingGameKnightEvent, EventDict, formatIsoDate } from "./Events";
+import { PlayerNameDict, PlayersDict } from "./Players";
 
 interface DeleteEventModalProps {
   close: () => void;
@@ -221,8 +222,8 @@ export function ManageEventModal({
           total_spots: undefined,
           attending: [],
           not_attending: [],
-          player_pool: [],
-          organizer_pool: [],
+          player_pool: players,
+          organizer_pool: organizers,
         }
   );
   const handleInput = (e: React.BaseSyntheticEvent) => {
@@ -292,8 +293,8 @@ export function ManageEventModal({
     if (body.total_spots == null) body.total_spots = undefined;
     if (body.bgg_id == null) body.bgg_id = undefined;
     // if (!body.event_type) body.event_type = "GameKnight";
-    if (body.game == "TBD" && gameKnightEvent && gameKnightEvent.tbd_pic && task !== "Clone") {
-      body.tbd_pic = gameKnightEvent.tbd_pic;
+    if (body.game == "TBD" && eventForm && eventForm.tbd_pic && task !== "Clone") {
+      body.tbd_pic = eventForm.tbd_pic;
     } else if (body.game == "TBD" && (!body.tbd_pic || body.tbd_pic != "")) {
       let active_tbd_pics: string[] = []; // as GameKnightEvent[];
       for (let game_event of events) {
@@ -440,7 +441,9 @@ export function ManageEventModal({
           </Col>
           <Col med="true" style={{ minWidth: "18rem" }}>
             <Form.Group controlId="chooseAttendingPlayers" className="mb-3">
-              <Form.Label aria-label="Choose Attending Players">Choose Attending Players</Form.Label>
+              <Form.Label aria-label="Choose Attending Players">
+                Choose Attending Players{task == "Create" && " (after event is created)"}
+              </Form.Label>
               <Row>
                 {players.map((player_id: string, index: number) => (
                   <Col key={player_id} style={{ minWidth: "min-content" }}>
@@ -452,10 +455,9 @@ export function ManageEventModal({
                       label={playersDict[player_id].attrib.given_name}
                       checked={selectedAttendingOptions.includes(player_id)}
                       disabled={
-                        // !gameKnightEvent!.player_pool.includes(player_id) &&
-                        // !gameKnightEvent!.organizer_pool.includes(player_id)
-                        !gameKnightEvent!.player_pool.includes(player_id) &&
-                        !(gameKnightEvent!.organizer_pool.includes(player_id) && gameKnightEvent!.organizer == "")
+                        task == "Create" ||
+                        (!eventForm.player_pool.includes(player_id) &&
+                          !(eventForm.organizer_pool.includes(player_id) && eventForm.organizer == ""))
                       }
                       onChange={handleOptionChange}
                       value={player_id}
@@ -498,10 +500,11 @@ export function ManageEventModal({
                       : eventForm.organizer
                     : "default"
                 }
+                disabled={task == "Create"}
               >
                 <option hidden disabled value="default">
                   {" "}
-                  -- choose an organizer --{" "}
+                  -- manually choose/override the organizer --{" "}
                 </option>
                 {organizers.map((player_id: string, index: number) => (
                   <option key={index} value={player_id}>
@@ -683,20 +686,3 @@ export const tbd_pics = [
   "Game_TBD_34.jpeg",
   "Game_TBD_33.jpeg",
 ];
-
-// https://betterprogramming.pub/5-recipes-for-setting-default-props-in-react-typescript-b52d8b6a842c
-export type PlayerNameDict = {
-  [key: Player["attrib"]["given_name"]]: string;
-};
-
-export type PlayersDict = {
-  [key: string]: Player;
-};
-
-export type Player = {
-  groups: string[];
-  attrib: {
-    given_name: string;
-    family_name?: string;
-  };
-};

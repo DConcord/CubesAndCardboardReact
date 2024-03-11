@@ -6,14 +6,14 @@ import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import { AccordionBody } from "react-bootstrap";
-import { PlayersDict } from "./EventManagement";
+import { PlayersDict } from "./Players";
 
 interface Props {
-  events: never[];
+  events?: never[];
   playersDict: PlayersDict;
-  players: string[];
-  organizers: string[];
-  hosts: string[];
+  players?: string[];
+  organizers?: string[];
+  hosts?: string[];
 }
 export default function TShoot({ events, playersDict, players, organizers, hosts }: Props) {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
@@ -42,22 +42,14 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
   const fetchTest = async () => {
     try {
       let base_url = `https://${import.meta.env.VITE_API_URL}/api`;
-      let response = await axios.get(`${base_url}/events`, {
+      let response = await axios.get(`${base_url}/players`, {
         headers: tokens && {
           Authorization: "Bearer " + tokens.idToken,
         },
+        params: {
+          refresh: "yes",
+        },
       });
-      // let response = await axios.post("/event", {
-      //   headers: tokens && {
-      //     Authorization: "Bearer " + tokens.idToken,
-      //   },
-      //   // params: {
-      //   //   event_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      //   //   name: "Colten",
-      //   //   // name: "xxxx",
-      //   //   // date: "yyyy",
-      //   // },
-      // });
 
       console.log(response.data);
       setEventsTest(response.data);
