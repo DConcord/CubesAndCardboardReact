@@ -24,8 +24,8 @@ import {
   TransferDevEventsModal,
   RsvpFooter,
   ManagedEventTask,
-  PlayersDict,
 } from "./EventManagement";
+import { PlayersDict } from "./Players";
 import Authenticated from "./Authenticated";
 
 export default function UpcomingEvents() {
@@ -132,33 +132,42 @@ export default function UpcomingEvents() {
     return (
       <>
         <Container fluid>
-          <Row>
+          <Row xs={1} sm={2}>
             <Col>
               {/* <h2>Upcoming Events</h2> */}
               <h2>{import.meta.env.VITE_EVENTS_TITLE}</h2>
             </Col>
             <Authenticated group={["admin"]}>
-              {/* <Authenticated given_name={["Colten", "Luke"]}> */}
+              <Col>
+                <Row style={{ justifyContent: "right" }}>
+                  {/* <Authenticated given_name={["Colten", "Luke"]}> */}
 
-              {import.meta.env.MODE == "development" &&
-                import.meta.env.VITE_API_URL == "eventsdev.dissonantconcord.com" && (
-                  <>
-                    <Col xs="auto" style={{ textAlign: "right" }}>
-                      <Button size="sm" variant="secondary" onClick={handleShowTransferDevEvents}>
-                        Transfer
-                      </Button>
-                    </Col>
-                  </>
-                )}
-              <Col xs="auto" style={{ textAlign: "right" }}>
-                <Button size="sm" variant="primary" onClick={() => handleShowManageEvent({ task: "Create" })}>
-                  Create Event
-                </Button>
-              </Col>
-              <Col xs="auto" style={{ textAlign: "right" }}>
-                <Button size="sm" variant="secondary" onClick={() => navigate("/tbd")}>
-                  TBD Gallery
-                </Button>
+                  {import.meta.env.MODE == "development" &&
+                    import.meta.env.VITE_API_URL == "eventsdev.dissonantconcord.com" && (
+                      <>
+                        <Col xs="auto" style={{ textAlign: "right" }}>
+                          <Button size="sm" variant="secondary" onClick={handleShowTransferDevEvents}>
+                            Transfer
+                          </Button>
+                        </Col>
+                      </>
+                    )}
+                  <Col xs="auto" style={{ textAlign: "right" }}>
+                    <Button size="sm" variant="primary" onClick={() => handleShowManageEvent({ task: "Create" })}>
+                      Create Event
+                    </Button>
+                  </Col>
+                  {/* <Col xs="auto" style={{ textAlign: "right" }}>
+                    <Button size="sm" variant="primary" onClick={() => navigate("/players")}>
+                      Players
+                    </Button>
+                  </Col> */}
+                  {/* <Col xs="auto" style={{ textAlign: "right" }}>
+                    <Button size="sm" variant="secondary" onClick={() => navigate("/tbd")}>
+                      TBD Gallery
+                    </Button>
+                  </Col> */}
+                </Row>
               </Col>
             </Authenticated>
           </Row>
