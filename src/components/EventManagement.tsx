@@ -150,7 +150,7 @@ export function TransferDevEventsModal({ close, events, refreshEvents }: Transfe
         {/* <Col med="true" style={{ minWidth: "18rem" }}> */}
         <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
           {events.map((event: ExistingGameKnightEvent, index: number) => (
-            <Row key={index} style={{ minWidth: "min-content" }}>
+            <Row key={index} style={{ minWidth: "min-content", maxWidth: "min-content" }}>
               <Form.Check
                 // style={{ marginLeft: "10%" }}
                 key={index}

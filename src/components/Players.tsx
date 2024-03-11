@@ -117,7 +117,8 @@ export default function Players() {
           {/* <Row xs={1} sm={2}> */}
           <Row xs={1} sm={2}>
             <Col xs="auto">
-              <h2>Manage Players</h2>
+              {/* <h2>Manage Players</h2> */}
+              <h2>{import.meta.env.VITE_PLAYERS_TITLE}</h2>
             </Col>
             <Col>
               <Row style={{ justifyContent: "right" }}>
@@ -355,11 +356,11 @@ function ManagePlayerModal({
           <Col med="true" style={{ minWidth: "18rem" }}>
             <Form.Group controlId="chooseGroups" className="mb-3">
               <Form.Label aria-label="Group Membership">Group Membership</Form.Label>
-              <Row>
+              <Row xs={2}>
                 {Object.keys(groups)
                   .sort()
                   .map((group: string, index: number) => (
-                    <Col key={group} style={{ minWidth: "min-content" }}>
+                    <Col key={group} style={{ minWidth: "min-content", maxWidth: "min-content" }}>
                       <Form.Check
                         // style={{ marginLeft: "10%" }}
                         key={index}
@@ -378,7 +379,7 @@ function ManagePlayerModal({
         </Row>
       </Modal.Body>
       <Modal.Footer>
-        <pre>{JSON.stringify(playerForm, null, 2)}</pre>
+        {/* <pre>{JSON.stringify(playerForm, null, 2)}</pre> */}
         <span>{errorMsg}</span>
         <Button variant="primary" type="submit" disabled={waiting || !inputValidated}>
           {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}

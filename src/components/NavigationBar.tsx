@@ -82,13 +82,13 @@ export default function NavigationBar() {
                 {/* XL+ */}
                 <div className="d-block d-md-none d-lg-block">
                   <Nav className="order-0 navbar-nav-left-side flex-grow-1">
-                    <Nav.Link as={NavLink} to="/" className="navLink">
+                    <Nav.Link eventKey="/" as={NavLink} to="/" className="navLink">
                       Events
                     </Nav.Link>
-                    <Nav.Link as={NavLink} to="/players" className="navLink">
+                    <Nav.Link eventKey="/players" as={NavLink} to="/players" className="navLink">
                       Players
                     </Nav.Link>
-                    <Nav.Link as={NavLink} to="tbd" className="navLink">
+                    <Nav.Link eventKey="/tbd" as={NavLink} to="/tbd" className="navLink">
                       TBD Gallery
                     </Nav.Link>
                   </Nav>
