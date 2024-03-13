@@ -6,25 +6,24 @@ import Nav from "react-bootstrap/Nav";
 import NavDropdown from "react-bootstrap/NavDropdown";
 import Button from "react-bootstrap/Button";
 import Modal from "react-bootstrap/Modal";
+import Row from "react-bootstrap/Row";
+import Col from "react-bootstrap/Col";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
-import { useNavigate, NavLink } from "react-router-dom";
+import { useNavigate, NavLink, Outlet } from "react-router-dom";
 
 import { THEME, initTheme, setTheme, resetTheme } from "./Theme";
 import LoginModal from "./LoginModal";
 import Authenticated, { authenticated } from "./Authenticated";
+import { ManagePlayerModal, PlayerModifySelf } from "./Players";
 
 initTheme();
 import Icon from "@mdi/react";
-import { mdiThemeLightDark, mdiWeatherNight, mdiBrightnessAuto, mdiWeatherSunny } from "@mdi/js";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
+import { mdiThemeLightDark, mdiWeatherNight, mdiBrightnessAuto, mdiWeatherSunny, mdiAccount } from "@mdi/js";
 
 import { matchRoutes, useLocation, Location } from "react-router-dom";
 
 export default function NavigationBar() {
-  const navigate = useNavigate();
-
   const [showLogin, setShowLogin] = useState(false);
   const handleCloseLogin = () => setShowLogin(false);
   const handleShowLogin = () => setShowLogin(true);
@@ -41,7 +40,26 @@ export default function NavigationBar() {
     showAuthenticatorManager,
     toggleShowAuthenticatorManager,
     tokensParsed,
+    tokens,
   } = usePasswordless();
+
+  var player: PlayerModifySelf;
+  if (tokensParsed && tokens) {
+    player = {
+      given_name: tokensParsed.idToken.given_name,
+      family_name: tokensParsed.idToken.family_name,
+      email: tokensParsed.idToken.email,
+      phone_number: tokensParsed.idToken.phone_number,
+      user_id: tokensParsed.idToken.sub,
+      groups: tokensParsed.idToken["cognito:groups"],
+      accessToken: tokens.accessToken,
+    } as PlayerModifySelf;
+  }
+  const [showManagePlayer, setShowManagePlayer] = useState(false);
+  const handleCloseManagePlayer = () => setShowManagePlayer(false);
+
+  // If Login Modal is open and user changes to "signed in", close the modal
+  if (signInStatus === "SIGNED_IN" && tokensParsed && showLogin) setShowLogin(false);
 
   const handleManageCredentials = () => {
     setShowMenu(false);
@@ -49,9 +67,9 @@ export default function NavigationBar() {
   };
 
   let expand = "";
-  if (authenticated({ group: ["admin"] })) {
+  if (authenticated({ signInStatus, tokensParsed, group: ["admin"] })) {
     expand = "md";
-  } else if (authenticated({})) {
+  } else if (authenticated({ signInStatus, tokensParsed })) {
     expand = "md";
   }
   const location = useLocation();
@@ -59,7 +77,7 @@ export default function NavigationBar() {
     <>
       {/* <h2>{location.pathname}</h2>
       <h2>{pathMap[location.pathname].title}</h2> */}
-      <Navbar expand={expand ? expand : true} onSelect={handleCloseMenu} className="bg-body-tertiary mb-3">
+      <Navbar fixed="top" expand={expand ? expand : true} onSelect={handleCloseMenu} className="bg-body-tertiary mb-3">
         {/* collapseOnSelect */}
         <Container fluid>
           <Navbar.Brand href="https://cubesandcardboard.net/">Cubes & Cardboard</Navbar.Brand>
@@ -82,13 +100,13 @@ export default function NavigationBar() {
                 {/* XL+ */}
                 <div className="d-block d-md-none d-lg-block">
                   <Nav className="order-0 navbar-nav-left-side flex-grow-1">
-                    <Nav.Link as={NavLink} to="/" className="navLink">
+                    <Nav.Link eventKey="/" as={NavLink} to="/" className="navLink">
                       Events
                     </Nav.Link>
-                    <Nav.Link as={NavLink} to="/players" className="navLink">
+                    <Nav.Link eventKey="/players" as={NavLink} to="/players" className="navLink">
                       Players
                     </Nav.Link>
-                    <Nav.Link as={NavLink} to="tbd" className="navLink">
+                    <Nav.Link eventKey="/tbd" as={NavLink} to="/tbd" className="navLink">
                       TBD Gallery
                     </Nav.Link>
                   </Nav>
@@ -158,7 +176,12 @@ export default function NavigationBar() {
                   </>
                 ) : (
                   <>
-                    {tokensParsed && <Navbar.Text>Hello, {String(tokensParsed.idToken.given_name)}</Navbar.Text>}
+                    {tokensParsed && (
+                      <Nav.Link eventKey="Profile" onClick={() => setShowManagePlayer(true)}>
+                        Hello, {String(tokensParsed.idToken.given_name)}
+                        <Icon className="align-top" path={mdiAccount} size={1} />
+                      </Nav.Link>
+                    )}
                     <Nav.Link eventKey="SignOut" onClick={signOut}>
                       Sign Out
                     </Nav.Link>
@@ -177,7 +200,7 @@ export default function NavigationBar() {
                   </>
                 )}
                 <NavDropdown
-                  // style={{ maxWidth: 10, minWidth: 10 }}
+                  style={{ maxWidth: "min-content" }}
                   id="theme-dropdown"
                   title={<Icon path={mdiThemeLightDark} size={1} />}
                   // drop="down"
@@ -185,16 +208,28 @@ export default function NavigationBar() {
                   align="end"
                 >
                   <a className="dropdown-item gap-2" onClick={() => setTheme(THEME.LIGHT)}>
-                    <Icon path={mdiWeatherSunny} size={1} />
-                    Light
+                    <Row>
+                      <Col style={{ maxWidth: "2rem" }}>
+                        <Icon path={mdiWeatherSunny} size={1} />
+                      </Col>
+                      <Col>Light</Col>
+                    </Row>
                   </a>
                   <a className="dropdown-item" onClick={() => setTheme(THEME.DARK)}>
-                    <Icon path={mdiWeatherNight} size={1} />
-                    Dark
+                    <Row>
+                      <Col style={{ maxWidth: "2rem" }}>
+                        <Icon path={mdiWeatherNight} size={1} />
+                      </Col>
+                      <Col>Dark</Col>
+                    </Row>
                   </a>
                   <a className="dropdown-item" onClick={() => resetTheme()}>
-                    <Icon path={mdiBrightnessAuto} size={1} />
-                    Auto
+                    <Row>
+                      <Col style={{ maxWidth: "2rem" }}>
+                        <Icon path={mdiBrightnessAuto} size={1} />
+                      </Col>
+                      <Col>Auto</Col>
+                    </Row>
                   </a>
                 </NavDropdown>
               </Nav>
@@ -213,6 +248,13 @@ export default function NavigationBar() {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {tokensParsed && (
+        <Modal show={showManagePlayer} onHide={handleCloseManagePlayer} backdrop="static" keyboard={false}>
+          <ManagePlayerModal close={handleCloseManagePlayer} task="ModifySelf" player={player!} />
+        </Modal>
+      )}
+      <Outlet />
     </>
   );
 }

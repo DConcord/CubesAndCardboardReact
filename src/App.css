@@ -45,15 +45,20 @@ button.passwordless-link {
 
 .navLink.dropdown-item.active {
   color: unset;
-  /* text-decoration: underline; */
+  text-decoration: underline;
   background-color: unset;
   /* background-color: #1877F2; */
 }
+
 /* .navbar {
   font-family: 'Roboto', sans-serif;
   background-color: #1877F2;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 } */
+
+body {
+  margin-top: 65px;
+}
 
 .navLink {
   color: #c9c1c1;
@@ -71,4 +76,8 @@ button.passwordless-link {
   /* background-color: #fff; */
   /* color: unset; */
   color: var(--bs-secondary-text-emphasis);
+}
+
+.dropdown-menu {
+  --bs-dropdown-min-width: 7rem;
 }
