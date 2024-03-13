@@ -31,6 +31,7 @@ const LoginModal = ({ onLogin }: Props) => {
   const [showSignInOptionsForUser, setShowSignInOptionsForUser] = useState("LAST_USER");
   const { lastSignedInUsers } = useLocalUserCache();
 
+  // After Sign in, clear "New" username and update showSignInOptionsForUser
   if (signInStatus === "SIGNED_IN") {
     // reset state fields for entering new username
     if (newUsername) {
@@ -43,17 +44,6 @@ const LoginModal = ({ onLogin }: Props) => {
 
   if (signInStatus === "CHECKING" || signInStatus === "REFRESHING_SIGN_IN" || !lastSignedInUsers) {
     return <>Checking or Refreshing</>;
-    // return (_jsx(FlexContainer, { brand: brand, children: _jsxs("div", { className: "passwordless-flex", children: [_jsx("div", { className: "passwordless-loading-spinner" }), _jsx("div", { children: "Checking your sign-in status..." })] }) }));
-    // return _jsx(FlexContainer, {
-    //   brand: brand,
-    //   children: _jsxs("div", {
-    //     className: "passwordless-flex",
-    //     children: [
-    //       _jsx("div", { className: "passwordless-loading-spinner" }),
-    //       _jsx("div", { children: "Checking your sign-in status..." }),
-    //     ],
-    //   }),
-    // });
   }
 
   if (signingInStatus === "SIGNIN_LINK_REQUESTED") {
@@ -91,9 +81,7 @@ const LoginModal = ({ onLogin }: Props) => {
 
   return (
     <>
-      {signInStatus === "SIGNED_IN" && tokens ? (
-        onLogin()
-      ) : signInStatus === "NOT_SIGNED_IN" && user ? (
+      {signInStatus === "NOT_SIGNED_IN" && user ? (
         <div>
           <div>
             <div className="passwordless-email-title">
@@ -139,7 +127,8 @@ const LoginModal = ({ onLogin }: Props) => {
                 </Button>
               </p>
               <div />
-              <Button className="passwordless-link" onClick={() => setShowSignInOptionsForUser("NEW_USER_ENTRY")}>
+              {/* <Button className="passwordless-link" onClick={() => setShowSignInOptionsForUser("NEW_USER_ENTRY")}> */}
+              <Button className="passwordless-link" onClick={() => setShowSignInOptionsForUser("NEW_USER")}>
                 Sign-in as another user
               </Button>
               <div />

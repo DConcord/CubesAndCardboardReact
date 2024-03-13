@@ -58,7 +58,9 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
       setEventsTest(JSON.parse(JSON.stringify(error)));
     }
   };
-
+  if (import.meta.env.VITE_SHOW_TSHOOT !== "True") {
+    return <></>;
+  }
   if (signInStatus === "SIGNED_IN" && tokensParsed) {
     return (
       <Accordion>

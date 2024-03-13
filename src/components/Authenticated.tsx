@@ -1,21 +1,49 @@
 import React from "react";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
+import { Navigate } from "react-router-dom";
+
+import { CognitoAccessTokenPayload, CognitoIdTokenPayload } from "amazon-cognito-passwordless-auth/jwt-model";
+
+type TokensParsed = {
+  idToken: CognitoIdTokenPayload;
+  accessToken: CognitoAccessTokenPayload;
+  expireAt: Date;
+};
+
 interface AuthenticatedProps {
   children: React.ReactNode;
   given_name?: string[];
   group?: string[];
+  unauthPath?: string;
+  show?: boolean;
 }
-export default function Authenticated({ children, given_name, group }: AuthenticatedProps) {
-  if (authenticated({ given_name: given_name, group: group })) {
+export default function Authenticated({ children, given_name, group, unauthPath, show = true }: AuthenticatedProps) {
+  const { signInStatus, tokensParsed } = usePasswordless();
+  if (!show) return <></>;
+  if (["REFRESHING_SIGN_IN", "SIGNING_IN", "CHECKING"].includes(signInStatus)) {
+    return <></>;
+  }
+
+  if (authenticated({ signInStatus, tokensParsed, given_name: given_name, group: group })) {
     return <>{children}</>;
   } else {
+    if (unauthPath != undefined) return <Navigate to={unauthPath} />;
     return <></>;
   }
 }
 
-export function authenticated({ given_name, group }: { given_name?: string[]; group?: string[] }) {
-  const { signInStatus, tokensParsed } = usePasswordless();
+export function authenticated({
+  signInStatus,
+  tokensParsed,
+  given_name,
+  group,
+}: {
+  signInStatus: "SIGNING_OUT" | "SIGNED_IN" | "REFRESHING_SIGN_IN" | "SIGNING_IN" | "CHECKING" | "NOT_SIGNED_IN";
+  tokensParsed?: TokensParsed;
+  given_name?: string[];
+  group?: string[];
+}) {
   if (!(signInStatus === "SIGNED_IN" && tokensParsed)) return false;
 
   let given_name_auth = false;

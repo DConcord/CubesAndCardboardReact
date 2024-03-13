@@ -30,7 +30,7 @@ import Authenticated from "./Authenticated";
 
 export default function UpcomingEvents() {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
-  const navigate = useNavigate();
+  const [showAdmin, setShowAdmin] = useState(false);
 
   let first_name = "";
   if (signInStatus === "SIGNED_IN" && tokensParsed) {
@@ -132,17 +132,17 @@ export default function UpcomingEvents() {
     return (
       <>
         <Container fluid>
-          <Row xs={1} sm={2}>
+          <Row xs={1} sm={2} className="align-items-center">
             <Col>
               {/* <h2>Upcoming Events</h2> */}
               <h2>{import.meta.env.VITE_EVENTS_TITLE}</h2>
             </Col>
+
             <Authenticated group={["admin"]}>
               <Col>
-                <Row style={{ justifyContent: "right" }}>
-                  {/* <Authenticated given_name={["Colten", "Luke"]}> */}
-
-                  {import.meta.env.MODE == "development" &&
+                <Row style={{ justifyContent: "right" }} className="align-items-center">
+                  {showAdmin &&
+                    import.meta.env.MODE == "development" &&
                     import.meta.env.VITE_API_URL == "eventsdev.dissonantconcord.com" && (
                       <>
                         <Col xs="auto" style={{ textAlign: "right" }}>
@@ -152,9 +152,16 @@ export default function UpcomingEvents() {
                         </Col>
                       </>
                     )}
+                  {showAdmin && (
+                    <Col xs="auto" style={{ textAlign: "right" }}>
+                      <Button size="sm" variant="primary" onClick={() => handleShowManageEvent({ task: "Create" })}>
+                        Create Event
+                      </Button>
+                    </Col>
+                  )}
                   <Col xs="auto" style={{ textAlign: "right" }}>
-                    <Button size="sm" variant="primary" onClick={() => handleShowManageEvent({ task: "Create" })}>
-                      Create Event
+                    <Button size="sm" variant="primary" onClick={() => setShowAdmin(!showAdmin)}>
+                      {showAdmin ? "Hide Admin" : "Show Admin"}
                     </Button>
                   </Col>
                   {/* <Col xs="auto" style={{ textAlign: "right" }}>
@@ -207,7 +214,7 @@ export default function UpcomingEvents() {
             refreshEvents={fetchEvents}
           />
         </Modal> */}
-          <Authenticated given_name={["Colten"]}>
+          <Authenticated given_name={["Colten", "Joe"]}>
             <TShoot events={events} playersDict={playersDict} players={players} organizers={organizers} hosts={hosts} />
           </Authenticated>
         </Authenticated>
@@ -314,7 +321,7 @@ export default function UpcomingEvents() {
                             </Card.Footer>
                           )}
                       </Authenticated>
-                      <Authenticated group={["admin"]}>
+                      <Authenticated show={showAdmin} group={["admin"]}>
                         <Card.Footer>
                           <Row key={"Row" + index}>
                             <Col className="d-flex justify-content-end gap-2">
@@ -398,24 +405,6 @@ export type GameKnightEvent = {
   tbd_pic?: string;
   migrated?: boolean;
 };
-
-// Temp static placeholder
-export const player_pool = [
-  "Luke",
-  "Eric",
-  "Colten",
-  "Frank",
-  "Wynn",
-  "Scott",
-  "Tim",
-  "Kevin",
-  "Agustin",
-  "Steve",
-  "Brett",
-  "Jake",
-  "Garrett",
-  "Robert",
-];
 
 export function formatIsoDate(isoString: string) {
   const months = {
