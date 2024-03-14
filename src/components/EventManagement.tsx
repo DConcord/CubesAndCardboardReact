@@ -12,23 +12,24 @@ import Modal from "react-bootstrap/Modal";
 
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { fetchEventsApiOptions, fetchEventsOptions } from "./Queries";
+
 import { GameKnightEvent, ExistingGameKnightEvent, EventDict, formatIsoDate } from "./Events";
 import { PlayerNameDict, PlayersDict } from "./Players";
 
 interface DeleteEventModalProps {
   close: () => void;
-  refreshEvents: (use_api: boolean) => void;
   gameKnightEvent: GameKnightEvent;
 }
-export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: DeleteEventModalProps) {
+export function DeleteEventModal({ close, gameKnightEvent }: DeleteEventModalProps) {
   const { tokens } = usePasswordless();
-  const [notConfirmed, setNotConfirmed] = useState(true);
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
 
+  const [notConfirmed, setNotConfirmed] = useState(true);
   function handleInput(event: React.BaseSyntheticEvent) {
     if (event.target.value == "DELETE") setNotConfirmed(false);
   }
-
-  const [waiting, setWaiting] = useState(false);
 
   const apiClient = axios.create({
     baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
@@ -38,25 +39,26 @@ export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: Dele
   });
 
   const [errorMsg, setErrorMsg] = useState("");
-  async function handleSubmit(event: React.BaseSyntheticEvent) {
-    setWaiting(true);
-    event.preventDefault();
-    try {
-      const response = await apiClient.delete("event", {
+  const deleteEventMutation = useMutation({
+    mutationFn: async () => {
+      await apiClient.delete("event", {
         params: { event_id: gameKnightEvent.event_id },
-        headers: tokens && {
-          Authorization: "Bearer " + tokens.idToken,
-        },
       });
-      console.log(response.data);
-      setWaiting(false);
-      refreshEvents(true);
+    },
+    onSuccess: async (data) => {
+      console.log(data);
+      await eventsQuery.refetch();
       close();
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error(error);
       setErrorMsg(`Delete Event failed`);
-      setWaiting(false);
-    }
+    },
+  });
+
+  async function handleSubmit(event: React.BaseSyntheticEvent) {
+    event.preventDefault();
+    deleteEventMutation.mutate();
   }
 
   return (
@@ -67,31 +69,29 @@ export function DeleteEventModal({ close, refreshEvents, gameKnightEvent }: Dele
       <Modal.Body className="text-center">
         Type DELETE to permanently delete event
         <Form.Control type="textarea" id="delete_event" aria-describedby="delete_event" onChange={handleInput} />
-        <Button variant="danger" type="submit" disabled={notConfirmed || waiting}>
-          {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
+        <Button variant="danger" type="submit" disabled={notConfirmed || deleteEventMutation.isPending}>
+          {deleteEventMutation.isPending && (
+            <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
+          )}
           Delete
         </Button>
-        <Button variant="secondary" onClick={close} disabled={waiting}>
+        <Button variant="secondary" onClick={close} disabled={deleteEventMutation.isPending}>
           Cancel
         </Button>
       </Modal.Body>
-      {/* <Modal.F ooter className="text-center">
-          {gameKnightEvent.event_id}
-        </Modal.Footer> */}
     </Form>
   );
 }
 
 interface TransferDevEventsModalProps {
   close: () => void;
-  events: ExistingGameKnightEvent[];
-  refreshEvents: (use_api: boolean) => void;
 }
-export function TransferDevEventsModal({ close, events, refreshEvents }: TransferDevEventsModalProps) {
+export function TransferDevEventsModal({ close }: TransferDevEventsModalProps) {
   const { tokens } = usePasswordless();
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
 
   let eventDict: EventDict = {};
-  for (let event of events) {
+  for (let event of eventsQuery.data as ExistingGameKnightEvent[]) {
     eventDict[event["event_id"]] = event;
   }
 
@@ -116,69 +116,73 @@ export function TransferDevEventsModal({ close, events, refreshEvents }: Transfe
   });
   const [waiting, setWaiting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const transferEventMutation = useMutation({
+    mutationFn: async (body: ExistingGameKnightEvent) => {
+      await apiClient.post("event", {
+        body: body,
+      });
+    },
+    onSuccess: async (data) => {
+      console.log(data);
+    },
+    onError: (error) => {
+      console.error(error);
+      setErrorMsg(`Transfer Events failed`);
+    },
+  });
+
   async function handleSubmit(event: React.BaseSyntheticEvent) {
     setWaiting(true);
     event.preventDefault();
     for (let event_id of selectedTransferOptions) {
       const body = eventDict[event_id];
-
-      try {
-        const response = await apiClient({
-          method: "POST",
-          url: "event",
-          data: body,
-        });
-        console.log(response.data);
-      } catch (error) {
-        console.error(error);
-        setErrorMsg(`Transfer Events failed`);
-        // setWaiting(false);
-      }
+      transferEventMutation.mutate(body);
     }
+
+    await eventsQuery.refetch();
+    close();
     setWaiting(false);
-    refreshEvents(true);
     if (errorMsg == "") close();
   }
-
+  if (eventsQuery.isSuccess) {
+    return (
+      <Form onSubmit={handleSubmit}>
+        <Modal.Header className="text-center">Transfer selected events to the Dev DB:</Modal.Header>
+        <Modal.Body className="text-center">
+          <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
+            {eventsQuery.data.map((event: ExistingGameKnightEvent, index: number) => (
+              <Row key={index} style={{ minWidth: "min-content", maxWidth: "min-content" }}>
+                <Form.Check
+                  key={index}
+                  type="checkbox"
+                  id={`option_${index}`}
+                  label={`${event.date} (${event.event_id})`}
+                  checked={selectedTransferOptions.includes(event.event_id)}
+                  onChange={handleOptionChange}
+                  value={event.event_id}
+                />
+              </Row>
+            ))}
+          </Form.Group>
+        </Modal.Body>
+        <Modal.Footer>
+          <span>{errorMsg}</span>
+          <pre>{JSON.stringify(selectedTransferOptions, null, 2)}</pre>
+          <Button variant="danger" type="submit" disabled={waiting}>
+            {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
+            Transfer
+          </Button>
+          <Button variant="secondary" onClick={close} disabled={waiting}>
+            Cancel
+          </Button>
+        </Modal.Footer>
+      </Form>
+    );
+  }
   return (
-    <Form onSubmit={handleSubmit}>
-      <Modal.Header className="text-center">
-        {/* Are you sure you want to  {formatIsoDate(gameKnightEvent.date)} event? */}
-        Transfer selected events to the Dev DB:
-      </Modal.Header>
-      <Modal.Body className="text-center">
-        {/* <Col med="true" style={{ minWidth: "18rem" }}> */}
-        <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
-          {events.map((event: ExistingGameKnightEvent, index: number) => (
-            <Row key={index} style={{ minWidth: "min-content", maxWidth: "min-content" }}>
-              <Form.Check
-                // style={{ marginLeft: "10%" }}
-                key={index}
-                type="checkbox"
-                id={`option_${index}`}
-                label={`${event.date} (${event.event_id})`}
-                checked={selectedTransferOptions.includes(event.event_id)}
-                // {selectedNotAttendingOptions.includes(player)}
-                onChange={handleOptionChange}
-                value={event.event_id}
-              />
-            </Row>
-          ))}
-        </Form.Group>
-        {/* </Col> */}
-      </Modal.Body>
-      <Modal.Footer>
-        <span>{errorMsg}</span>
-        <pre>{JSON.stringify(selectedTransferOptions, null, 2)}</pre>
-        <Button variant="danger" type="submit" disabled={waiting}>
-          {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
-          Transfer
-        </Button>
-        <Button variant="secondary" onClick={close} disabled={waiting}>
-          Cancel
-        </Button>
-      </Modal.Footer>
-    </Form>
+    <div>
+      <p>Loading...</p>
+    </div>
   );
 }
 
@@ -189,10 +193,8 @@ interface ManageEventModalProps {
   organizers: string[];
   hosts: string[];
   close: () => void;
-  refreshEvents: (use_api: boolean) => void;
   task: ManagedEventTask;
   gameKnightEvent?: GameKnightEvent | null;
-  events: GameKnightEvent[];
 }
 export function ManageEventModal({
   playersDict,
@@ -200,10 +202,8 @@ export function ManageEventModal({
   organizers,
   hosts,
   close,
-  refreshEvents,
   task,
   gameKnightEvent,
-  events,
 }: ManageEventModalProps) {
   const method = ["Create", "Clone"].includes(task) ? "POST" : ["Modify", "Migrate"].includes(task) ? "PUT" : "";
   const { tokens } = usePasswordless();
@@ -226,6 +226,7 @@ export function ManageEventModal({
           organizer_pool: organizers,
         }
   );
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
   const handleInput = (e: React.BaseSyntheticEvent) => {
     if (e.target.id == "bgg_id" || e.target.id == "total_spots") {
       setEventForm({ ...eventForm, [e.target.id]: parseInt(e.target.value) });
@@ -276,7 +277,6 @@ export function ManageEventModal({
     setEventForm({ ...eventForm, attending: selectedAttendingOptions, not_attending: selectedNotAttendingOptions });
   }, [selectedAttendingOptions, selectedNotAttendingOptions]);
 
-  const [waiting, setWaiting] = useState(false);
   const apiClient = axios.create({
     baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
     headers: tokens && {
@@ -285,78 +285,72 @@ export function ManageEventModal({
   });
 
   const [errorMsg, setErrorMsg] = useState("");
-  // const [timeDiff, setTimeDiff] = useState(0);
-  const createEvent = async (body: GameKnightEvent, method: string) => {
-    setWaiting(true);
-    // const start = Date.parse(new Date().toISOString());
-    if (task == "Clone") delete body.event_id;
-    if (body.total_spots == null) body.total_spots = undefined;
-    if (body.bgg_id == null) body.bgg_id = undefined;
-    // if (!body.event_type) body.event_type = "GameKnight";
-    if (body.game == "TBD" && eventForm && eventForm.tbd_pic && task !== "Clone") {
-      body.tbd_pic = eventForm.tbd_pic;
-    } else if (body.game == "TBD" && (!body.tbd_pic || body.tbd_pic != "")) {
-      let active_tbd_pics: string[] = []; // as GameKnightEvent[];
-      for (let game_event of events) {
-        if (game_event.game == "TBD" && game_event.tbd_pic && game_event.tbd_pic != "") {
-          active_tbd_pics.push(game_event.tbd_pic);
+  const manageEventMutation = useMutation({
+    mutationFn: async ({ body, method }: { body: GameKnightEvent; method: string }) => {
+      // const start = Date.parse(new Date().toISOString());
+      if (task == "Clone") delete body.event_id;
+      if (body.total_spots == null) body.total_spots = undefined;
+      if (body.bgg_id == null) body.bgg_id = undefined;
+      if (body.game == "TBD" && eventForm && eventForm.tbd_pic && task !== "Clone") {
+        body.tbd_pic = eventForm.tbd_pic;
+      } else if (body.game == "TBD" && (!body.tbd_pic || body.tbd_pic != "")) {
+        let active_tbd_pics: string[] = []; // as GameKnightEvent[];
+        for (let game_event of eventsQuery.data! as GameKnightEvent[]) {
+          if (game_event.game == "TBD" && game_event.tbd_pic && game_event.tbd_pic != "") {
+            active_tbd_pics.push(game_event.tbd_pic);
+          }
         }
-      }
-      let available_tbd_pics = tbd_pics.filter((n) => !active_tbd_pics.includes(n));
-      body.tbd_pic = available_tbd_pics[~~(Math.random() * available_tbd_pics.length)];
-    } else if (body.game !== "TBD" && body.tbd_pic) body.tbd_pic = "";
+        let available_tbd_pics = tbd_pics.filter((n) => !active_tbd_pics.includes(n));
+        body.tbd_pic = available_tbd_pics[~~(Math.random() * available_tbd_pics.length)];
+      } else if (body.game !== "TBD" && body.tbd_pic) body.tbd_pic = "";
 
-    if (task == "Migrate") {
-      let new_attending = [];
-      for (let name of body.attending) {
-        if (name in playerNameDict) new_attending.push(playerNameDict[name]);
-      }
-      console.log({ attending: body.attending, new_attending: new_attending });
-      body.attending = new_attending;
+      if (task == "Migrate") {
+        let new_attending = [];
+        for (let name of body.attending) {
+          if (name in playerNameDict) new_attending.push(playerNameDict[name]);
+        }
+        console.log({ attending: body.attending, new_attending: new_attending });
+        body.attending = new_attending;
 
-      let new_not_attending = [];
-      for (let name of body.not_attending) {
-        if (name in playerNameDict) new_not_attending.push(playerNameDict[name]);
-      }
-      console.log({ not_attending: body.not_attending, new_not_attending: new_not_attending });
-      body.not_attending = new_not_attending;
+        let new_not_attending = [];
+        for (let name of body.not_attending) {
+          if (name in playerNameDict) new_not_attending.push(playerNameDict[name]);
+        }
+        console.log({ not_attending: body.not_attending, new_not_attending: new_not_attending });
+        body.not_attending = new_not_attending;
 
-      console.log({ host: body.host, new_host: playerNameDict[body.host] });
-      body.host = playerNameDict[body.host];
+        console.log({ host: body.host, new_host: playerNameDict[body.host] });
+        body.host = playerNameDict[body.host];
 
-      if (body.organizer && body.organizer != undefined) {
-        console.log({ organizer: body.organizer, new_organizer: playerNameDict[body.organizer] });
-        body.organizer = playerNameDict[body.organizer];
+        if (body.organizer && body.organizer != undefined) {
+          console.log({ organizer: body.organizer, new_organizer: playerNameDict[body.organizer] });
+          body.organizer = playerNameDict[body.organizer];
+        }
+        body.migrated = true;
+        console.log(body);
       }
-      body.migrated = true;
-      console.log(body);
-    }
-    try {
-      const response = await apiClient({
+
+      await apiClient({
         method: method,
         url: "event",
         data: body,
       });
-
-      console.log(response.data);
-      refreshEvents(true);
-      setWaiting(false);
-      // const current_time = Date.parse(new Date().toISOString());
-      // setTimeDiff(current_time - start);
+    },
+    onSuccess: async (data) => {
+      console.log(data);
+      await eventsQuery.refetch();
       close();
-    } catch (error) {
-      console.error(error);
+    },
+    onError: (error) => {
       setErrorMsg(`${task === "Clone" ? "Create" : task} Event Failed`);
-      setWaiting(false);
-      // const current_time = Date.parse(new Date().toISOString());
-      // setTimeDiff(current_time - start);
-    }
-  };
+      console.error(error);
+    },
+  });
 
   function handleSubmit(event: React.BaseSyntheticEvent) {
     event.preventDefault();
     console.log(eventForm);
-    createEvent(eventForm, method);
+    manageEventMutation.mutate({ body: eventForm, method: method });
   }
   return (
     <Form onSubmit={handleSubmit}>
@@ -474,7 +468,6 @@ export function ManageEventModal({
                 {players.map((player_id: string, index: number) => (
                   <Col key={index} style={{ minWidth: "min-content" }}>
                     <Form.Check
-                      // style={{ marginLeft: "10%" }}
                       key={index}
                       type="checkbox"
                       id={`option_${index}`}
@@ -522,11 +515,13 @@ export function ManageEventModal({
         {/* <pre>{JSON.stringify(selectedAttendingOptions, null, 4)}</pre> */}
         {/* <pre>{JSON.stringify(selectedNotAttendingOptions, null, 4)}</pre> */}
         <span>{errorMsg}</span>
-        <Button variant="primary" type="submit" disabled={waiting}>
-          {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
+        <Button variant="primary" type="submit" disabled={manageEventMutation.isPending}>
+          {manageEventMutation.isPending && (
+            <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
+          )}
           {task == "Modify" ? "Update Event" : task == "Migrate" ? "Migrate Event" : "Create Event"}
         </Button>
-        <Button variant="secondary" onClick={close} disabled={waiting}>
+        <Button variant="secondary" onClick={close} disabled={manageEventMutation.isPending}>
           Cancel
         </Button>
       </Modal.Footer>
@@ -537,9 +532,8 @@ export function ManageEventModal({
 interface RsvpFooterProps {
   event: GameKnightEvent;
   index: number;
-  refreshEvents: (use_api: boolean) => void;
 }
-export function RsvpFooter({ event, index, refreshEvents }: RsvpFooterProps) {
+export function RsvpFooter({ event, index }: RsvpFooterProps) {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
   const apiClient = axios.create({
     baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
@@ -547,6 +541,8 @@ export function RsvpFooter({ event, index, refreshEvents }: RsvpFooterProps) {
       Authorization: "Bearer " + tokens.idToken,
     },
   });
+
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
 
   let player_id = "";
   if (signInStatus === "SIGNED_IN" && tokensParsed) {
@@ -563,14 +559,14 @@ export function RsvpFooter({ event, index, refreshEvents }: RsvpFooterProps) {
         user_id: player_id,
         rsvp: "attending",
       };
-      send({ params: body, method: "DELETE" });
+      eventRsvpMutation.mutate({ params: body, method: "DELETE" });
     } else {
       const body = {
         event_id: event.event_id,
         user_id: player_id,
         rsvp: "attending",
       };
-      send({ body: body, method: "POST" });
+      eventRsvpMutation.mutate({ body: body, method: "POST" });
     }
   };
   const handleNo = () => {
@@ -581,15 +577,14 @@ export function RsvpFooter({ event, index, refreshEvents }: RsvpFooterProps) {
         user_id: player_id,
         rsvp: "not_attending",
       };
-      send({ params: body, method: "DELETE" });
-      // send(body, "DELETE");
+      eventRsvpMutation.mutate({ params: body, method: "DELETE" });
     } else {
       const body = {
         event_id: event.event_id,
         user_id: player_id,
         rsvp: "not_attending",
       };
-      send({ body: body, method: "POST" });
+      eventRsvpMutation.mutate({ body: body, method: "POST" });
     }
   };
 
@@ -598,21 +593,26 @@ export function RsvpFooter({ event, index, refreshEvents }: RsvpFooterProps) {
     params?: Object | null;
     method: string;
   }
-  const send = async ({ body = null, params = null, method }: SendProps) => {
-    const response = await apiClient({
-      headers: tokens && {
-        Authorization: "Bearer " + tokens.idToken,
-      },
-      params: params,
-      method: method,
-      url: "event/rsvp",
-      data: body,
-    });
-    console.log(response.data);
-    refreshEvents(true);
-    setYesWaiting(false);
-    setNoWaiting(false);
-  };
+
+  const eventRsvpMutation = useMutation({
+    mutationFn: async ({ body = null, params = null, method }: SendProps) => {
+      await apiClient({
+        headers: tokens && {
+          Authorization: "Bearer " + tokens.idToken,
+        },
+        params: params,
+        method: method,
+        url: "event/rsvp",
+        data: body,
+      });
+    },
+    onSuccess: async (data) => {
+      console.log(data);
+      await eventsQuery.refetch();
+      setYesWaiting(false);
+      setNoWaiting(false);
+    },
+  });
   try {
     if (
       !event.player_pool.includes(player_id) &&
