@@ -9,6 +9,9 @@ import "./App.scss";
 import "amazon-cognito-passwordless-auth/passwordless.css";
 import "./App.css";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
 import { Passwordless } from "amazon-cognito-passwordless-auth";
 import { PasswordlessContextProvider, Fido2Toast } from "amazon-cognito-passwordless-auth/react";
 // } from "./components/DemoContext";
@@ -27,16 +30,22 @@ Passwordless.configure({
   },
 });
 
+// const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5min
+    },
+  },
+});
+
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <PasswordlessContextProvider enableLocalUserCache={true}>
     <React.StrictMode>
-      {/* <ThemeProvider
-      // breakpoints={["xxxl", "1400px", "1200px", "992px", "768px", "576px", "xs", "xxs"]}
-      // minBreakpoint="xl"
-      > */}
-      <RouterProvider router={router} />
-      {/* <App data-bs-theme="dark" /> */}
-      {/* </ThemeProvider> */}
+      <QueryClientProvider client={queryClient}>
+        <ReactQueryDevtools />
+        <RouterProvider router={router} />
+      </QueryClientProvider>
     </React.StrictMode>
     <Fido2Toast />
   </PasswordlessContextProvider>

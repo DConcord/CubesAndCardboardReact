@@ -14,10 +14,12 @@ import FloatingLabel from "react-bootstrap/FloatingLabel";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
 
-import NumberFormat, { NumericFormat, PatternFormat } from "react-number-format";
+import { PatternFormat } from "react-number-format";
 
 import Authenticated, { authenticated } from "./Authenticated";
 import TShoot from "./TShoot";
+import { fetchPlayersApiOptions } from "./Queries";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function PlayersAuth() {
   const { signInStatus, tokensParsed } = usePasswordless();
@@ -48,35 +50,24 @@ export function PlayersAuth() {
 }
 
 export default function Players() {
-  const navigate = useNavigate();
-  // if (!authenticated({ group: ["admin"] })) navigate("/");
   const { tokens } = usePasswordless();
+  const playersQuery = useQuery(fetchPlayersApiOptions({ tokens: tokens!, refresh: "no" }));
+  const playersDict = playersQuery?.data?.Users ?? {};
+  const groups = playersQuery?.data?.Groups ?? [];
 
-  // API Client
-  const apiClient = axios.create({
-    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
-    headers: tokens && {
-      Authorization: "Bearer " + tokens.idToken,
+  const queryClient = useQueryClient();
+  const playersRefreshMutation = useMutation({
+    mutationFn: async () => {
+      const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/players`, {
+        headers: { Authorization: "Bearer " + tokens!.idToken },
+        params: { refresh: "yes" },
+      });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["players"], data);
     },
   });
-
-  const [waitingFetchPlayers, setWaitingFetchPlayers] = useState(false);
-  const [playersDict, setPlayersDict] = useState<PlayersDict>();
-  const [groups, setGroups] = useState<string[]>([]);
-  interface FetchPlayersProps {
-    refresh: "yes" | "no";
-  }
-  async function fetchPlayers({ refresh }: FetchPlayersProps) {
-    if (refresh == "yes") setWaitingFetchPlayers(true);
-    const response = await apiClient.get("players", { params: { refresh: refresh } });
-    // console.log(response.data);
-    if (refresh == "yes") setWaitingFetchPlayers(false);
-    setPlayersDict(response.data.Users);
-    setGroups(response.data.Groups);
-  }
-  useEffect(() => {
-    fetchPlayers({ refresh: "no" });
-  }, [tokens]);
 
   // Create "Manage Event" PopUp ("Modal")
   const [managedPlayer, setManagedPlayer] = useState<Player>();
@@ -134,15 +125,15 @@ export default function Players() {
                     <span className="visually-hidden">Loading...</span>
                   </Spinner> */}
                   <Button
-                    disabled={waitingFetchPlayers}
+                    disabled={playersRefreshMutation.isPending}
                     className="align-top"
                     size="sm"
                     variant="secondary"
                     onClick={() => {
-                      fetchPlayers({ refresh: "yes" });
+                      playersRefreshMutation.mutate();
                     }}
                   >
-                    {waitingFetchPlayers && (
+                    {playersRefreshMutation.isPending && (
                       <Spinner size="sm" animation="grow" role="status">
                         <span className="visually-hidden">Loading...</span>
                       </Spinner>
@@ -180,7 +171,6 @@ export default function Players() {
             {tabData.map((row, index) => (
               <tr key={index}>
                 <td>
-                  {/* <Button size="sm" variant="secondary" > */}
                   <Button
                     size="sm"
                     variant="secondary"
@@ -202,13 +192,10 @@ export default function Players() {
 
         <Modal show={showManagePlayer} onHide={handleCloseManagePlayer} backdrop="static" keyboard={false}>
           <ManagePlayerModal
-            groups={groups}
+            // groups={groups}
             close={handleCloseManagePlayer}
             task={managedPlayerTask}
             player={managedPlayer}
-            // refreshPlayers={fetchPlayers}
-            setPlayersDict={setPlayersDict}
-            setGroups={setGroups}
           />
         </Modal>
       </>
@@ -221,7 +208,6 @@ export default function Players() {
             <Col xs="auto">
               <h2>Manage Players</h2>
             </Col>
-            {/* <Row style={{ justifyContent: "right" }}> */}
             <Col style={{ textAlign: "right" }}>
               <Spinner animation="border" role="status">
                 <span className="visually-hidden">Loading...</span>
@@ -239,25 +225,11 @@ export default function Players() {
 
 interface ManagePlayerModalProps {
   task: "Create" | "Modify" | "ModifySelf";
-  groups?: string[];
   player?: Player;
   close: () => void;
-  // refreshPlayers: () => void;
-  setPlayersDict?: (playersDict: PlayersDict) => void;
-  setGroups?: (groups: string[]) => void;
-  // accessToken?: string;
 }
-export function ManagePlayerModal({
-  task,
-  groups,
-  player,
-  close,
-  // refreshPlayers,
-  setPlayersDict,
-  setGroups,
-}: // accessToken,
-ManagePlayerModalProps) {
-  const { tokens, tokensParsed } = usePasswordless();
+export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProps) {
+  const { tokens } = usePasswordless();
   const method = task === "Create" ? "POST" : "PUT";
   const [playerForm, setPlayerForm] = useState<Player>(
     player
@@ -271,6 +243,9 @@ ManagePlayerModalProps) {
         }
   );
   const [phone, setPhone] = useState(playerForm.phone_number ? playerForm.phone_number.replace("+1", "") : "");
+
+  const playersQuery = useQuery(fetchPlayersApiOptions({ tokens: tokens!, refresh: "no" }));
+  const groups = playersQuery?.data?.Groups ?? [];
 
   const [inputValidated, setInputValidated] = useState(false);
   const handleInput = (e: React.BaseSyntheticEvent) => {
@@ -313,40 +288,41 @@ ManagePlayerModalProps) {
     },
   });
 
-  const [waiting, setWaiting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const managePlayer = async (body: Player, method: string) => {
-    setWaiting(true);
-    let url = "player";
-    if (task == "ModifySelf") url = "player/self";
-    try {
+  const queryClient = useQueryClient();
+  const managePlayerMutation = useMutation({
+    mutationFn: async ({ body, method }: { body: Player; method: string }) => {
+      let url = "player";
+      if (task == "ModifySelf") url = "player/self";
       const response = await apiClient({
         method: method,
         url: url,
         data: body,
       });
-
-      console.log(response.data);
-
+      return response.data;
+    },
+    onSuccess: async (data) => {
       // refreshPlayers();
-      if (task !== "ModifySelf") {
-        setPlayersDict!(response.data.Users);
-        setGroups!(response.data.Groups);
+      if (task === "ModifySelf") {
+        await playersQuery.refetch();
+      } else {
+        queryClient.setQueryData(["players"], data);
       }
-      setWaiting(false);
       close();
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error(error);
       setErrorMsg(task == "ModifySelf" ? "Modify Profile Failed" : `${task} Player Failed`);
-      setWaiting(false);
-    }
-  };
+    },
+  });
 
   function handleSubmit(event: React.BaseSyntheticEvent) {
     event.preventDefault();
     if (task == "Create" && !playerForm.family_name) delete playerForm.family_name;
+    if (task == "Create" && !playerForm.phone_number) delete playerForm.phone_number;
     console.log(playerForm, task);
-    managePlayer(playerForm, method);
+    // managePlayer(playerForm, method);
+    managePlayerMutation.mutate({ body: playerForm, method: method });
   }
   return (
     <Form onSubmit={handleSubmit}>
@@ -427,14 +403,16 @@ ManagePlayerModalProps) {
         </Row>
       </Modal.Body>
       <Modal.Footer>
-        <pre>{JSON.stringify(playerForm, null, 2)}</pre>
-        phone: {phone}
+        {/* <pre>{JSON.stringify(playerForm, null, 2)}</pre> */}
+        {/* phone: {phone} */}
         <span>{errorMsg}</span>
-        <Button variant="primary" type="submit" disabled={waiting || !inputValidated}>
-          {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
+        <Button variant="primary" type="submit" disabled={managePlayerMutation.isPending || !inputValidated}>
+          {managePlayerMutation.isPending && (
+            <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
+          )}
           {task == "Modify" ? "Update Player" : task == "ModifySelf" ? "Update" : "Create Player"}
         </Button>
-        <Button variant="secondary" onClick={close} disabled={waiting}>
+        <Button variant="secondary" onClick={close} disabled={managePlayerMutation.isPending}>
           Cancel
         </Button>
       </Modal.Footer>
@@ -444,13 +422,17 @@ ManagePlayerModalProps) {
 const CustomFormControl: React.FC<FormControlProps> = (props) => {
   return <Form.Control autoComplete="off" {...props} />;
 };
-{
-  /* <NumberFormat decimalScale={0} thousandSeparator={" "} customInput={CustomInput} />; */
-}
 
 // https://betterprogramming.pub/5-recipes-for-setting-default-props-in-react-typescript-b52d8b6a842c
 export type PlayerNameDict = {
   [key: PlayerGet["attrib"]["given_name"]]: string;
+};
+
+export type PlayersGroups = {
+  Users: PlayersDict;
+  Groups: {
+    [key: string]: string[];
+  };
 };
 
 export type PlayersDict = {

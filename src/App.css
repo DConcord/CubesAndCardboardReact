@@ -81,3 +81,7 @@ body {
 .dropdown-menu {
   --bs-dropdown-min-width: 7rem;
 }
+
+.link-no-blue {
+  color: unset;
+}

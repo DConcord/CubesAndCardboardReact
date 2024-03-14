@@ -14,7 +14,8 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 
-import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { fetchEventsOptions, fetchPlayersOptions, fetchPlayersApiOptions } from "./Queries";
 
 import TShoot from "./TShoot";
 import {
@@ -25,8 +26,7 @@ import {
   RsvpFooter,
   ManagedEventTask,
 } from "./EventManagement";
-import { PlayersDict } from "./Players";
-import Authenticated from "./Authenticated";
+import Authenticated, { authenticated } from "./Authenticated";
 
 export default function UpcomingEvents() {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
@@ -36,61 +36,20 @@ export default function UpcomingEvents() {
   if (signInStatus === "SIGNED_IN" && tokensParsed) {
     first_name = String(tokensParsed.idToken.given_name);
   }
+  const eventsQuery = useQuery(fetchEventsOptions());
+  const playersQuery =
+    authenticated({ signInStatus, tokensParsed, group: ["admin"] }) && tokens
+      ? useQuery(fetchPlayersApiOptions({ tokens: tokens, refresh: "no" }))
+      : useQuery(fetchPlayersOptions());
+  const playersDict = playersQuery?.data?.Users ?? {};
+  const players = playersQuery?.data?.Groups?.player ?? [];
+  const organizers = playersQuery?.data?.Groups?.organizer ?? [];
+  const hosts = playersQuery?.data?.Groups?.host ?? [];
 
-  // API Client
-  const apiClient = axios.create({
-    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
-    headers: tokens && {
-      Authorization: "Bearer " + tokens.idToken,
-    },
-  });
-
-  const [events, setEvents] = useState([]);
-  // interface fetchEventsProps {
-  //   use_api?: boolean;
-  // }
-  // async function fetchEvents({ use_api = false }: fetchEventsProps) {
-  // async function fetchEvents(use_api = false) {
-  const fetchEvents = async (use_api = false) => {
-    // if (use_api === undefined) use_api = false;
-    let response;
-    if (events.length !== 0 && signInStatus === "SIGNED_IN" && use_api) {
-      // If Authenticated, pull events from the API
-      response = await apiClient.get("events", {});
-    } else {
-      // Otherwise pull from the public events.json
-      response = await axios.get(`https://${import.meta.env.VITE_API_URL}/events.json`);
-    }
-    setEvents(response.data);
-  };
-
-  const [playersDict, setPlayersDict] = useState<PlayersDict>();
-  const [players, setPlayers] = useState([]);
-  const [organizers, setOrganizers] = useState([]);
-  const [hosts, setHosts] = useState([]);
-  const fetchPlayersGroups = async (use_api = false) => {
-    let response;
-    if (players.length != 0 && signInStatus === "SIGNED_IN" && use_api) {
-      // If Authenticated, pull players from the API
-      console.log(players.length, players, signInStatus);
-      response = await apiClient.get("players", {});
-    } else {
-      // Otherwise pull from the public players_groups.json
-      response = await axios.get(`https://${import.meta.env.VITE_API_URL}/players_groups.json`);
-    }
-    setPlayersDict(response.data.Users);
-    setPlayers(response.data.Groups.player);
-    setOrganizers(response.data.Groups.organizer);
-    setHosts(response.data.Groups.host);
-    // console.log(response.data);
-    // console.log(players);
-    // console.log(organizers);
-    // console.log(hosts);
-  };
   useEffect(() => {
-    // fetchEvents({ use_api: false });
-    fetchEvents(false);
-    fetchPlayersGroups(false);
+    if (authenticated({ signInStatus, tokensParsed, group: ["admin"] })) {
+      playersQuery.refetch();
+    }
   }, [tokens]);
 
   // Create "Delete Event" PopUp ("Modal")
@@ -123,12 +82,7 @@ export default function UpcomingEvents() {
     setShowTransferDevEvents(true);
   };
 
-  // const [showMigrateEvents, setShowMigrateEvents] = useState(false);
-  // const handleCloseMigrateEvents = () => setShowMigrateEvents(false);
-  // const handleShowMigrateEvents = () => {
-  //   setShowMigrateEvents(true);
-  // };
-  if (playersDict && events) {
+  if (playersQuery.isSuccess && eventsQuery.isSuccess) {
     return (
       <>
         <Container fluid>
@@ -164,16 +118,6 @@ export default function UpcomingEvents() {
                       {showAdmin ? "Hide Admin" : "Show Admin"}
                     </Button>
                   </Col>
-                  {/* <Col xs="auto" style={{ textAlign: "right" }}>
-                    <Button size="sm" variant="primary" onClick={() => navigate("/players")}>
-                      Players
-                    </Button>
-                  </Col> */}
-                  {/* <Col xs="auto" style={{ textAlign: "right" }}>
-                    <Button size="sm" variant="secondary" onClick={() => navigate("/tbd")}>
-                      TBD Gallery
-                    </Button>
-                  </Col> */}
                 </Row>
               </Col>
             </Authenticated>
@@ -189,40 +133,28 @@ export default function UpcomingEvents() {
               close={handleCloseManageEvent}
               task={managedEventTask}
               gameKnightEvent={managedEvent}
-              refreshEvents={fetchEvents}
-              events={events}
             />
           </Modal>
           <Modal show={showDeleteEvent} onHide={handleCloseDeleteEvent}>
-            <DeleteEventModal
-              close={handleCloseDeleteEvent}
-              gameKnightEvent={deleteEvent!}
-              refreshEvents={fetchEvents}
-            />
+            <DeleteEventModal close={handleCloseDeleteEvent} gameKnightEvent={deleteEvent!} />
           </Modal>
           <Modal show={showTransferDevEvents} onHide={handleCloseTransferDevEvents} backdrop="static" keyboard={false}>
-            <TransferDevEventsModal close={handleCloseTransferDevEvents} events={events} refreshEvents={fetchEvents} />
+            <TransferDevEventsModal close={handleCloseTransferDevEvents} />
           </Modal>
-          {/* <Modal show={showTransferDevEvents} onHide={handleCloseMigrateEvents} backdrop="static" keyboard={false}>
-          <MigrateEventsModal
-            playersDict={playersDict}
-            players={players}
-            organizers={organizers}
-            hosts={hosts}
-            close={handleCloseMigrateEvents}
-            events={events}
-            refreshEvents={fetchEvents}
-          />
-        </Modal> */}
           <Authenticated given_name={["Colten", "Joe"]}>
-            <TShoot events={events} playersDict={playersDict} players={players} organizers={organizers} hosts={hosts} />
+            <TShoot
+              events={eventsQuery.data}
+              playersDict={playersDict}
+              players={players}
+              organizers={organizers}
+              hosts={hosts}
+            />
           </Authenticated>
         </Authenticated>
 
-        {/* GameKnight Event Cards */}
         <Container fluid>
           <Row xs={1} sm={2} md={2} lg={3} xl={4} xxl={4} className="g-4 justify-content-center">
-            {events.map((event: GameKnightEvent, index) => {
+            {eventsQuery.data.map((event: GameKnightEvent, index) => {
               if (event.format == "Private" && signInStatus !== "SIGNED_IN") {
                 return null; // skip
               } else if (
@@ -233,9 +165,7 @@ export default function UpcomingEvents() {
               ) {
                 return null; // skip
               }
-
               const spots_available = event.format == "Open" ? null : event.total_spots! - event.attending.length;
-              // const date_obj = new Date(event.date);
               const event_date = formatIsoDate(event.date);
 
               var attending_names: string[] = [];
@@ -258,7 +188,6 @@ export default function UpcomingEvents() {
                       {event.bgg_id && event.bgg_id > 0 ? (
                         <Card.Img variant="top" src={`https://${import.meta.env.VITE_API_URL}/${event.bgg_id}.png`} />
                       ) : (
-                        // <Card.Img variant="top" src="/Game_TBD.png" />
                         <Card.Img variant="top" src={"/" + event.tbd_pic} />
                       )}
                       <Card.Body>
@@ -292,7 +221,20 @@ export default function UpcomingEvents() {
                         </Card.Title>
                         <Card.Subtitle className="mb-2 text-muted">
                           <Row>
-                            <Col className="d-flex align-items-center justify-content-start">{event.game}</Col>
+                            <Col className="d-flex align-items-center justify-content-start">
+                              {event.bgg_id && event.bgg_id > 0 && event.game !== "TBD" ? (
+                                <a
+                                  className="link-no-blue"
+                                  href={`https://boardgamegeek.com/boardgameexpansion/${event.bgg_id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {event.game}
+                                </a>
+                              ) : (
+                                event.game
+                              )}
+                            </Col>
                           </Row>
                         </Card.Subtitle>
                         <Card.Text as="div">
@@ -300,7 +242,6 @@ export default function UpcomingEvents() {
                           {event.format != "Open" && (
                             <>
                               <div>Max Players: {event.total_spots}</div>
-                              {/* <div>Spots Remaining: {event.total_spots}</div> */}
                             </>
                           )}
                           <div>
@@ -317,7 +258,7 @@ export default function UpcomingEvents() {
                             !event.attending.includes(tokensParsed.idToken.sub)
                           ) && (
                             <Card.Footer>
-                              <RsvpFooter event={event} index={index} refreshEvents={fetchEvents} />
+                              <RsvpFooter event={event} index={index} />
                             </Card.Footer>
                           )}
                       </Authenticated>
@@ -362,22 +303,7 @@ export default function UpcomingEvents() {
         </Container>
       </>
     );
-  } else return <></>;
-}
-
-interface RsvpOverlayProps {
-  children: React.ReactNode;
-}
-function RsvpOverlay({ children }: RsvpOverlayProps) {
-  return (
-    <OverlayTrigger
-      placement="bottom"
-      delay={{ show: 250, hide: 400 }}
-      overlay={<Tooltip id="button-tooltip">DEMO! You Coming?!</Tooltip>}
-    >
-      <span>{children}</span>
-    </OverlayTrigger>
-  );
+  } else return <div>Loading...</div>;
 }
 
 export interface EventDict {
