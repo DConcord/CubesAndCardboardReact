@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
+import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Row from "react-bootstrap/Row";
@@ -17,6 +18,7 @@ import { fetchEventsApiOptions, fetchEventsOptions } from "./Queries";
 
 import { GameKnightEvent, ExistingGameKnightEvent, EventDict, formatIsoDate } from "./Events";
 import { PlayerNameDict, PlayersDict } from "./Players";
+import { Alert } from "react-bootstrap";
 
 interface DeleteEventModalProps {
   close: () => void;
@@ -207,13 +209,14 @@ export function ManageEventModal({
 }: ManageEventModalProps) {
   const method = ["Create", "Clone"].includes(task) ? "POST" : ["Modify", "Migrate"].includes(task) ? "PUT" : "";
   const { tokens } = usePasswordless();
+  const today_6p_local = new Date(new Date().setHours(18, 0, 0, 0)).toLocaleString("lt").replace(" ", "T");
   const [eventForm, setEventForm] = useState<GameKnightEvent>(
     gameKnightEvent
       ? gameKnightEvent
       : {
           event_id: undefined,
           event_type: "GameKnight",
-          date: "",
+          date: today_6p_local,
           host: "",
           organizer: "",
           format: "Open",
@@ -222,7 +225,7 @@ export function ManageEventModal({
           total_spots: undefined,
           attending: [],
           not_attending: [],
-          player_pool: players,
+          player_pool: [],
           organizer_pool: organizers,
         }
   );
@@ -241,6 +244,19 @@ export function ManageEventModal({
     playerNameDict[player["attrib"]["given_name"]] = player_id;
   }
   // console.log(playerNameDict);
+
+  // Handle Private Player Pool Checkboxes
+  const [selectedPrivatePlayerPool, setSelectedPrivatePlayerPool] = useState(eventForm.player_pool);
+  const handlePrivatePlayerPoolChange = (event: React.BaseSyntheticEvent) => {
+    const optionId = event.target.value;
+    const isChecked = event.target.checked;
+
+    if (isChecked) {
+      setSelectedPrivatePlayerPool([...selectedPrivatePlayerPool, optionId]);
+    } else {
+      setSelectedPrivatePlayerPool(selectedPrivatePlayerPool.filter((id) => id !== optionId));
+    }
+  };
 
   // Handle Player Attending Checkboxes
   const [selectedAttendingOptions, setSelectedAttendingOptions] = useState(eventForm.attending);
@@ -273,9 +289,11 @@ export function ManageEventModal({
 
   // when selectedAttendingOptions changes, update eventForm.attending
   // when selectedNotAttendingOptions changes, update eventForm.not_attending
+  // when selectedPrivatePlayerPool changes and format is "Private": update player_pool
   useEffect(() => {
     setEventForm({ ...eventForm, attending: selectedAttendingOptions, not_attending: selectedNotAttendingOptions });
-  }, [selectedAttendingOptions, selectedNotAttendingOptions]);
+    if (eventForm.format == "Private") setEventForm({ ...eventForm, player_pool: selectedPrivatePlayerPool });
+  }, [selectedAttendingOptions, selectedNotAttendingOptions, selectedPrivatePlayerPool]);
 
   const apiClient = axios.create({
     baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
@@ -356,7 +374,7 @@ export function ManageEventModal({
     <Form onSubmit={handleSubmit}>
       <Modal.Body className="text-center">
         <Row>
-          <Col med="true" style={{ minWidth: "13rem" }}>
+          <Col med="true" style={{ minWidth: "14rem" }}>
             <FloatingLabel controlId="host" label="Host" className="mb-3">
               <Form.Select
                 aria-label="Choose Host"
@@ -375,16 +393,19 @@ export function ManageEventModal({
               </Form.Select>
             </FloatingLabel>
           </Col>
-          <Col med="true" style={{ minWidth: "8rem", maxWidth: "11rem" }}>
-            <FloatingLabel controlId="date" label="Date">
+          <Col med="true" style={{ minWidth: "14rem" }}>
+            <FloatingLabel controlId="date" label="Date" className="mb-3">
               <Form.Control
-                type="date"
+                aria-label="Select a date and time"
+                type="datetime-local"
                 onChange={handleInput}
-                defaultValue={task == "Modify" || task == "Clone" ? eventForm.date : ""}
+                defaultValue={eventForm.date.slice(0, 16)}
+                // defaultValue={task == "Modify" || task == "Clone" ? eventForm.date.slice(0, 16) : ""}
               />
             </FloatingLabel>
           </Col>
-
+        </Row>
+        <Row>
           <Col med="true" style={{ minWidth: "13rem" }}>
             <FloatingLabel controlId="game" label="Game" className="mb-3">
               <Form.Control
@@ -433,31 +454,58 @@ export function ManageEventModal({
               />
             </FloatingLabel>
           </Col>
+          {eventForm.format == "Private" && (
+            <Col med="true" style={{ minWidth: "18rem" }}>
+              <Form.Group controlId="choosePrivatePlayerPool" className="mb-3">
+                <Form.Label aria-label="Choose Private Player Pool">Choose Private Player Pool</Form.Label>
+                <Row>
+                  {players.map((player_id: string, index: number) => (
+                    <Col key={player_id} style={{ minWidth: "min-content" }}>
+                      <Form.Check
+                        // style={{ marginLeft: "10%" }}
+                        key={index}
+                        type="checkbox"
+                        id={`option_${index}`}
+                        label={playersDict[player_id].attrib.given_name}
+                        checked={selectedPrivatePlayerPool.includes(player_id)}
+                        onChange={handlePrivatePlayerPoolChange}
+                        value={player_id}
+                      />
+                    </Col>
+                  ))}
+                </Row>
+              </Form.Group>
+            </Col>
+          )}
           <Col med="true" style={{ minWidth: "18rem" }}>
             <Form.Group controlId="chooseAttendingPlayers" className="mb-3">
               <Form.Label aria-label="Choose Attending Players">
-                Choose Attending Players{task == "Create" && " (after event is created)"}
+                Choose Attending Players
+                {task == "Create" && eventForm.format == "Reserved" && " (after event is created)"}
               </Form.Label>
               <Row>
-                {players.map((player_id: string, index: number) => (
-                  <Col key={player_id} style={{ minWidth: "min-content" }}>
-                    <Form.Check
-                      // style={{ marginLeft: "10%" }}
-                      key={index}
-                      type="checkbox"
-                      id={`option_${index}`}
-                      label={playersDict[player_id].attrib.given_name}
-                      checked={selectedAttendingOptions.includes(player_id)}
-                      disabled={
-                        task == "Create" ||
-                        (!eventForm.player_pool.includes(player_id) &&
-                          !(eventForm.organizer_pool.includes(player_id) && eventForm.organizer == ""))
-                      }
-                      onChange={handleOptionChange}
-                      value={player_id}
-                    />
-                  </Col>
-                ))}
+                {!(task == "Create" && eventForm.format == "Reserved") &&
+                  players.map((player_id: string, index: number) => (
+                    <Col key={player_id} style={{ minWidth: "min-content" }}>
+                      <Form.Check
+                        // style={{ marginLeft: "10%" }}
+                        key={index}
+                        type="checkbox"
+                        id={`option_${index}`}
+                        label={playersDict[player_id].attrib.given_name}
+                        checked={selectedAttendingOptions.includes(player_id)}
+                        disabled={
+                          (task == "Create" && eventForm.format == "Reserved") ||
+                          (eventForm.format == "Private" && !eventForm.player_pool.includes(player_id)) ||
+                          (eventForm.format !== "Open" &&
+                            !eventForm.player_pool.includes(player_id) &&
+                            !(eventForm.organizer_pool.includes(player_id) && eventForm.organizer == ""))
+                        }
+                        onChange={handleOptionChange}
+                        value={player_id}
+                      />
+                    </Col>
+                  ))}
               </Row>
             </Form.Group>
           </Col>
@@ -481,10 +529,10 @@ export function ManageEventModal({
               </Row>
             </Form.Group>
           </Col>
-          <Col med="true" style={{ minWidth: "13rem" }}>
+          <Col med="true" style={{ minWidth: "18rem" }}>
             <FloatingLabel controlId="organizer" label="Organizer" className="mb-3">
               <Form.Select
-                aria-label="Choose Organizer (manually for now)"
+                aria-label="Choose Organizer"
                 onChange={handleInput}
                 defaultValue={
                   task == "Modify" || task == "Clone"
@@ -509,9 +557,18 @@ export function ManageEventModal({
           </Col>
         </Row>
       </Modal.Body>
+      {import.meta.env.MODE == "development" && (
+        <Accordion>
+          <Accordion.Item eventKey="eventDebug">
+            <Accordion.Header>Event Debug</Accordion.Header>
+            <Accordion.Body>
+              <pre>{JSON.stringify(eventForm, null, 2)}</pre>
+            </Accordion.Body>
+          </Accordion.Item>
+        </Accordion>
+      )}
       <Modal.Footer>
         {/* <pre>{timeDiff}</pre> */}
-        {/* <pre>{JSON.stringify(eventForm, null, 4)}</pre> */}
         {/* <pre>{JSON.stringify(selectedAttendingOptions, null, 4)}</pre> */}
         {/* <pre>{JSON.stringify(selectedNotAttendingOptions, null, 4)}</pre> */}
         <span>{errorMsg}</span>
@@ -588,14 +645,14 @@ export function RsvpFooter({ event, index }: RsvpFooterProps) {
     }
   };
 
-  interface SendProps {
+  const [rsvpError, setRsvpError] = useState("");
+  interface eventRsvpProps {
     body?: Object | null;
     params?: Object | null;
     method: string;
   }
-
   const eventRsvpMutation = useMutation({
-    mutationFn: async ({ body = null, params = null, method }: SendProps) => {
+    mutationFn: async ({ body = null, params = null, method }: eventRsvpProps) => {
       await apiClient({
         headers: tokens && {
           Authorization: "Bearer " + tokens.idToken,
@@ -612,11 +669,23 @@ export function RsvpFooter({ event, index }: RsvpFooterProps) {
       setYesWaiting(false);
       setNoWaiting(false);
     },
+    onError: async (error: AxiosError) => {
+      console.error(error);
+      if (error.response) {
+        setRsvpError(`${error.message}\n${JSON.stringify(error.response.data).replaceAll(/["{}]/g, "")}`);
+      } else {
+        setRsvpError(error.message);
+      }
+
+      setYesWaiting(false);
+      setNoWaiting(false);
+    },
   });
   try {
     if (
+      event.format != "Private" &&
       !event.player_pool.includes(player_id) &&
-      !(event.organizer_pool.includes(player_id) && event.organizer == "")
+      !(event.organizer_pool && event.organizer_pool.includes(player_id) && event.organizer == "")
     ) {
       return (
         <Row>
@@ -627,43 +696,52 @@ export function RsvpFooter({ event, index }: RsvpFooterProps) {
       );
     }
   } catch (error) {
-    console.log(event);
+    console.error(error);
+    console.error(event);
     return <></>;
   }
   return (
-    <Row>
-      <Col className="d-flex align-items-center justify-content-start">Can you make it?:</Col>
-      <Col xs="auto" className="d-flex align-items-center justify-content-end ">
-        <ButtonGroup key={index} aria-label="RSVP">
-          <Button
-            onClick={handleYes}
-            key={"yes" + index}
-            variant={event.attending.includes(player_id) ? "success" : "outline-secondary"}
-            disabled={
-              noWaiting ||
-              yesWaiting ||
-              (!event.player_pool.includes(player_id) &&
-                !(event.organizer_pool.includes(player_id) && event.organizer == ""))
-            }
-          >
-            {yesWaiting ? <span className="spinner-grow spinner-grow-sm" role="status"></span> : "Yes"}
-          </Button>
-          <Button
-            onClick={handleNo}
-            key={"no" + index}
-            variant={event.not_attending.includes(player_id) ? "secondary" : "outline-secondary"}
-            disabled={
-              noWaiting ||
-              yesWaiting ||
-              (!event.player_pool.includes(player_id) &&
-                !(event.organizer_pool.includes(player_id) && event.organizer == ""))
-            }
-          >
-            {noWaiting ? <span className="spinner-grow spinner-grow-sm " role="status"></span> : "No"}
-          </Button>
-        </ButtonGroup>
-      </Col>
-    </Row>
+    <>
+      {rsvpError && (
+        <Alert variant="danger" onClose={() => setRsvpError("")} dismissible>
+          <Alert.Heading>RSVP Update Failed</Alert.Heading>
+          <p>{rsvpError}</p>
+        </Alert>
+      )}
+      <Row>
+        <Col className="d-flex align-items-center justify-content-start">Can you make it?:</Col>
+        <Col xs="auto" className="d-flex align-items-center justify-content-end ">
+          <ButtonGroup key={index} aria-label="RSVP">
+            <Button
+              onClick={handleYes}
+              key={"yes" + index}
+              variant={event.attending.includes(player_id) ? "success" : "outline-secondary"}
+              disabled={
+                noWaiting ||
+                yesWaiting ||
+                (!event.player_pool.includes(player_id) &&
+                  !(event.organizer_pool && event.organizer_pool.includes(player_id) && event.organizer == ""))
+              }
+            >
+              {yesWaiting ? <span className="spinner-grow spinner-grow-sm" role="status"></span> : "Yes"}
+            </Button>
+            <Button
+              onClick={handleNo}
+              key={"no" + index}
+              variant={event.not_attending.includes(player_id) ? "secondary" : "outline-secondary"}
+              disabled={
+                noWaiting ||
+                yesWaiting ||
+                (!event.player_pool.includes(player_id) &&
+                  !(event.organizer_pool && event.organizer_pool.includes(player_id) && event.organizer == ""))
+              }
+            >
+              {noWaiting ? <span className="spinner-grow spinner-grow-sm " role="status"></span> : "No"}
+            </Button>
+          </ButtonGroup>
+        </Col>
+      </Row>
+    </>
   );
 }
 
