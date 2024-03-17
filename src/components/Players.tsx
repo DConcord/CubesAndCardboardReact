@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import axios from "axios";
 
+import ConditionalWrap from "./ConditionalWrap";
+
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
@@ -12,6 +14,8 @@ import Spinner from "react-bootstrap/Spinner";
 import Modal from "react-bootstrap/Modal";
 import FloatingLabel from "react-bootstrap/FloatingLabel";
 import Form from "react-bootstrap/Form";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 import { FormControlProps } from "react-bootstrap/FormControl";
 
 import { PatternFormat } from "react-number-format";
@@ -229,7 +233,7 @@ interface ManagePlayerModalProps {
   close: () => void;
 }
 export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProps) {
-  const { tokens } = usePasswordless();
+  const { tokens, refreshTokens } = usePasswordless();
   const method = task === "Create" ? "POST" : "PUT";
   const [playerForm, setPlayerForm] = useState<Player>(
     player
@@ -302,8 +306,8 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
       return response.data;
     },
     onSuccess: async (data) => {
-      // refreshPlayers();
       if (task === "ModifySelf") {
+        refreshTokens();
         await playersQuery.refetch();
       } else {
         queryClient.setQueryData(["players"], data);
@@ -350,19 +354,33 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
               />
             </FloatingLabel>
           </Col>
-          <Col med="true" style={{ minWidth: "13rem" }}>
-            <FloatingLabel controlId="email" label="Email" className="mb-3">
-              <Form.Control
-                autoComplete="off"
-                placeholder="email"
-                type="email"
-                as="textarea"
-                onChange={handleInput}
-                defaultValue={task.startsWith("Modify") ? playerForm.email : ""}
-              />
-            </FloatingLabel>
+          <Col med="true" style={{ minWidth: "18rem" }}>
+            <ConditionalWrap
+              condition={task === "ModifySelf"}
+              wrap={(children) => (
+                <OverlayTrigger
+                  placement="bottom"
+                  delay={{ show: 100, hide: 400 }}
+                  overlay={<Tooltip id="email">Contact an administrator to update your email address</Tooltip>}
+                >
+                  {children}
+                </OverlayTrigger>
+              )}
+            >
+              <FloatingLabel controlId="email" label="Email" className="mb-3">
+                <Form.Control
+                  autoComplete="off"
+                  placeholder="email"
+                  type="email"
+                  as="textarea"
+                  onChange={handleInput}
+                  disabled={task == "ModifySelf"}
+                  defaultValue={task.startsWith("Modify") ? playerForm.email : ""}
+                />
+              </FloatingLabel>
+            </ConditionalWrap>
           </Col>
-          <Col med="true" style={{ minWidth: "13rem" }}>
+          <Col med="true" style={{ minWidth: "18rem" }}>
             <FloatingLabel controlId="phone_number" label="Phone" className="mb-3">
               <PatternFormat
                 format="+1 (###) ###-####"

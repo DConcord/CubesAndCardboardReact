@@ -85,3 +85,55 @@ body {
 .link-no-blue {
   color: unset;
 }
+
+
+.accordion-card-bottom > .accordion-item {
+  border-right: 0;
+  border-left: 0;
+  border-bottom: 0;
+}
+.accordion-card-bottom:first-of-type {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.accordion-card-bottom:first-of-type > .accordion-item > .accordion-header .accordion-button {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.accordion-card-bottom > .accordion-item:first-child {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.accordion-card-bottom > .accordion-item > .accordion-header .accordion-button, .accordion-card-bottom > .accordion-item > .accordion-header .accordion-button.collapsed {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom: 0;
+  /* border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0; */
+}
+
+
+.accordion-card-middle > .accordion-item {
+  border-right: 0;
+  border-left: 0;
+  border-bottom: 0;
+}
+.accordion-card-middle:first-of-type {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.accordion-card-middle:first-of-type > .accordion-item > .accordion-header .accordion-button {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.accordion-card-middle > .accordion-item:first-child {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.accordion-card-middle > .accordion-item > .accordion-header .accordion-button, .accordion-card-middle > .accordion-item > .accordion-header .accordion-button.collapsed {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom: 0;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}

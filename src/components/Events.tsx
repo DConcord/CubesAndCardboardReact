@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import axios from "axios";
 
-// import Accordion from "react-bootstrap/Accordion";
+import Accordion from "react-bootstrap/Accordion";
 // import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 // import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -14,14 +14,13 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 
-import { useQuery } from "@tanstack/react-query";
-import { fetchEventsOptions, fetchPlayersOptions, fetchPlayersApiOptions } from "./Queries";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchPlayersApiOptions } from "./Queries";
 
 import TShoot from "./TShoot";
 import {
   ManageEventModal,
   DeleteEventModal,
-  // MigrateEventsModal,
   TransferDevEventsModal,
   RsvpFooter,
   ManagedEventTask,
@@ -30,13 +29,18 @@ import Authenticated, { authenticated } from "./Authenticated";
 
 export default function UpcomingEvents() {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
-  const [showAdmin, setShowAdmin] = useState(false);
+  const [showAdmin, setShowAdmin] = useState(() => {
+    // getting stored value
+    const saved = localStorage.getItem("showAdmin");
+    if (saved === null) return true;
+    return JSON.parse(saved);
+  });
 
-  let first_name = "";
-  if (signInStatus === "SIGNED_IN" && tokensParsed) {
-    first_name = String(tokensParsed.idToken.given_name);
-  }
-  const eventsQuery = useQuery(fetchEventsOptions());
+  useEffect(() => {
+    localStorage.setItem("showAdmin", JSON.stringify(showAdmin));
+  }, [showAdmin]);
+
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
   const playersQuery =
     authenticated({ signInStatus, tokensParsed, group: ["admin"] }) && tokens
       ? useQuery(fetchPlayersApiOptions({ tokens: tokens, refresh: "no" }))
@@ -45,12 +49,6 @@ export default function UpcomingEvents() {
   const players = playersQuery?.data?.Groups?.player ?? [];
   const organizers = playersQuery?.data?.Groups?.organizer ?? [];
   const hosts = playersQuery?.data?.Groups?.host ?? [];
-
-  useEffect(() => {
-    if (authenticated({ signInStatus, tokensParsed, group: ["admin"] })) {
-      playersQuery.refetch();
-    }
-  }, [tokens]);
 
   // Create "Delete Event" PopUp ("Modal")
   const [deleteEvent, setDeleteEvent] = useState<GameKnightEvent>();
@@ -82,7 +80,42 @@ export default function UpcomingEvents() {
     setShowTransferDevEvents(true);
   };
 
-  if (playersQuery.isSuccess && eventsQuery.isSuccess) {
+  const queryClient = useQueryClient();
+  const playersRefreshMutation = useMutation({
+    mutationFn: async () => {
+      const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/players`, {
+        headers: { Authorization: "Bearer " + tokens!.idToken },
+        params: { refresh: "no" },
+      });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["players"], data);
+    },
+  });
+  const eventsApiRefreshMutation = useMutation({
+    mutationFn: async () => {
+      const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/events`, {
+        headers: { Authorization: "Bearer " + tokens!.idToken },
+      });
+      return response.data;
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["events"], data);
+    },
+  });
+
+  useEffect(() => {
+    console.log(signInStatus, authenticated({ signInStatus, tokensParsed }));
+    if (authenticated({ signInStatus, tokensParsed, group: ["admin"] })) {
+      playersRefreshMutation.mutate();
+    }
+    if (authenticated({ signInStatus, tokensParsed })) {
+      eventsApiRefreshMutation.mutate();
+    }
+  }, [tokens]);
+
+  if (playersQuery.isSuccess && eventsQuery.isSuccess && signInStatus !== "CHECKING") {
     return (
       <>
         <Container fluid>
@@ -161,7 +194,8 @@ export default function UpcomingEvents() {
                 event.format == "Private" &&
                 signInStatus === "SIGNED_IN" &&
                 tokensParsed &&
-                event.player_pool.includes(tokensParsed.idToken.sub) == false
+                event.player_pool.includes(tokensParsed.idToken.sub) == false &&
+                !authenticated({ signInStatus, tokensParsed, group: ["admin"] })
               ) {
                 return null; // skip
               }
@@ -170,6 +204,8 @@ export default function UpcomingEvents() {
 
               var attending_names: string[] = [];
               var not_attending_names: string[] = [];
+
+              const futureEvent = Date.parse(event.date) >= Date.parse(new Date().toString());
 
               if (playersDict) {
                 try {
@@ -200,15 +236,23 @@ export default function UpcomingEvents() {
                                 delay={{ show: 250, hide: 400 }}
                                 overlay={
                                   <Tooltip id="button-tooltip">
-                                    {event.format == "Open"
-                                      ? "Open event! Let " + event.host + " know if you can make it"
-                                      : spots_available + " spots remaining"}
+                                    {!futureEvent && event.format == "Open"
+                                      ? "Open Event"
+                                      : event.format == "Open"
+                                      ? "Open event! Let " +
+                                        playersDict[event.host].attrib.given_name +
+                                        " know if you can make it"
+                                      : !futureEvent
+                                      ? spots_available + " spot(s) unfilled"
+                                      : spots_available + " spot(s) remaining"}
                                   </Tooltip>
                                 }
                               >
                                 <span key={index}>
                                   {event.format == "Open"
                                     ? "Open Event"
+                                    : !futureEvent && event.format == "Reserved"
+                                    ? "Reserved"
                                     : event.format == "Reserved" && spots_available! >= 1
                                     ? "Spots: " + spots_available
                                     : event.format == "Reserved" && spots_available! < 1
@@ -245,13 +289,24 @@ export default function UpcomingEvents() {
                             </>
                           )}
                           <div>
-                            Attending: {attending_names.join(", ")}
-                            {event.format == "Open" && <div>Not Attending: {not_attending_names.join(", ")}</div>}
+                            {futureEvent ? "Attending:" : "Attended:"} {attending_names.join(", ")}
+                            {futureEvent && event.format == "Open" && (
+                              <div>Not Attending: {not_attending_names.join(", ")}</div>
+                            )}
                           </div>
                         </Card.Text>
                       </Card.Body>
+                      {!futureEvent && import.meta.env.MODE == "development" && (
+                        <Accordion className={showAdmin && tokens ? "accordion-card-middle" : "accordion-card-bottom"}>
+                          <Accordion.Item eventKey="scores">
+                            <Accordion.Header>Final Scores</Accordion.Header>
+                            <Accordion.Body>Coming Soon!</Accordion.Body>
+                          </Accordion.Item>
+                        </Accordion>
+                      )}
                       <Authenticated group={["player"]}>
                         {tokensParsed &&
+                          futureEvent &&
                           !(
                             event.format == "Reserved" &&
                             spots_available! < 1 &&
@@ -333,20 +388,27 @@ export type GameKnightEvent = {
 };
 
 export function formatIsoDate(isoString: string) {
-  const months = {
-    "01": "Jan",
-    "02": "Feb",
-    "03": "Mar",
-    "04": "Apr",
-    "05": "May",
-    "06": "Jun",
-    "07": "Jul",
-    "08": "Aug",
-    "09": "Sep",
-    "10": "Oct",
-    "11": "Nov",
-    "12": "Dec",
-  };
-  const date = isoString.split("-");
-  return `${months[date[1] as keyof typeof months]} ${date[2]}, ${date[0]}`;
+  return new Date(isoString).toLocaleDateString("en-US", {
+    // weekday: 'long',
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "America/Denver",
+  });
+  // const months = {
+  //   "01": "Jan",
+  //   "02": "Feb",
+  //   "03": "Mar",
+  //   "04": "Apr",
+  //   "05": "May",
+  //   "06": "Jun",
+  //   "07": "Jul",
+  //   "08": "Aug",
+  //   "09": "Sep",
+  //   "10": "Oct",
+  //   "11": "Nov",
+  //   "12": "Dec",
+  // };
+  // const date = isoString.split("-");
+  // return `${months[date[1] as keyof typeof months]} ${date[2]}, ${date[0]}`;
 }
