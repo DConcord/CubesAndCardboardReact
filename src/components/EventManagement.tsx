@@ -151,7 +151,7 @@ export function TransferDevEventsModal({ close }: TransferDevEventsModalProps) {
       <Form onSubmit={handleSubmit}>
         <Modal.Header className="text-center">Transfer selected events to the Dev DB:</Modal.Header>
         <Modal.Body className="text-center">
-          <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
+          <Form.Group controlId="chooseNotAttendingPlayers" className="mb-2">
             {eventsQuery.data.map((event: ExistingGameKnightEvent, index: number) => (
               <Row key={index} style={{ minWidth: "min-content", maxWidth: "min-content" }}>
                 <Form.Check
@@ -263,7 +263,6 @@ export function ManageEventModal({
   const handleOptionChange = (event: React.BaseSyntheticEvent) => {
     const optionId = event.target.value;
     const isChecked = event.target.checked;
-
     if (isChecked) {
       setSelectedAttendingOptions([...selectedAttendingOptions, optionId]);
       // Remove from not_attending:
@@ -291,8 +290,16 @@ export function ManageEventModal({
   // when selectedNotAttendingOptions changes, update eventForm.not_attending
   // when selectedPrivatePlayerPool changes and format is "Private": update player_pool
   useEffect(() => {
-    setEventForm({ ...eventForm, attending: selectedAttendingOptions, not_attending: selectedNotAttendingOptions });
-    if (eventForm.format == "Private") setEventForm({ ...eventForm, player_pool: selectedPrivatePlayerPool });
+    if (eventForm.format == "Private") {
+      setEventForm({
+        ...eventForm,
+        attending: selectedAttendingOptions,
+        not_attending: selectedNotAttendingOptions,
+        player_pool: selectedPrivatePlayerPool,
+      });
+    } else {
+      setEventForm({ ...eventForm, attending: selectedAttendingOptions, not_attending: selectedNotAttendingOptions });
+    }
   }, [selectedAttendingOptions, selectedNotAttendingOptions, selectedPrivatePlayerPool]);
 
   const apiClient = axios.create({
@@ -375,7 +382,7 @@ export function ManageEventModal({
       <Modal.Body className="text-center">
         <Row>
           <Col med="true" style={{ minWidth: "14rem" }}>
-            <FloatingLabel controlId="host" label="Host" className="mb-3">
+            <FloatingLabel controlId="host" label="Host" className="mb-2">
               <Form.Select
                 aria-label="Choose Host"
                 onChange={handleInput}
@@ -394,7 +401,7 @@ export function ManageEventModal({
             </FloatingLabel>
           </Col>
           <Col med="true" style={{ minWidth: "14rem" }}>
-            <FloatingLabel controlId="date" label="Date" className="mb-3">
+            <FloatingLabel controlId="date" label="Date" className="mb-2">
               <Form.Control
                 aria-label="Select a date and time"
                 type="datetime-local"
@@ -407,7 +414,7 @@ export function ManageEventModal({
         </Row>
         <Row>
           <Col med="true" style={{ minWidth: "13rem" }}>
-            <FloatingLabel controlId="game" label="Game" className="mb-3">
+            <FloatingLabel controlId="game" label="Game" className="mb-2">
               <Form.Control
                 as="textarea"
                 onChange={handleInput}
@@ -416,8 +423,8 @@ export function ManageEventModal({
               />
             </FloatingLabel>
           </Col>
-          <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem" }}>
-            <FloatingLabel controlId="bgg_id" label="BGG ID" className="mb-3">
+          <Col med="true" style={{ minWidth: "6rem", maxWidth: "6rem" }}>
+            <FloatingLabel controlId="bgg_id" label="BGG ID" className="mb-2">
               <Form.Control
                 type="number"
                 disabled={eventForm.game == "TBD"}
@@ -426,8 +433,20 @@ export function ManageEventModal({
               />
             </FloatingLabel>
           </Col>
+          <Col med="true" style={{ minWidth: "10rem", maxWidth: "10rem" }}>
+            <FloatingLabel controlId="status" label="Status" className="mb-2">
+              <Form.Select
+                aria-label="Status"
+                onChange={handleInput}
+                defaultValue={eventForm.status ? eventForm.status : "Normal"}
+              >
+                <option value="Normal">Normal</option>
+                <option value="Cancelled">Cancelled</option>
+              </Form.Select>
+            </FloatingLabel>
+          </Col>
           <Col med="true" style={{ minWidth: "13rem" }}>
-            <FloatingLabel controlId="format" label="Format" className="mb-3">
+            <FloatingLabel controlId="format" label="Format" className="mb-2">
               <Form.Select
                 aria-label="Choose Format"
                 onChange={handleInput}
@@ -444,7 +463,7 @@ export function ManageEventModal({
             </FloatingLabel>
           </Col>
           <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem" }}>
-            <FloatingLabel controlId="total_spots" label="Total Spots" className="mb-3">
+            <FloatingLabel controlId="total_spots" label="Total Spots" className="mb-2">
               <Form.Control
                 disabled={eventForm.format == "Open"}
                 onChange={handleInput}
@@ -456,7 +475,7 @@ export function ManageEventModal({
           </Col>
           {eventForm.format == "Private" && (
             <Col med="true" style={{ minWidth: "18rem" }}>
-              <Form.Group controlId="choosePrivatePlayerPool" className="mb-3">
+              <Form.Group controlId="choosePrivatePlayerPool" className="mb-2">
                 <Form.Label aria-label="Choose Private Player Pool">Choose Private Player Pool</Form.Label>
                 <Row>
                   {players.map((player_id: string, index: number) => (
@@ -478,7 +497,7 @@ export function ManageEventModal({
             </Col>
           )}
           <Col med="true" style={{ minWidth: "18rem" }}>
-            <Form.Group controlId="chooseAttendingPlayers" className="mb-3">
+            <Form.Group controlId="chooseAttendingPlayers" className="mb-2">
               <Form.Label aria-label="Choose Attending Players">
                 Choose Attending Players
                 {task == "Create" && eventForm.format == "Reserved" && " (after event is created)"}
@@ -510,7 +529,7 @@ export function ManageEventModal({
             </Form.Group>
           </Col>
           <Col med="true" style={{ minWidth: "18rem" }}>
-            <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
+            <Form.Group controlId="chooseNotAttendingPlayers" className="mb-2">
               <Form.Label aria-label="Choose Not Attending Players">Choose Not Attending Players</Form.Label>
               <Row>
                 {players.map((player_id: string, index: number) => (
@@ -530,7 +549,7 @@ export function ManageEventModal({
             </Form.Group>
           </Col>
           <Col med="true" style={{ minWidth: "18rem" }}>
-            <FloatingLabel controlId="organizer" label="Organizer" className="mb-3">
+            <FloatingLabel controlId="organizer" label="Organizer" className="mb-2">
               <Form.Select
                 aria-label="Choose Organizer"
                 onChange={handleInput}

@@ -170,9 +170,10 @@ export default function NavigationBar() {
                         </div>
                       )
                     )}
-                    <Nav.Link onClick={handleShowLogin} eventKey="Admin">
+                    {/* <Nav.Link onClick={handleShowLogin} eventKey="Admin">
                       Admin
-                    </Nav.Link>
+                    </Nav.Link> */}
+                    <Button onClick={handleShowLogin}>Sign In</Button>
                   </>
                 ) : (
                   <>

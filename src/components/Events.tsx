@@ -14,6 +14,8 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 
+import "../assets/fonts/TopSecret.ttf";
+
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchPlayersApiOptions } from "./Queries";
 
@@ -221,11 +223,28 @@ export default function UpcomingEvents() {
                 return (
                   <Col key={index}>
                     <Card style={{ minWidth: "20rem", maxWidth: "40rem", height: "100%" }}>
-                      {event.bgg_id && event.bgg_id > 0 ? (
-                        <Card.Img variant="top" src={`https://${import.meta.env.VITE_API_URL}/${event.bgg_id}.png`} />
-                      ) : (
-                        <Card.Img variant="top" src={"/" + event.tbd_pic} />
-                      )}
+                      <a className="position-relative">
+                        {event.bgg_id && event.bgg_id > 0 ? (
+                          <Card.Img variant="top" src={`https://${import.meta.env.VITE_API_URL}/${event.bgg_id}.png`} />
+                        ) : (
+                          <Card.Img variant="top" src={"/" + event.tbd_pic} />
+                        )}
+                        {event.status && event.status == "Cancelled" ? (
+                          <Card.ImgOverlay>
+                            <Card.Title className="topsecret" style={{ color: "red" }}>
+                              {"[Cancelled]"}
+                            </Card.Title>
+                          </Card.ImgOverlay>
+                        ) : !futureEvent ? (
+                          <Card.ImgOverlay>
+                            <Card.Title className="topsecret" style={{ color: "green" }}>
+                              {"[Complete]"}
+                            </Card.Title>
+                          </Card.ImgOverlay>
+                        ) : (
+                          <></>
+                        )}
+                      </a>
                       <Card.Body>
                         <Card.Title key={index}>
                           <Row>
@@ -385,6 +404,7 @@ export type GameKnightEvent = {
   organizer_pool: string[];
   tbd_pic?: string;
   migrated?: boolean;
+  status?: "Normal" | "Cancelled";
 };
 
 export function formatIsoDate(isoString: string) {
