@@ -291,8 +291,16 @@ export function ManageEventModal({
   // when selectedNotAttendingOptions changes, update eventForm.not_attending
   // when selectedPrivatePlayerPool changes and format is "Private": update player_pool
   useEffect(() => {
-    setEventForm({ ...eventForm, attending: selectedAttendingOptions, not_attending: selectedNotAttendingOptions });
-    if (eventForm.format == "Private") setEventForm({ ...eventForm, player_pool: selectedPrivatePlayerPool });
+    if (eventForm.format == "Private") {
+      setEventForm({
+        ...eventForm,
+        attending: selectedAttendingOptions,
+        not_attending: selectedNotAttendingOptions,
+        player_pool: selectedPrivatePlayerPool,
+      });
+    } else {
+      setEventForm({ ...eventForm, attending: selectedAttendingOptions, not_attending: selectedNotAttendingOptions });
+    }
   }, [selectedAttendingOptions, selectedNotAttendingOptions, selectedPrivatePlayerPool]);
 
   const apiClient = axios.create({
