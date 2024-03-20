@@ -6,14 +6,17 @@ import { router } from "./App";
 import "bootstrap/dist/css/bootstrap.css";
 import "./App.scss";
 
-import "amazon-cognito-passwordless-auth/passwordless.css";
+// import "amazon-cognito-passwordless-auth/passwordless.css";
+import "./passwordless.css";
 import "./App.css";
+
+import Fido2Toast from "./components/Fido2Toast";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { Passwordless } from "amazon-cognito-passwordless-auth";
-import { PasswordlessContextProvider, Fido2Toast } from "amazon-cognito-passwordless-auth/react";
+import { PasswordlessContextProvider /*Fido2Toast*/ } from "amazon-cognito-passwordless-auth/react";
 // } from "./components/DemoContext";
 import ThemeProvider from "react-bootstrap/ThemeProvider";
 import { RouterProvider } from "react-router-dom";
