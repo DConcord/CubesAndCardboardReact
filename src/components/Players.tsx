@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import axios from "axios";
 
-import ConditionalWrap from "./ConditionalWrap";
+import Icon from "@mdi/react";
+import { mdiRefresh, mdiClose, mdiCheck } from "@mdi/js";
 
 import { verifyUserAttribute, getUserAttributeVerificationCode } from "amazon-cognito-passwordless-auth/cognito-api";
 
@@ -16,8 +17,6 @@ import Spinner from "react-bootstrap/Spinner";
 import Modal from "react-bootstrap/Modal";
 import FloatingLabel from "react-bootstrap/FloatingLabel";
 import Form from "react-bootstrap/Form";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
 import { FormControlProps } from "react-bootstrap/FormControl";
 
 import { PatternFormat } from "react-number-format";
@@ -496,7 +495,8 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
               {/* <Col xs="auto" style={{ textAlign: "right" }}></Col> */}
               <Col xs="auto" style={{ justifyContent: "left", paddingLeft: 0, paddingRight: 4 }}>
                 <Button variant="secondary" onClick={() => refreshTokens()} disabled={managePlayerMutation.isPending}>
-                  Refresh
+                  {/* Refresh */}
+                  <Icon path={mdiRefresh} size={1} />
                 </Button>
               </Col>
               <Col style={{ justifyContent: "left", paddingLeft: 4, paddingRight: 0 }}>
@@ -504,6 +504,7 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
                   variant="secondary"
                   onClick={() => setVerifyAttribute(true)}
                   disabled={managePlayerMutation.isPending}
+                  style={{ height: "100%" }}
                 >
                   Enter Code
                 </Button>
@@ -517,12 +518,19 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
                   {managePlayerMutation.isPending && (
                     <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
                   )}
-                  {task == "Modify" ? "Update Player" : task == "ModifySelf" ? "Update" : "Create Player"}
+                  {task == "Modify" ? (
+                    "Update Player"
+                  ) : task == "ModifySelf" ? (
+                    <Icon path={mdiCheck} size={1} />
+                  ) : (
+                    "Create Player"
+                  )}
                 </Button>
               </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 8 }}>
                 <Button variant="secondary" onClick={close} disabled={managePlayerMutation.isPending}>
-                  Cancel
+                  {/* Cancel */}
+                  <Icon path={mdiClose} size={1} />
                 </Button>
               </Col>
             </Row>
