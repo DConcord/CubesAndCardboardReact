@@ -1,4 +1,8 @@
 /* Overrides and customizations */
+@font-face {
+  font-family: 'TopSecret';
+  src: local('TopSecret'), url('./assets/fonts/TopSecret.ttf') format('truetype');
+}
 
 .passwordless-link {
   text-decoration: underline;
@@ -58,6 +62,14 @@ button.passwordless-link {
 
 body {
   margin-top: 65px;
+}
+
+.topsecret {
+  font-family: 'TopSecret';
+  /* text-shadow: 1px 1px 5px black; */
+  text-shadow: 2px 2px 2px black;
+  filter: drop-shadow(0 0 1rem black);
+  font-size: 2rem;
 }
 
 .navLink {

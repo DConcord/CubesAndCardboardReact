@@ -15,6 +15,7 @@ import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { fetchEventsApiOptions, fetchEventsOptions } from "./Queries";
+import { authenticated } from "./Authenticated";
 
 import { GameKnightEvent, ExistingGameKnightEvent, EventDict, formatIsoDate } from "./Events";
 import { PlayerNameDict, PlayersDict } from "./Players";
@@ -151,7 +152,7 @@ export function TransferDevEventsModal({ close }: TransferDevEventsModalProps) {
       <Form onSubmit={handleSubmit}>
         <Modal.Header className="text-center">Transfer selected events to the Dev DB:</Modal.Header>
         <Modal.Body className="text-center">
-          <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
+          <Form.Group controlId="chooseNotAttendingPlayers" className="mb-1">
             {eventsQuery.data.map((event: ExistingGameKnightEvent, index: number) => (
               <Row key={index} style={{ minWidth: "min-content", maxWidth: "min-content" }}>
                 <Form.Check
@@ -208,7 +209,7 @@ export function ManageEventModal({
   gameKnightEvent,
 }: ManageEventModalProps) {
   const method = ["Create", "Clone"].includes(task) ? "POST" : ["Modify", "Migrate"].includes(task) ? "PUT" : "";
-  const { tokens } = usePasswordless();
+  const { tokens, signInStatus, tokensParsed } = usePasswordless();
   const today_6p_local = new Date(new Date().setHours(18, 0, 0, 0)).toLocaleString("lt").replace(" ", "T");
   const [eventForm, setEventForm] = useState<GameKnightEvent>(
     gameKnightEvent
@@ -263,7 +264,6 @@ export function ManageEventModal({
   const handleOptionChange = (event: React.BaseSyntheticEvent) => {
     const optionId = event.target.value;
     const isChecked = event.target.checked;
-
     if (isChecked) {
       setSelectedAttendingOptions([...selectedAttendingOptions, optionId]);
       // Remove from not_attending:
@@ -309,6 +309,7 @@ export function ManageEventModal({
       Authorization: "Bearer " + tokens.idToken,
     },
   });
+  const isAdmin = authenticated({ signInStatus, tokensParsed, group: ["admin"] });
 
   const [errorMsg, setErrorMsg] = useState("");
   const manageEventMutation = useMutation({
@@ -381,13 +382,40 @@ export function ManageEventModal({
   return (
     <Form onSubmit={handleSubmit}>
       <Modal.Body className="text-center">
-        <Row>
-          <Col med="true" style={{ minWidth: "14rem" }}>
-            <FloatingLabel controlId="host" label="Host" className="mb-3">
+        <Row style={{ padding: 4 }}>
+          <Col med="true" style={{ minWidth: "13rem", padding: 4 }}>
+            <FloatingLabel controlId="date" label="Date" className="mb-1">
+              <Form.Control
+                aria-label="Select a date and time"
+                type="datetime-local"
+                onChange={handleInput}
+                defaultValue={eventForm.date.slice(0, 16)}
+                disabled={!isAdmin}
+              />
+            </FloatingLabel>
+          </Col>
+          <Col med="true" style={{ minWidth: "9rem", maxWidth: "9rem", padding: 4 }}>
+            <FloatingLabel controlId="status" label="Status" className="mb-1">
+              <Form.Select
+                aria-label="Status"
+                onChange={handleInput}
+                defaultValue={eventForm.status ? eventForm.status : "Normal"}
+                disabled={!isAdmin}
+              >
+                <option value="Normal">Normal</option>
+                <option value="Cancelled">Cancelled</option>
+              </Form.Select>
+            </FloatingLabel>
+          </Col>
+        </Row>
+        <Row style={{ padding: 2 }}>
+          <Col med="true" style={{ minWidth: "18rem", padding: 4 }}>
+            <FloatingLabel controlId="host" label="Host" className="mb-1">
               <Form.Select
                 aria-label="Choose Host"
                 onChange={handleInput}
                 defaultValue={task == "Modify" || task == "Clone" ? eventForm.host : "default"}
+                disabled={!isAdmin}
               >
                 <option hidden disabled value="default">
                   {" "}
@@ -401,31 +429,19 @@ export function ManageEventModal({
               </Form.Select>
             </FloatingLabel>
           </Col>
-          <Col med="true" style={{ minWidth: "14rem" }}>
-            <FloatingLabel controlId="date" label="Date" className="mb-3">
-              <Form.Control
-                aria-label="Select a date and time"
-                type="datetime-local"
-                onChange={handleInput}
-                defaultValue={eventForm.date.slice(0, 16)}
-                // defaultValue={task == "Modify" || task == "Clone" ? eventForm.date.slice(0, 16) : ""}
-              />
-            </FloatingLabel>
-          </Col>
         </Row>
-        <Row>
-          <Col med="true" style={{ minWidth: "13rem" }}>
-            <FloatingLabel controlId="game" label="Game" className="mb-3">
+        <Row style={{ padding: 2 }}>
+          <Col med="true" style={{ minWidth: "13rem", padding: 4 }}>
+            <FloatingLabel controlId="game" label="Game" className="mb-1">
               <Form.Control
                 as="textarea"
                 onChange={handleInput}
                 defaultValue={task == "Modify" || task == "Clone" ? eventForm.game : "TBD"}
-                // onChange={(e) => setGame(e.target.value)}
               />
             </FloatingLabel>
           </Col>
-          <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem" }}>
-            <FloatingLabel controlId="bgg_id" label="BGG ID" className="mb-3">
+          <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem", padding: 4 }}>
+            <FloatingLabel controlId="bgg_id" label="BGG ID" className="mb-1">
               <Form.Control
                 type="number"
                 disabled={eventForm.game == "TBD"}
@@ -434,12 +450,13 @@ export function ManageEventModal({
               />
             </FloatingLabel>
           </Col>
-          <Col med="true" style={{ minWidth: "13rem" }}>
-            <FloatingLabel controlId="format" label="Format" className="mb-3">
+          <Col med="true" style={{ minWidth: "13rem", padding: 4 }}>
+            <FloatingLabel controlId="format" label="Format" className="mb-1">
               <Form.Select
                 aria-label="Choose Format"
                 onChange={handleInput}
                 defaultValue={task == "Modify" || task == "Clone" ? eventForm.format : "default"}
+                disabled={!isAdmin}
               >
                 <option hidden disabled value="default">
                   {" "}
@@ -451,8 +468,8 @@ export function ManageEventModal({
               </Form.Select>
             </FloatingLabel>
           </Col>
-          <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem" }}>
-            <FloatingLabel controlId="total_spots" label="Total Spots" className="mb-3">
+          <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem", padding: 4 }}>
+            <FloatingLabel controlId="total_spots" label="Total Spots" className="mb-1">
               <Form.Control
                 disabled={eventForm.format == "Open"}
                 onChange={handleInput}
@@ -464,7 +481,7 @@ export function ManageEventModal({
           </Col>
           {eventForm.format == "Private" && (
             <Col med="true" style={{ minWidth: "18rem" }}>
-              <Form.Group controlId="choosePrivatePlayerPool" className="mb-3">
+              <Form.Group controlId="choosePrivatePlayerPool" className="mb-1">
                 <Form.Label aria-label="Choose Private Player Pool">Choose Private Player Pool</Form.Label>
                 <Row>
                   {players.map((player_id: string, index: number) => (
@@ -486,7 +503,7 @@ export function ManageEventModal({
             </Col>
           )}
           <Col med="true" style={{ minWidth: "18rem" }}>
-            <Form.Group controlId="chooseAttendingPlayers" className="mb-3">
+            <Form.Group controlId="chooseAttendingPlayers" className="mb-1">
               <Form.Label aria-label="Choose Attending Players">
                 Choose Attending Players
                 {task == "Create" && eventForm.format == "Reserved" && " (after event is created)"}
@@ -518,7 +535,7 @@ export function ManageEventModal({
             </Form.Group>
           </Col>
           <Col med="true" style={{ minWidth: "18rem" }}>
-            <Form.Group controlId="chooseNotAttendingPlayers" className="mb-3">
+            <Form.Group controlId="chooseNotAttendingPlayers" className="mb-1">
               <Form.Label aria-label="Choose Not Attending Players">Choose Not Attending Players</Form.Label>
               <Row>
                 {players.map((player_id: string, index: number) => (
@@ -537,32 +554,35 @@ export function ManageEventModal({
               </Row>
             </Form.Group>
           </Col>
-          <Col med="true" style={{ minWidth: "18rem" }}>
-            <FloatingLabel controlId="organizer" label="Organizer" className="mb-3">
-              <Form.Select
-                aria-label="Choose Organizer"
-                onChange={handleInput}
-                defaultValue={
-                  task == "Modify" || task == "Clone"
-                    ? eventForm.organizer == ""
-                      ? "default"
-                      : eventForm.organizer
-                    : "default"
-                }
-                disabled={task == "Create"}
-              >
-                <option hidden disabled value="default">
-                  {" "}
-                  -- manually choose/override the organizer --{" "}
-                </option>
-                {organizers.map((player_id: string, index: number) => (
-                  <option key={index} value={player_id}>
-                    {playersDict[player_id].attrib.given_name}
+
+          {isAdmin && (
+            <Col med="true" style={{ minWidth: "18rem" }}>
+              <FloatingLabel controlId="organizer" label="Organizer" className="mb-1">
+                <Form.Select
+                  aria-label="Choose Organizer"
+                  onChange={handleInput}
+                  defaultValue={
+                    task == "Modify" || task == "Clone"
+                      ? eventForm.organizer == ""
+                        ? "default"
+                        : eventForm.organizer
+                      : "default"
+                  }
+                  disabled={task == "Create"}
+                >
+                  <option hidden disabled value="default">
+                    {" "}
+                    -- manually choose/override the organizer --{" "}
                   </option>
-                ))}
-              </Form.Select>
-            </FloatingLabel>
-          </Col>
+                  {organizers.map((player_id: string, index: number) => (
+                    <option key={index} value={player_id}>
+                      {playersDict[player_id].attrib.given_name}
+                    </option>
+                  ))}
+                </Form.Select>
+              </FloatingLabel>
+            </Col>
+          )}
         </Row>
       </Modal.Body>
       {import.meta.env.MODE == "development" && (

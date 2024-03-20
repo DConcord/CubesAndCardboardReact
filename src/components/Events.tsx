@@ -14,6 +14,8 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 
+import "../assets/fonts/TopSecret.ttf";
+
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchPlayersApiOptions } from "./Queries";
 
@@ -106,13 +108,14 @@ export default function UpcomingEvents() {
   });
 
   useEffect(() => {
-    console.log(signInStatus, authenticated({ signInStatus, tokensParsed }));
     if (authenticated({ signInStatus, tokensParsed, group: ["admin"] })) {
       playersRefreshMutation.mutate();
     }
     if (authenticated({ signInStatus, tokensParsed })) {
       eventsApiRefreshMutation.mutate();
     }
+    if (!authenticated({ signInStatus, tokensParsed, group: ["admin"] })) setShowAdmin(true);
+    console.log(signInStatus, authenticated({ signInStatus, tokensParsed }), showAdmin);
   }, [tokens]);
 
   if (playersQuery.isSuccess && eventsQuery.isSuccess && signInStatus !== "CHECKING") {
@@ -127,12 +130,12 @@ export default function UpcomingEvents() {
 
             <Authenticated group={["admin"]}>
               <Col>
-                <Row style={{ justifyContent: "right" }} className="align-items-center">
+                <Row style={{ justifyContent: "right", padding: 4 }} className="align-items-center">
                   {showAdmin &&
                     import.meta.env.MODE == "development" &&
                     import.meta.env.VITE_API_URL == "eventsdev.dissonantconcord.com" && (
                       <>
-                        <Col xs="auto" style={{ textAlign: "right" }}>
+                        <Col xs="auto" style={{ textAlign: "right", padding: 4 }}>
                           <Button size="sm" variant="secondary" onClick={handleShowTransferDevEvents}>
                             Transfer
                           </Button>
@@ -140,13 +143,13 @@ export default function UpcomingEvents() {
                       </>
                     )}
                   {showAdmin && (
-                    <Col xs="auto" style={{ textAlign: "right" }}>
+                    <Col xs="auto" style={{ textAlign: "right", padding: 4 }}>
                       <Button size="sm" variant="primary" onClick={() => handleShowManageEvent({ task: "Create" })}>
                         Create Event
                       </Button>
                     </Col>
                   )}
-                  <Col xs="auto" style={{ textAlign: "right" }}>
+                  <Col xs="auto" style={{ textAlign: "right", padding: 4 }}>
                     <Button size="sm" variant="primary" onClick={() => setShowAdmin(!showAdmin)}>
                       {showAdmin ? "Hide Admin" : "Show Admin"}
                     </Button>
@@ -206,7 +209,6 @@ export default function UpcomingEvents() {
               var not_attending_names: string[] = [];
 
               const futureEvent = Date.parse(event.date) >= Date.parse(new Date().toString());
-
               if (playersDict) {
                 try {
                   attending_names = event.attending.map((player_id) => playersDict[player_id].attrib.given_name);
@@ -221,11 +223,28 @@ export default function UpcomingEvents() {
                 return (
                   <Col key={index}>
                     <Card style={{ minWidth: "20rem", maxWidth: "40rem", height: "100%" }}>
-                      {event.bgg_id && event.bgg_id > 0 ? (
-                        <Card.Img variant="top" src={`https://${import.meta.env.VITE_API_URL}/${event.bgg_id}.png`} />
-                      ) : (
-                        <Card.Img variant="top" src={"/" + event.tbd_pic} />
-                      )}
+                      <a className="position-relative">
+                        {event.bgg_id && event.bgg_id > 0 ? (
+                          <Card.Img variant="top" src={`https://${import.meta.env.VITE_API_URL}/${event.bgg_id}.png`} />
+                        ) : (
+                          <Card.Img variant="top" src={"/" + event.tbd_pic} />
+                        )}
+                        {event.status && event.status == "Cancelled" ? (
+                          <Card.ImgOverlay>
+                            <Card.Title className="topsecret" style={{ color: "red" }}>
+                              {"[Cancelled]"}
+                            </Card.Title>
+                          </Card.ImgOverlay>
+                        ) : !futureEvent ? (
+                          <Card.ImgOverlay>
+                            <Card.Title className="topsecret" style={{ color: "green" }}>
+                              {"[Complete]"}
+                            </Card.Title>
+                          </Card.ImgOverlay>
+                        ) : (
+                          <></>
+                        )}
+                      </a>
                       <Card.Body>
                         <Card.Title key={index}>
                           <Row>
@@ -317,37 +336,46 @@ export default function UpcomingEvents() {
                             </Card.Footer>
                           )}
                       </Authenticated>
-                      <Authenticated show={showAdmin} group={["admin"]}>
-                        <Card.Footer>
-                          <Row key={"Row" + index}>
-                            <Col className="d-flex justify-content-end gap-2">
-                              <Button
-                                size="sm"
-                                key={"Modify" + index}
-                                variant="primary"
-                                onClick={() => handleShowManageEvent({ managedEvent: event, task: "Modify" })}
-                              >
-                                Modify
-                              </Button>
-                              <Button
-                                size="sm"
-                                key={"Delete" + index}
-                                variant="danger"
-                                onClick={() => handleShowDeleteEvent({ deleteEvent: event })}
-                              >
-                                Delete
-                              </Button>
-                              <Button
-                                size="sm"
-                                key={"Clone" + index}
-                                variant="secondary"
-                                onClick={() => handleShowManageEvent({ managedEvent: event, task: "Clone" })}
-                              >
-                                Clone
-                              </Button>
-                            </Col>
-                          </Row>
-                        </Card.Footer>
+                      <Authenticated>
+                        {(showAdmin && authenticated({ signInStatus, tokensParsed, group: ["admin"] })) ||
+                        (tokensParsed && tokensParsed.idToken.sub == event.host) ? (
+                          <Card.Footer>
+                            <Row key={"Row" + index}>
+                              <Col className="d-flex justify-content-end gap-2">
+                                <Button
+                                  size="sm"
+                                  key={"Modify" + index}
+                                  variant="primary"
+                                  onClick={() => handleShowManageEvent({ managedEvent: event, task: "Modify" })}
+                                >
+                                  Modify
+                                </Button>
+                                <Authenticated group={["admin"]}>
+                                  <Button
+                                    size="sm"
+                                    key={"Delete" + index}
+                                    variant="danger"
+                                    onClick={() => handleShowDeleteEvent({ deleteEvent: event })}
+                                  >
+                                    Delete
+                                  </Button>
+                                </Authenticated>
+                                <Authenticated group={["admin"]}>
+                                  <Button
+                                    size="sm"
+                                    key={"Clone" + index}
+                                    variant="secondary"
+                                    onClick={() => handleShowManageEvent({ managedEvent: event, task: "Clone" })}
+                                  >
+                                    Clone
+                                  </Button>
+                                </Authenticated>
+                              </Col>
+                            </Row>
+                          </Card.Footer>
+                        ) : (
+                          <></>
+                        )}
                       </Authenticated>
                     </Card>
                   </Col>
@@ -385,6 +413,7 @@ export type GameKnightEvent = {
   organizer_pool: string[];
   tbd_pic?: string;
   migrated?: boolean;
+  status?: "Normal" | "Cancelled";
 };
 
 export function formatIsoDate(isoString: string) {
