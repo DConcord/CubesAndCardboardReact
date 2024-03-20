@@ -3,7 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import axios from "axios";
 
-import ConditionalWrap from "./ConditionalWrap";
+import Icon from "@mdi/react";
+import { mdiRefresh, mdiClose, mdiCheck } from "@mdi/js";
+
+import { verifyUserAttribute, getUserAttributeVerificationCode } from "amazon-cognito-passwordless-auth/cognito-api";
 
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
@@ -14,8 +17,6 @@ import Spinner from "react-bootstrap/Spinner";
 import Modal from "react-bootstrap/Modal";
 import FloatingLabel from "react-bootstrap/FloatingLabel";
 import Form from "react-bootstrap/Form";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
-import Tooltip from "react-bootstrap/Tooltip";
 import { FormControlProps } from "react-bootstrap/FormControl";
 
 import { PatternFormat } from "react-number-format";
@@ -307,12 +308,17 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
     },
     onSuccess: async (data) => {
       if (task === "ModifySelf") {
-        refreshTokens();
-        await playersQuery.refetch();
+        if (data.response && data.response.CodeDeliveryDetailsList) {
+          setVerifyAttribute(true);
+        } else {
+          refreshTokens();
+          await playersQuery.refetch();
+          close();
+        }
       } else {
         queryClient.setQueryData(["players"], data);
+        close();
       }
-      close();
     },
     onError: (error) => {
       console.error(error);
@@ -328,45 +334,110 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
     // managePlayer(playerForm, method);
     managePlayerMutation.mutate({ body: playerForm, method: method });
   }
-  return (
-    <Form onSubmit={handleSubmit}>
-      <Modal.Body className="text-center">
-        <Row>
-          <Col med="true" style={{ minWidth: "13rem" }}>
-            <FloatingLabel controlId="given_name" label="First Name" className="mb-3">
-              <Form.Control
-                autoComplete="off"
-                placeholder="first_name"
-                as="textarea"
-                onChange={handleInput}
-                defaultValue={task.startsWith("Modify") ? playerForm.given_name : ""}
-              />
-            </FloatingLabel>
-          </Col>
-          <Col med="true" style={{ minWidth: "13rem" }}>
-            <FloatingLabel controlId="family_name" label="Last Name" className="mb-3">
-              <Form.Control
-                autoComplete="off"
-                placeholder="last_name"
-                as="textarea"
-                onChange={handleInput}
-                defaultValue={task.startsWith("Modify") ? playerForm.family_name : ""}
-              />
-            </FloatingLabel>
-          </Col>
-          <Col med="true" style={{ minWidth: "18rem" }}>
-            <ConditionalWrap
-              condition={task === "ModifySelf"}
-              wrap={(children) => (
-                <OverlayTrigger
-                  placement="bottom"
-                  delay={{ show: 100, hide: 400 }}
-                  overlay={<Tooltip id="email">Contact an administrator to update your email address</Tooltip>}
-                >
-                  {children}
-                </OverlayTrigger>
-              )}
-            >
+
+  const [resendWaiting, setResendWaiting] = useState(false);
+  async function handleResendCode() {
+    setResendWaiting(true);
+    try {
+      await getUserAttributeVerificationCode({
+        attributeName: "email",
+      });
+      setResendWaiting(false);
+    } catch (error) {
+      console.error(error);
+      setResendWaiting(false);
+    }
+  }
+
+  const [verifyWaiting, setVerifyWaiting] = useState(false);
+  const [verifyAttribute, setVerifyAttribute] = useState(false);
+  async function handleVerifySubmit(event: React.BaseSyntheticEvent) {
+    event.preventDefault();
+    setVerifyWaiting(true);
+    try {
+      const response = await verifyUserAttribute({
+        attributeName: "email",
+        code: event.target.code.value,
+      });
+      console.log(response);
+      refreshTokens();
+      await playersQuery.refetch();
+      setVerifyWaiting(false);
+      close();
+    } catch (error) {
+      console.error(error);
+      setVerifyWaiting(false);
+    }
+  }
+  // CodeDeliveryDetailsList
+
+  if (verifyAttribute) {
+    return (
+      <Form onSubmit={handleVerifySubmit}>
+        <Modal.Body className="text-center">
+          <div>Enter the verification code sent to your email:</div>
+          <Row>
+            <Col med="true" style={{ minWidth: "18rem" }}>
+              <FloatingLabel controlId="code" label="Email Verification Code" className="mb-3">
+                <Form.Control placeholder="code" as="textarea" />
+              </FloatingLabel>
+            </Col>
+          </Row>
+        </Modal.Body>
+        <Modal.Footer>
+          <Container fluid>
+            <Row style={{ justifyContent: "right", paddingLeft: 8, paddingRight: 0 }}>
+              <Col style={{ justifyContent: "left", paddingLeft: 0, paddingRight: 0 }}>
+                <Button variant="secondary" onClick={handleResendCode} disabled={verifyWaiting || resendWaiting}>
+                  {resendWaiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
+                  Resend Code
+                </Button>
+              </Col>
+              <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
+                {/* <Col> */}
+                <Button variant="primary" type="submit" disabled={verifyWaiting || resendWaiting}>
+                  {verifyWaiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
+                  Send
+                </Button>
+              </Col>
+              <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 8 }}>
+                <Button variant="secondary" onClick={close} disabled={verifyWaiting || resendWaiting}>
+                  Cancel
+                </Button>
+              </Col>
+            </Row>
+          </Container>
+        </Modal.Footer>
+      </Form>
+    );
+  } else
+    return (
+      <Form onSubmit={handleSubmit}>
+        <Modal.Body className="text-center">
+          <Row>
+            <Col med="true" style={{ minWidth: "13rem" }}>
+              <FloatingLabel controlId="given_name" label="First Name" className="mb-3">
+                <Form.Control
+                  autoComplete="off"
+                  placeholder="first_name"
+                  as="textarea"
+                  onChange={handleInput}
+                  defaultValue={task.startsWith("Modify") ? playerForm.given_name : ""}
+                />
+              </FloatingLabel>
+            </Col>
+            <Col med="true" style={{ minWidth: "13rem" }}>
+              <FloatingLabel controlId="family_name" label="Last Name" className="mb-3">
+                <Form.Control
+                  autoComplete="off"
+                  placeholder="last_name"
+                  as="textarea"
+                  onChange={handleInput}
+                  defaultValue={task.startsWith("Modify") ? playerForm.family_name : ""}
+                />
+              </FloatingLabel>
+            </Col>
+            <Col med="true" style={{ minWidth: "18rem" }}>
               <FloatingLabel controlId="email" label="Email" className="mb-3">
                 <Form.Control
                   autoComplete="off"
@@ -374,68 +445,99 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
                   type="email"
                   as="textarea"
                   onChange={handleInput}
-                  disabled={task == "ModifySelf"}
+                  // disabled={task == "ModifySelf"}
                   defaultValue={task.startsWith("Modify") ? playerForm.email : ""}
                 />
               </FloatingLabel>
-            </ConditionalWrap>
-          </Col>
-          <Col med="true" style={{ minWidth: "18rem" }}>
-            <FloatingLabel controlId="phone_number" label="Phone" className="mb-3">
-              <PatternFormat
-                format="+1 (###) ###-####"
-                defaultValue={phone}
-                placeholder="phone"
-                onValueChange={(value) => setPhone(value.value)}
-                onChange={handleInput}
-                customInput={CustomFormControl}
-                valueIsNumericString={true}
-              />
-            </FloatingLabel>
-          </Col>
-          {task !== "ModifySelf" && groups && (
-            <Col med="true" style={{ minWidth: "18rem" }}>
-              <Form.Group controlId="chooseGroups" className="mb-3">
-                <Form.Label aria-label="Group Membership">Group Membership</Form.Label>
-                <Row xs={2} className="justify-content-center">
-                  {Object.keys(groups)
-                    .sort()
-                    .map((group: string, index: number) => (
-                      <Col key={group} style={{ minWidth: "min-content", maxWidth: "min-content" }}>
-                        <Form.Check
-                          // style={{ marginLeft: "10%" }}
-                          key={index}
-                          type="checkbox"
-                          id={`option_${index}`}
-                          label={group}
-                          checked={playerForm.groups.includes(group)}
-                          onChange={handleOptionChange}
-                          value={group}
-                        />
-                      </Col>
-                    ))}
-                </Row>
-              </Form.Group>
             </Col>
-          )}
-        </Row>
-      </Modal.Body>
-      <Modal.Footer>
-        {/* <pre>{JSON.stringify(playerForm, null, 2)}</pre> */}
-        {/* phone: {phone} */}
-        <span>{errorMsg}</span>
-        <Button variant="primary" type="submit" disabled={managePlayerMutation.isPending || !inputValidated}>
-          {managePlayerMutation.isPending && (
-            <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
-          )}
-          {task == "Modify" ? "Update Player" : task == "ModifySelf" ? "Update" : "Create Player"}
-        </Button>
-        <Button variant="secondary" onClick={close} disabled={managePlayerMutation.isPending}>
-          Cancel
-        </Button>
-      </Modal.Footer>
-    </Form>
-  );
+            <Col med="true" style={{ minWidth: "18rem" }}>
+              <FloatingLabel controlId="phone_number" label="Phone" className="mb-3">
+                <PatternFormat
+                  format="+1 (###) ###-####"
+                  defaultValue={phone}
+                  placeholder="phone"
+                  onValueChange={(value) => setPhone(value.value)}
+                  onChange={handleInput}
+                  customInput={CustomFormControl}
+                  valueIsNumericString={true}
+                />
+              </FloatingLabel>
+            </Col>
+            {task !== "ModifySelf" && groups && (
+              <Col med="true" style={{ minWidth: "18rem" }}>
+                <Form.Group controlId="chooseGroups" className="mb-3">
+                  <Form.Label aria-label="Group Membership">Group Membership</Form.Label>
+                  <Row xs={2} className="justify-content-center">
+                    {Object.keys(groups)
+                      .sort()
+                      .map((group: string, index: number) => (
+                        <Col key={group} style={{ minWidth: "min-content", maxWidth: "min-content" }}>
+                          <Form.Check
+                            key={index}
+                            type="checkbox"
+                            id={`option_${index}`}
+                            label={group}
+                            checked={playerForm.groups.includes(group)}
+                            onChange={handleOptionChange}
+                            value={group}
+                          />
+                        </Col>
+                      ))}
+                  </Row>
+                </Form.Group>
+              </Col>
+            )}
+          </Row>
+        </Modal.Body>
+        <Modal.Footer>
+          <Container fluid>
+            <Row style={{ justifyContent: "right", paddingLeft: 8, paddingRight: 0 }}>
+              {/* <Col xs="auto" style={{ textAlign: "right" }}></Col> */}
+              <Col xs="auto" style={{ justifyContent: "left", paddingLeft: 0, paddingRight: 4 }}>
+                <Button variant="secondary" onClick={() => refreshTokens()} disabled={managePlayerMutation.isPending}>
+                  {/* Refresh */}
+                  <Icon path={mdiRefresh} size={1} />
+                </Button>
+              </Col>
+              <Col style={{ justifyContent: "left", paddingLeft: 4, paddingRight: 0 }}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setVerifyAttribute(true)}
+                  disabled={managePlayerMutation.isPending}
+                  style={{ height: "100%" }}
+                >
+                  Enter Code
+                </Button>
+              </Col>
+
+              <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
+                <span>{errorMsg}</span>
+              </Col>
+              <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
+                <Button variant="primary" type="submit" disabled={managePlayerMutation.isPending || !inputValidated}>
+                  {managePlayerMutation.isPending && (
+                    <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
+                  )}
+                  {task == "Modify" ? (
+                    "Update Player"
+                  ) : task == "ModifySelf" ? (
+                    <Icon path={mdiCheck} size={1} />
+                  ) : (
+                    "Create Player"
+                  )}
+                </Button>
+              </Col>
+              <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 8 }}>
+                <Button variant="secondary" onClick={close} disabled={managePlayerMutation.isPending}>
+                  {/* Cancel */}
+                  <Icon path={mdiClose} size={1} />
+                </Button>
+              </Col>
+            </Row>
+          </Container>
+        </Modal.Footer>
+      </Form>
+    );
 }
 const CustomFormControl: React.FC<FormControlProps> = (props) => {
   return <Form.Control autoComplete="off" {...props} />;

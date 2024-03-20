@@ -13,19 +13,27 @@ type TokensParsed = {
 
 interface AuthenticatedProps {
   children: React.ReactNode;
+  user_id?: string[];
   given_name?: string[];
   group?: string[];
   unauthPath?: string;
   show?: boolean;
 }
-export default function Authenticated({ children, given_name, group, unauthPath, show = true }: AuthenticatedProps) {
+export default function Authenticated({
+  children,
+  user_id,
+  given_name,
+  group,
+  unauthPath,
+  show = true,
+}: AuthenticatedProps) {
   const { signInStatus, tokensParsed } = usePasswordless();
   if (!show) return <></>;
   if (["REFRESHING_SIGN_IN", "SIGNING_IN", "CHECKING"].includes(signInStatus)) {
     return <></>;
   }
 
-  if (authenticated({ signInStatus, tokensParsed, given_name: given_name, group: group })) {
+  if (authenticated({ signInStatus, tokensParsed, user_id: user_id, given_name: given_name, group: group })) {
     return <>{children}</>;
   } else {
     if (unauthPath != undefined) return <Navigate to={unauthPath} />;
@@ -36,15 +44,22 @@ export default function Authenticated({ children, given_name, group, unauthPath,
 export function authenticated({
   signInStatus,
   tokensParsed,
+  user_id,
   given_name,
   group,
 }: {
   signInStatus: "SIGNING_OUT" | "SIGNED_IN" | "REFRESHING_SIGN_IN" | "SIGNING_IN" | "CHECKING" | "NOT_SIGNED_IN";
   tokensParsed?: TokensParsed;
+  user_id?: string[];
   given_name?: string[];
   group?: string[];
 }) {
   if (!(signInStatus === "SIGNED_IN" && tokensParsed)) return false;
+
+  let user_id_auth = false;
+  if (user_id) {
+    user_id_auth = user_id.includes(tokensParsed.idToken.sub);
+  } else user_id_auth = true;
 
   let given_name_auth = false;
   if (given_name) {
@@ -58,7 +73,7 @@ export function authenticated({
     }
   } else group_auth = true;
 
-  if (signInStatus === "SIGNED_IN" && tokensParsed && given_name_auth && group_auth) {
+  if (signInStatus === "SIGNED_IN" && tokensParsed && user_id_auth && given_name_auth && group_auth) {
     return true;
   }
   return false;
