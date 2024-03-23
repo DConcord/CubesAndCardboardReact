@@ -37,16 +37,18 @@ export default function UpcomingEvents() {
     if (saved === null) return true;
     return JSON.parse(saved);
   });
+  const isAdmin = authenticated({ signInStatus, tokensParsed, group: ["admin"] });
 
   useEffect(() => {
     localStorage.setItem("showAdmin", JSON.stringify(showAdmin));
   }, [showAdmin]);
 
   const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
-  const playersQuery =
-    authenticated({ signInStatus, tokensParsed, group: ["admin"] }) && tokens
-      ? useQuery(fetchPlayersApiOptions({ tokens: tokens, refresh: "no" }))
-      : useQuery(fetchPlayersOptions());
+  const playersQuery = useQuery(fetchPlayersOptions());
+  // const playersQuery =
+  //   authenticated({ signInStatus, tokensParsed, group: ["admin"] }) && tokens
+  //     ? useQuery(fetchPlayersApiOptions({ tokens: tokens, refresh: "no" }))
+  //     : useQuery(fetchPlayersOptions());
   const playersDict = playersQuery?.data?.Users ?? {};
   const players = playersQuery?.data?.Groups?.player ?? [];
   const organizers = playersQuery?.data?.Groups?.organizer ?? [];
@@ -83,18 +85,18 @@ export default function UpcomingEvents() {
   };
 
   const queryClient = useQueryClient();
-  const playersRefreshMutation = useMutation({
-    mutationFn: async () => {
-      const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/players`, {
-        headers: { Authorization: "Bearer " + tokens!.idToken },
-        params: { refresh: "no" },
-      });
-      return response.data;
-    },
-    onSuccess: (data) => {
-      queryClient.setQueryData(["players"], data);
-    },
-  });
+  // const playersRefreshMutation = useMutation({
+  //   mutationFn: async () => {
+  //     const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/players`, {
+  //       headers: { Authorization: "Bearer " + tokens!.idToken },
+  //       params: { refresh: "no" },
+  //     });
+  //     return response.data;
+  //   },
+  //   onSuccess: (data) => {
+  //     queryClient.setQueryData(["players"], data);
+  //   },
+  // });
   const eventsApiRefreshMutation = useMutation({
     mutationFn: async () => {
       const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/events`, {
@@ -108,19 +110,19 @@ export default function UpcomingEvents() {
   });
 
   useEffect(() => {
-    if (authenticated({ signInStatus, tokensParsed, group: ["admin"] })) {
-      playersRefreshMutation.mutate();
-    }
+    // if (authenticated({ signInStatus, tokensParsed, group: ["admin"] })) {
+    //   playersRefreshMutation.mutate();
+    // }
     if (authenticated({ signInStatus, tokensParsed })) {
       eventsApiRefreshMutation.mutate();
     }
     if (!authenticated({ signInStatus, tokensParsed, group: ["admin"] })) setShowAdmin(true);
-    console.log(signInStatus, authenticated({ signInStatus, tokensParsed }), showAdmin);
   }, [tokens]);
 
   if (playersQuery.isSuccess && eventsQuery.isSuccess && signInStatus !== "CHECKING") {
+    const user_id = tokensParsed ? tokensParsed.idToken.sub : "";
     return (
-      <>
+      <div className="margin-top-65">
         <Container fluid>
           <Row xs={1} sm={2} className="align-items-center">
             <Col>
@@ -197,7 +199,7 @@ export default function UpcomingEvents() {
                 event.format == "Private" &&
                 signInStatus === "SIGNED_IN" &&
                 tokensParsed &&
-                event.player_pool.includes(tokensParsed.idToken.sub) == false &&
+                event.player_pool.includes(user_id) == false &&
                 !authenticated({ signInStatus, tokensParsed, group: ["admin"] })
               ) {
                 return null; // skip
@@ -316,7 +318,9 @@ export default function UpcomingEvents() {
                         </Card.Text>
                       </Card.Body>
                       {!futureEvent && import.meta.env.MODE == "development" && (
-                        <Accordion className={showAdmin && tokens ? "accordion-card-middle" : "accordion-card-bottom"}>
+                        <Accordion
+                          className={showAdmin && tokens && isAdmin ? "accordion-card-middle" : "accordion-card-bottom"}
+                        >
                           <Accordion.Item eventKey="scores">
                             <Accordion.Header>Final Scores</Accordion.Header>
                             <Accordion.Body>Coming Soon!</Accordion.Body>
@@ -326,10 +330,11 @@ export default function UpcomingEvents() {
                       <Authenticated group={["player"]}>
                         {tokensParsed &&
                           futureEvent &&
+                          event.host !== user_id &&
                           !(
                             event.format == "Reserved" &&
                             spots_available! < 1 &&
-                            !event.attending.includes(tokensParsed.idToken.sub)
+                            !event.attending.includes(user_id)
                           ) && (
                             <Card.Footer>
                               <RsvpFooter event={event} index={index} />
@@ -338,7 +343,7 @@ export default function UpcomingEvents() {
                       </Authenticated>
                       <Authenticated>
                         {(showAdmin && authenticated({ signInStatus, tokensParsed, group: ["admin"] })) ||
-                        (tokensParsed && tokensParsed.idToken.sub == event.host) ? (
+                        (tokensParsed && user_id == event.host) ? (
                           <Card.Footer>
                             <Row key={"Row" + index}>
                               <Col className="d-flex justify-content-end gap-2">
@@ -384,9 +389,30 @@ export default function UpcomingEvents() {
             })}
           </Row>
         </Container>
-      </>
+      </div>
     );
-  } else return <div>Loading...</div>;
+  } else {
+    if (playersQuery.isLoading || eventsQuery.isLoading) {
+      console.log({ playersQuery: playersQuery.status, eventsQuery: eventsQuery.status, signInStatus: signInStatus });
+      if (eventsQuery.isLoading) return <div className="margin-top-65">Loading Events...</div>;
+      if (playersQuery.isLoading) return <div className="margin-top-65">Loading Players...</div>;
+      return <div className="margin-top-65">Loading...</div>;
+    }
+
+    if (playersQuery.isError || eventsQuery.isError) {
+      console.error(playersQuery.error);
+      console.error(eventsQuery.error);
+      return (
+        <div className="margin-top-65">
+          {eventsQuery.isError && <div>Error Retreiving Events</div>}
+          {playersQuery.isError && <div>Error Retreiving Players</div>}
+          <div>Please Refresh</div>
+        </div>
+      );
+    }
+    console.log({ playersQuery: playersQuery.status, eventsQuery: eventsQuery.status, signInStatus: signInStatus });
+    return <div className="margin-top-65">Loading...</div>;
+  }
 }
 
 export interface EventDict {
