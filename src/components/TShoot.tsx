@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import axios from "axios";
 
@@ -54,6 +54,21 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
       setEventsTest(JSON.parse(JSON.stringify(error)));
     }
   };
+
+  const [width, setWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWidth(window.innerWidth);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
   if (import.meta.env.VITE_SHOW_TSHOOT !== "True") {
     return <></>;
   }
@@ -63,7 +78,8 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
         <Accordion.Item eventKey="token">
           <Accordion.Header>TokenInfo</Accordion.Header>
           <Accordion.Body>
-            {"signInStatus: " + signInStatus}
+            <div>{"signInStatus: " + signInStatus}</div>
+            <div>{"Window Width: " + width}</div>
             <Accordion>
               <Accordion.Item eventKey="idToken">
                 <Accordion.Header>idToken</Accordion.Header>

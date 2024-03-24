@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-import axios, { AxiosError } from "axios";
+import { AxiosError } from "axios";
 
 import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
@@ -15,7 +15,7 @@ import Feedback from "react-bootstrap/Feedback";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchEventsApiOptions, fetchEventsOptions } from "./Queries";
+import { fetchEventsApiOptions, fetchEventsOptions, apiClient } from "./Queries";
 import { authenticated } from "./Authenticated";
 import { tbd_pics } from "../types/Events";
 
@@ -30,19 +30,12 @@ interface DeleteEventModalProps {
 }
 export function DeleteEventModal({ close, gameKnightEvent }: DeleteEventModalProps) {
   const { tokens } = usePasswordless();
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
 
   const [notConfirmed, setNotConfirmed] = useState(true);
   function handleInput(event: React.BaseSyntheticEvent) {
     if (event.target.value == "DELETE") setNotConfirmed(false);
   }
-
-  const apiClient = axios.create({
-    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
-    headers: tokens && {
-      Authorization: "Bearer " + tokens.idToken,
-    },
-  });
 
   const [errorMsg, setErrorMsg] = useState("");
   const deleteEventMutation = useMutation({
@@ -94,7 +87,7 @@ interface TransferDevEventsModalProps {
 }
 export function TransferDevEventsModal({ close }: TransferDevEventsModalProps) {
   const { tokens } = usePasswordless();
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
 
   let eventDict: EventDict = {};
   for (let event of eventsQuery.data as ExistingGameKnightEvent[]) {
@@ -114,12 +107,6 @@ export function TransferDevEventsModal({ close }: TransferDevEventsModalProps) {
     }
   };
 
-  const apiClient = axios.create({
-    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
-    headers: tokens && {
-      Authorization: "Bearer " + tokens.idToken,
-    },
-  });
   const [waiting, setWaiting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const transferEventMutation = useMutation({
@@ -252,7 +239,7 @@ export function ManageEventModal({
         !(eventForm.game === "" || eventForm.game == undefined)
     );
   }, [eventForm]);
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const handleInput = (e: React.BaseSyntheticEvent) => {
     if (e.target.id == "bgg_id" || e.target.id == "total_spots") {
       console.log(e.target.id, e.target.value, e.target.value === "");
@@ -326,12 +313,6 @@ export function ManageEventModal({
     }
   }, [selectedAttendingOptions, selectedNotAttendingOptions, selectedPrivatePlayerPool]);
 
-  const apiClient = axios.create({
-    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
-    headers: tokens && {
-      Authorization: "Bearer " + tokens.idToken,
-    },
-  });
   const isAdmin = authenticated({ signInStatus, tokensParsed, group: ["admin"] });
 
   const [errorMsg, setErrorMsg] = useState("");
@@ -667,14 +648,8 @@ interface RsvpFooterProps {
 }
 export function RsvpFooter({ event, index }: RsvpFooterProps) {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
-  const apiClient = axios.create({
-    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
-    headers: tokens && {
-      Authorization: "Bearer " + tokens.idToken,
-    },
-  });
 
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
 
   let player_id = "";
   if (signInStatus === "SIGNED_IN" && tokensParsed) {
@@ -729,9 +704,6 @@ export function RsvpFooter({ event, index }: RsvpFooterProps) {
   const eventRsvpMutation = useMutation({
     mutationFn: async ({ body = null, params = null, method }: eventRsvpProps) => {
       await apiClient({
-        headers: tokens && {
-          Authorization: "Bearer " + tokens.idToken,
-        },
         params: params,
         method: method,
         url: "event/rsvp",

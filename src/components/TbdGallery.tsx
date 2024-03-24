@@ -25,10 +25,10 @@ export default function TbdGallery() {
       </Container>
 
       <Container fluid>
-        <Row xs={1} sm={2} md={2} lg={3} xl={4} xxl={4} className="g-4 justify-content-center">
+        <Row xs={1} sm={1} md={2} lg={2} xl={3} xxl={4} className="g-4 justify-content-center">
           {tbd_pics.map((tbd_pic, index) => (
-            <Col key={index}>
-              <Card style={{ minWidth: "20rem", maxWidth: "40rem", height: "100%" }}>
+            <Col className="d-flex justify-content-center" key={index}>
+              <Card style={{ minWidth: "20rem", maxWidth: "35rem", height: "100%" }}>
                 <Card.Img variant="top" src={"/" + tbd_pic} />
                 <Card.Body>{tbd_pic}</Card.Body>
               </Card>

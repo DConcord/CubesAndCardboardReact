@@ -1,6 +1,4 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
-import axios from "axios";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import Tab from "react-bootstrap/Tab";
@@ -17,6 +15,8 @@ import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import FloatingLabel from "react-bootstrap/FloatingLabel";
 
+import loggingContext, { IntervalType } from "./LoggingContext";
+
 import yaml from "js-yaml";
 
 // import { ManageEventModal } from "./EventManagement";
@@ -25,9 +25,8 @@ const ManageEventModal = lazy(() =>
 );
 import { ManagedEventTask } from "../types/Events";
 import { GameKnightEvent, formatIsoDate } from "./Events";
-import { fetchPlayersOptions } from "./Queries";
+import { fetchPlayersOptions, apiClient } from "./Queries";
 
-type IntervalType = "Minutes" | "Hours" | "Days" | "Weeks";
 const timeInterval: { [key in IntervalType]: number } = {
   Minutes: 60 * 1000,
   Hours: 60 * 60 * 1000,
@@ -41,21 +40,22 @@ const timeIntervalShort: { [key in IntervalType]: string } = {
   Weeks: "w",
 };
 export default function Logs() {
-  const { signInStatus, tokensParsed, tokens } = usePasswordless();
-
-  const playersQuery = useQuery(fetchPlayersOptions());
-  const queryClient = useQueryClient();
+  const {
+    customTimeRange,
+    setCustomTimeRange,
+    startInterval,
+    setStartInterval,
+    startIntervalType,
+    setStartIntervalType,
+    startTime,
+    setStartTime,
+    endTime,
+    setEndTime,
+  } = loggingContext();
 
   const [eventLog, setEventLog] = useState<EventLogType[]>([]);
   const [rsvpLog, setRsvpLog] = useState<RsvpLogType[]>([]);
   const [playerLog, setPlayerLog] = useState<LogType[]>([]);
-
-  const [customTimeRange, setCustomTimeRange] = useState(false);
-  const [showTimeModal, setShowTimeModal] = useState(false);
-  const [startInterval, setStartInterval] = useState(1);
-  const [startIntervalType, setStartIntervalType] = useState<IntervalType>("Hours");
-  const [startTime, setStartTime] = useState<string>(String(Date.now() - 60 * 60 * 1000).slice(0, 10)); // 1hr ago
-  const [endTime, setEndTime] = useState<string | null>(null);
   useEffect(() => {
     setStartTime(String(Date.now() - timeInterval[startIntervalType] * startInterval).slice(0, 10));
     setEndTime(null);
@@ -69,8 +69,7 @@ export default function Logs() {
   const logsQuery = useQuery({
     queryKey: ["logs"],
     queryFn: async (): Promise<[]> => {
-      const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/activitylogs`, {
-        headers: { Authorization: "Bearer " + tokens!.idToken },
+      const response = await apiClient.get(`/activitylogs`, {
         params: {
           startTime: startTime,
           endTime: endTime,
@@ -116,6 +115,9 @@ export default function Logs() {
       setPlayerLog(_playerLog);
     }
   }, []);
+  const queryClient = useQueryClient();
+
+  const [showTimeModal, setShowTimeModal] = useState(false);
   const handleShowTimeModal = () => {
     setShowTimeModal(true);
   };
