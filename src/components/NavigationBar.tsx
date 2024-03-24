@@ -69,9 +69,9 @@ export default function NavigationBar() {
 
   let expand = "";
   if (authenticated({ signInStatus, tokensParsed, group: ["admin"] })) {
-    expand = "md";
+    expand = "lg";
   } else if (authenticated({ signInStatus, tokensParsed })) {
-    expand = "md";
+    expand = "lg";
   }
   const location = useLocation();
   return (
@@ -105,7 +105,8 @@ export default function NavigationBar() {
               <h2 className="d-none d-lg-block">LG+</h2> */}
               <Authenticated group={["admin"]}>
                 {/* XL+ */}
-                <div className="d-block d-md-none d-lg-block">
+                {/* <div className="d-block d-md-none d-lg-block"> */}
+                <div className="d-block d-md-none d-xl-block">
                   <Nav className="order-0 navbar-nav-left-side flex-grow-1">
                     <Nav.Link eventKey="/" as={NavLink} to="/" className="navLink">
                       Events
@@ -121,8 +122,8 @@ export default function NavigationBar() {
                     </Nav.Link>
                   </Nav>
                 </div>
-                {/* <div className="d-block d-lg-none"> */}
-                <div className="d-none d-md-block d-lg-none">
+                {/* <div className="d-none d-md-block d-lg-none"> */}
+                <div className="d-none d-md-block d-xl-none">
                   <Nav className="order-0 navbar-nav-left-side flex-grow-1">
                     <NavDropdown
                       title={pathMap[location.pathname as keyof typeof pathMap].title}

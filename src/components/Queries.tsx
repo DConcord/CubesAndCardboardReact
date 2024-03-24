@@ -1,17 +1,13 @@
-import { retrieveTokens, TokensFromStorage } from "amazon-cognito-passwordless-auth/storage";
-// import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
+import { useEffect } from "react";
+import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 import { PlayersGroups } from "../types/Players";
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
-// const { tokens } = usePasswordless();
-// const apiClient = axios.create({
-//   baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
-//   headers: tokens && {
-//     Authorization: "Bearer " + tokens.idToken,
-//   },
-// });
+export const apiClient = axios.create({
+  baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
+});
 
 ///// Events /////
 export function fetchEventsOptions() {
@@ -27,18 +23,16 @@ export const fetchEventsJson = async (): Promise<[]> => {
   return response.data;
 };
 
-export function fetchEventsApiOptions(tokens: TokensFromStorage) {
+export function fetchEventsApiOptions() {
   return queryOptions({
     queryKey: ["events"],
-    queryFn: () => fetchEventsApi(tokens),
+    queryFn: () => fetchEventsApi(),
     refetchInterval: 1000 * 60 * 10, // refetch every 10 min
   });
 }
 
-export const fetchEventsApi = async (tokens: TokensFromStorage): Promise<[]> => {
-  const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/events`, {
-    headers: { Authorization: "Bearer " + tokens.idToken },
-  });
+export const fetchEventsApi = async (): Promise<[]> => {
+  const response = await apiClient.get(`/events`);
   return response.data;
 };
 
@@ -57,19 +51,39 @@ export const fetchPlayersJson = async (): Promise<PlayersGroups> => {
   return response.data;
 };
 
-export function fetchPlayersApiOptions({ tokens, refresh }: { tokens: TokensFromStorage; refresh: "yes" | "no" }) {
+export function fetchPlayersApiOptions({ refresh }: { refresh: "yes" | "no" }) {
   return queryOptions({
     queryKey: ["players"],
-    queryFn: () => fetchPlayersApi(tokens, refresh),
+    queryFn: () => fetchPlayersApi(refresh),
     staleTime: 1000 * 60 * 10, // cache for 10 min before refetching
     refetchInterval: 1000 * 60 * 20, // refetch every 20 min
   });
 }
 
-export const fetchPlayersApi = async (tokens: TokensFromStorage, refresh: "yes" | "no"): Promise<PlayersGroups> => {
-  const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/players`, {
-    headers: { Authorization: "Bearer " + tokens.idToken },
+export const fetchPlayersApi = async (refresh: "yes" | "no"): Promise<PlayersGroups> => {
+  const response = await apiClient.get(`/players`, {
     params: { refresh: refresh },
   });
   return response.data;
 };
+
+// Default queryClient
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5min
+    },
+  },
+});
+
+export default function CustomQueryClientProvider(props: { children: React.ReactNode }) {
+  const { tokens } = usePasswordless();
+  useEffect(() => {
+    if (tokens) {
+      apiClient.defaults.headers.common["Authorization"] = "Bearer " + tokens.idToken;
+      console.log("apiClient Bearer token updated");
+    }
+  }, [tokens]);
+
+  return <QueryClientProvider client={queryClient}>{props.children}</QueryClientProvider>;
+}

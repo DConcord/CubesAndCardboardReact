@@ -16,9 +16,6 @@ const LoginModal = ({ onLogin }: Props) => {
     /** FIDO2 */
     authenticateWithFido2, // function to sign in with FIDO2 (e.g. Face ID or Touch)
 
-    /** JWTs */
-    tokens, // raw (i.e. string) JWTs of the signed-in user: ID token, Access token and Refresh Token
-
     /** Errors */
     lastError, // contains the last error that occured in the authentication flow (if any)
 

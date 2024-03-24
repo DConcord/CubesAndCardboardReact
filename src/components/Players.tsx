@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
-import axios from "axios";
 
 import Icon from "@mdi/react";
 import { mdiRefresh, mdiClose, mdiCheck } from "@mdi/js";
@@ -25,12 +24,12 @@ import { PatternFormat } from "react-number-format";
 
 import Authenticated, { authenticated } from "./Authenticated";
 import TShoot from "./TShoot";
-import { fetchPlayersApiOptions, fetchPlayersApi } from "./Queries";
+import { fetchPlayersApiOptions, fetchPlayersApi, apiClient } from "./Queries";
 import ConditionalWrap from "./ConditionalWrap";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { PlayersGroups, PlayerTable, Player } from "../types/Players";
+import { PlayerTable, Player } from "../types/Players";
 
 export function PlayersAuth() {
   const { signInStatus, tokensParsed } = usePasswordless();
@@ -61,11 +60,10 @@ export function PlayersAuth() {
 }
 
 export default function Players() {
-  const { tokens } = usePasswordless();
   // const playersQuery = useQuery(fetchPlayersApiOptions({ tokens: tokens!, refresh: "no" }));
   const playersQuery = useQuery({
     queryKey: ["players"],
-    queryFn: () => fetchPlayersApi(tokens!, "no"),
+    queryFn: () => fetchPlayersApi("no"),
     refetchOnMount: "always",
     // staleTime: 0,
     refetchInterval: 1000 * 60 * 20, // refetch every 20 min
@@ -75,8 +73,7 @@ export default function Players() {
   const queryClient = useQueryClient();
   const playersRefreshMutation = useMutation({
     mutationFn: async () => {
-      const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/players`, {
-        headers: { Authorization: "Bearer " + tokens!.idToken },
+      const response = await apiClient.get(`/players`, {
         params: { refresh: "yes" },
       });
       return response.data;
@@ -271,7 +268,7 @@ interface ManagePlayerModalProps {
   close: () => void;
 }
 export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProps) {
-  const { tokens, tokensParsed, refreshTokens } = usePasswordless();
+  const { tokensParsed, refreshTokens } = usePasswordless();
   const method = task === "Create" ? "POST" : "PUT";
   const [playerForm, setPlayerForm] = useState<Player>(
     player
@@ -286,7 +283,7 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
   );
   const [phone, setPhone] = useState(playerForm.phone_number ? playerForm.phone_number.replace("+1", "") : "");
 
-  const playersQuery = useQuery(fetchPlayersApiOptions({ tokens: tokens!, refresh: "no" }));
+  const playersQuery = useQuery(fetchPlayersApiOptions({ refresh: "no" }));
   const groups = playersQuery?.data?.Groups ?? [];
 
   const [inputValidated, setInputValidated] = useState(false);
@@ -322,13 +319,6 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
   useEffect(() => {
     setPlayerForm({ ...playerForm, groups: selectedGroupOptions });
   }, [selectedGroupOptions]);
-
-  const apiClient = axios.create({
-    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
-    headers: tokens && {
-      Authorization: "Bearer " + tokens.idToken,
-    },
-  });
 
   const [errorMsg, setErrorMsg] = useState("");
   const queryClient = useQueryClient();
@@ -541,8 +531,8 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
                   </Button>
                 </div>
               </Col>
-              {!tokensParsed?.idToken.email_verified && (
-                <Col style={{ justifyContent: "left", paddingLeft: 4, paddingRight: 0 }}>
+              <Col style={{ justifyContent: "left", paddingLeft: 4, paddingRight: 0 }}>
+                {!tokensParsed?.idToken.email_verified && (
                   <Button
                     variant="secondary"
                     onClick={() => setVerifyAttribute(true)}
@@ -551,8 +541,8 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
                   >
                     Enter Code
                   </Button>
-                </Col>
-              )}
+                )}
+              </Col>
 
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
                 <span>{errorMsg}</span>
@@ -563,7 +553,9 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
                     variant="primary"
                     type="submit"
                     disabled={
-                      managePlayerMutation.isPending || !inputValidated || import.meta.env.MODE !== "production"
+                      managePlayerMutation.isPending ||
+                      !inputValidated ||
+                      (task !== "ModifySelf" && import.meta.env.MODE !== "production")
                     }
                   >
                     {managePlayerMutation.isPending && (
@@ -583,7 +575,9 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
                     variant="primary"
                     type="submit"
                     disabled={
-                      managePlayerMutation.isPending || !inputValidated || import.meta.env.MODE !== "production"
+                      managePlayerMutation.isPending ||
+                      !inputValidated ||
+                      (task !== "ModifySelf" && import.meta.env.MODE !== "production")
                     }
                   >
                     {managePlayerMutation.isPending && (

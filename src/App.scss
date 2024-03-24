@@ -28,14 +28,24 @@
 //   "dark":       $dark
 // ) !default;
 // scss-docs-start grid-breakpoints
+
 $grid-breakpoints: (
   xs: 0,
-  sm: 650px, // 576px,
-  md: 768px,
-  lg: 992px,
-  xl: 1310px, //1200
-  xxl: 1400px
+  sm: 440px, // 576px,
+  md: 678px,
+  lg: 750px,
+  xl: 992px, //1200
+  xxl: 1310px
 );
+
+// $grid-breakpoints: (
+//   xs: 0,
+//   sm: 650px, // 576px,
+//   md: 768px,
+//   lg: 992px,
+//   xl: 1310px, //1200
+//   xxl: 1400px
+// );
 // scss-docs-end grid-breakpoints
 
 

@@ -1,11 +1,8 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
-import axios from "axios";
 
 import Accordion from "react-bootstrap/Accordion";
-// import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-// import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
@@ -17,7 +14,7 @@ import Modal from "react-bootstrap/Modal";
 import "../assets/fonts/TopSecret.ttf";
 
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions } from "./Queries";
+import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchEventsApi } from "./Queries";
 
 import TShoot from "./TShoot";
 // import { ManageEventModal, DeleteEventModal, TransferDevEventsModal, RsvpFooter } from "./EventManagement";
@@ -52,10 +49,6 @@ export default function UpcomingEvents() {
 
   const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const playersQuery = useQuery(fetchPlayersOptions());
-  // const playersQuery =
-  //   authenticated({ signInStatus, tokensParsed, group: ["admin"] }) && tokens
-  //     ? useQuery(fetchPlayersApiOptions({ tokens: tokens, refresh: "no" }))
-  //     : useQuery(fetchPlayersOptions());
   const playersDict = playersQuery?.data?.Users ?? {};
   const players = playersQuery?.data?.Groups?.player ?? [];
   const organizers = playersQuery?.data?.Groups?.organizer ?? [];
@@ -92,34 +85,14 @@ export default function UpcomingEvents() {
   };
 
   const queryClient = useQueryClient();
-  // const playersRefreshMutation = useMutation({
-  //   mutationFn: async () => {
-  //     const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/players`, {
-  //       headers: { Authorization: "Bearer " + tokens!.idToken },
-  //       params: { refresh: "no" },
-  //     });
-  //     return response.data;
-  //   },
-  //   onSuccess: (data) => {
-  //     queryClient.setQueryData(["players"], data);
-  //   },
-  // });
   const eventsApiRefreshMutation = useMutation({
-    mutationFn: async () => {
-      const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/events`, {
-        headers: { Authorization: "Bearer " + tokens!.idToken },
-      });
-      return response.data;
-    },
+    mutationFn: () => fetchEventsApi(),
     onSuccess: (data) => {
       queryClient.setQueryData(["events"], data);
     },
   });
 
   useEffect(() => {
-    // if (authenticated({ signInStatus, tokensParsed, group: ["admin"] })) {
-    //   playersRefreshMutation.mutate();
-    // }
     if (authenticated({ signInStatus, tokensParsed })) {
       eventsApiRefreshMutation.mutate();
     }
@@ -131,7 +104,8 @@ export default function UpcomingEvents() {
     return (
       <div className="margin-top-65">
         <Container fluid>
-          <Row xs={1} sm={2} className="align-items-center">
+          {/* <Row xs={1} sm={2} className="align-items-center"> */}
+          <Row xs={1} sm={1} md={2} className="align-items-center">
             <Col>
               {/* <h2>Upcoming Events</h2> */}
               <h2>{import.meta.env.VITE_EVENTS_TITLE}</h2>
@@ -204,7 +178,8 @@ export default function UpcomingEvents() {
         </Authenticated>
 
         <Container fluid>
-          <Row xs={1} sm={2} md={2} lg={3} xl={4} xxl={4} className="g-4 justify-content-center">
+          {/* <Row xs={1} sm={2} md={2} lg={3} xl={4} xxl={4} className="g-4 justify-content-center"> */}
+          <Row xs={1} sm={1} md={2} lg={2} xl={3} xxl={4} className="g-4 justify-content-center">
             {eventsQuery.data.map((event: GameKnightEvent, index) => {
               if (event.format == "Private" && signInStatus !== "SIGNED_IN") {
                 return null; // skip
@@ -236,8 +211,8 @@ export default function UpcomingEvents() {
                   throw error;
                 }
                 return (
-                  <Col key={index}>
-                    <Card style={{ minWidth: "20rem", maxWidth: "40rem", height: "100%" }}>
+                  <Col className="d-flex justify-content-center" key={index}>
+                    <Card style={{ minWidth: "20rem", maxWidth: "35rem", height: "100%" }}>
                       <a className="position-relative">
                         {event.bgg_id && event.bgg_id > 0 ? (
                           <Card.Img variant="top" src={`https://${import.meta.env.VITE_API_URL}/${event.bgg_id}.png`} />
