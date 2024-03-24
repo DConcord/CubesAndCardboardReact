@@ -18,12 +18,16 @@ import Modal from "react-bootstrap/Modal";
 import FloatingLabel from "react-bootstrap/FloatingLabel";
 import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
+import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import Tooltip from "react-bootstrap/Tooltip";
 
 import { PatternFormat } from "react-number-format";
 
 import Authenticated, { authenticated } from "./Authenticated";
 import TShoot from "./TShoot";
 import { fetchPlayersApiOptions } from "./Queries";
+import ConditionalWrap from "./ConditionalWrap";
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function PlayersAuth() {
@@ -56,9 +60,22 @@ export function PlayersAuth() {
 
 export default function Players() {
   const { tokens } = usePasswordless();
-  const playersQuery = useQuery(fetchPlayersApiOptions({ tokens: tokens!, refresh: "no" }));
+  // const playersQuery = useQuery(fetchPlayersApiOptions({ tokens: tokens!, refresh: "no" }));
+  const playersQuery = useQuery({
+    queryKey: ["players"],
+    queryFn: async (): Promise<PlayersGroups> => {
+      const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/players`, {
+        headers: { Authorization: "Bearer " + tokens!.idToken },
+        params: { refresh: "no" },
+      });
+      return response.data;
+    },
+    refetchOnMount: "always",
+    // staleTime: 0,
+    refetchInterval: 1000 * 60 * 20, // refetch every 20 min
+  });
   const playersDict = playersQuery?.data?.Users ?? {};
-  const groups = playersQuery?.data?.Groups ?? [];
+  // const groups = playersQuery?.data?.Groups ?? [];
 
   const queryClient = useQueryClient();
   const playersRefreshMutation = useMutation({
@@ -112,7 +129,7 @@ export default function Players() {
     });
 
     return (
-      <>
+      <div className="margin-top-65">
         <Authenticated given_name={["Colten"]}>
           <TShoot playersDict={playersDict} />
         </Authenticated>
@@ -126,9 +143,6 @@ export default function Players() {
             <Col>
               <Row style={{ justifyContent: "right" }}>
                 <Col xs="auto" style={{ textAlign: "right" }}>
-                  {/* <Spinner animation="grow" role="status">
-                    <span className="visually-hidden">Loading...</span>
-                  </Spinner> */}
                   <Button
                     disabled={playersRefreshMutation.isPending}
                     className="align-top"
@@ -152,9 +166,28 @@ export default function Players() {
                   </Button>
                 </Col>
                 <Col xs="auto" style={{ textAlign: "right" }}>
-                  <Button size="sm" variant="primary" onClick={() => handleShowManagePlayer({ task: "Create" })}>
-                    New Player
-                  </Button>
+                  <ConditionalWrap
+                    condition={import.meta.env.MODE !== "production"}
+                    wrap={(children) => (
+                      <OverlayTrigger
+                        placement="bottom"
+                        delay={{ show: 100, hide: 400 }}
+                        overlay={<Tooltip id="NewPlayer">Players cannot be modified from Dev</Tooltip>}
+                      >
+                        <div>{children}</div>
+                      </OverlayTrigger>
+                    )}
+                  >
+                    <Button
+                      size="sm"
+                      id="NewPlayer"
+                      disabled={import.meta.env.MODE !== "production"}
+                      variant="primary"
+                      onClick={() => handleShowManagePlayer({ task: "Create" })}
+                    >
+                      New Player
+                    </Button>
+                  </ConditionalWrap>
                 </Col>
               </Row>
             </Col>
@@ -176,13 +209,27 @@ export default function Players() {
             {tabData.map((row, index) => (
               <tr key={index}>
                 <td>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => handleShowManagePlayer({ task: "Modify", managedPlayer: row })}
+                  <ConditionalWrap
+                    condition={import.meta.env.MODE !== "production"}
+                    wrap={(children) => (
+                      <OverlayTrigger
+                        placement="right"
+                        delay={{ show: 100, hide: 400 }}
+                        overlay={<Tooltip id="NewPlayer">Players cannot be modified from Dev</Tooltip>}
+                      >
+                        <span>{children}</span>
+                      </OverlayTrigger>
+                    )}
                   >
-                    Edit
-                  </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => handleShowManagePlayer({ task: "Modify", managedPlayer: row })}
+                      disabled={import.meta.env.MODE !== "production"}
+                    >
+                      Edit
+                    </Button>
+                  </ConditionalWrap>
                 </td>
                 <td>{row.given_name}</td>
                 <td>{row.family_name}</td>
@@ -196,18 +243,13 @@ export default function Players() {
         </Table>
 
         <Modal show={showManagePlayer} onHide={handleCloseManagePlayer} backdrop="static" keyboard={false}>
-          <ManagePlayerModal
-            // groups={groups}
-            close={handleCloseManagePlayer}
-            task={managedPlayerTask}
-            player={managedPlayer}
-          />
+          <ManagePlayerModal close={handleCloseManagePlayer} task={managedPlayerTask} player={managedPlayer} />
         </Modal>
-      </>
+      </div>
     );
   } else {
     return (
-      <>
+      <div className="margin-top-65">
         <Container fluid>
           <Row>
             <Col xs="auto">
@@ -223,7 +265,7 @@ export default function Players() {
             </Col>
           </Row>
         </Container>
-      </>
+      </div>
     );
   }
 }
@@ -514,7 +556,11 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
                 <span>{errorMsg}</span>
               </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
-                <Button variant="primary" type="submit" disabled={managePlayerMutation.isPending || !inputValidated}>
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={managePlayerMutation.isPending || !inputValidated || import.meta.env.MODE !== "production"}
+                >
                   {managePlayerMutation.isPending && (
                     <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
                   )}

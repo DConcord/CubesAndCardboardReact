@@ -10,7 +10,7 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
-import { useNavigate, NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
 
 import { THEME, initTheme, setTheme, resetTheme } from "./Theme";
 import LoginModal from "./LoginModal";
@@ -21,7 +21,7 @@ initTheme();
 import Icon from "@mdi/react";
 import { mdiThemeLightDark, mdiWeatherNight, mdiBrightnessAuto, mdiWeatherSunny, mdiAccount } from "@mdi/js";
 
-import { matchRoutes, useLocation, Location } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 export default function NavigationBar() {
   const [showLogin, setShowLogin] = useState(false);
@@ -77,7 +77,13 @@ export default function NavigationBar() {
     <>
       {/* <h2>{location.pathname}</h2>
       <h2>{pathMap[location.pathname].title}</h2> */}
-      <Navbar fixed="top" expand={expand ? expand : true} onSelect={handleCloseMenu} className="bg-body-tertiary mb-3">
+      <Navbar
+        fixed="top"
+        expand={expand ? expand : true}
+        onSelect={handleCloseMenu}
+        className="bg-body-tertiary mb-3"
+        style={{ minHeight: "58px" }}
+      >
         {/* collapseOnSelect */}
         <Container fluid>
           <Navbar.Brand href="https://cubesandcardboard.net/">Cubes & Cardboard</Navbar.Brand>
@@ -106,6 +112,9 @@ export default function NavigationBar() {
                     <Nav.Link eventKey="/players" as={NavLink} to="/players" className="navLink">
                       Players
                     </Nav.Link>
+                    <Nav.Link eventKey="/logs" as={NavLink} to="/logs" className="navLink">
+                      Logs
+                    </Nav.Link>
                     <Nav.Link eventKey="/tbd" as={NavLink} to="/tbd" className="navLink">
                       TBD Gallery
                     </Nav.Link>
@@ -124,6 +133,9 @@ export default function NavigationBar() {
                       </NavDropdown.Item>
                       <NavDropdown.Item as={NavLink} to="/players" className="navLink">
                         Players
+                      </NavDropdown.Item>
+                      <NavDropdown.Item as={NavLink} to="/logs" className="navLink">
+                        Logs
                       </NavDropdown.Item>
                       <NavDropdown.Item as={NavLink} to="tbd" className="navLink">
                         TBD Gallery
@@ -263,5 +275,6 @@ export default function NavigationBar() {
 const pathMap = {
   "/": { title: "Events" },
   "/players": { title: "Players" },
+  "/logs": { title: "Logs" },
   "/tbd": { title: "TBD Gallery" },
 };

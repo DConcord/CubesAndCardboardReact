@@ -4,6 +4,7 @@ import UpcomingEvents from "./components/Events";
 import NavigationBar from "./components/NavigationBar";
 import TbdGallery from "./components/TbdGallery";
 import Players from "./components/Players";
+import Logs from "./components/Logs";
 import Authenticated, { authenticated } from "./components/Authenticated";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 // import { usePasswordless } from "./components/DemoContext";
@@ -22,6 +23,14 @@ export const router = createBrowserRouter(
           element={
             <Authenticated unauthPath="/">
               <Players />
+            </Authenticated>
+          }
+        />
+        <Route
+          path="/logs"
+          element={
+            <Authenticated unauthPath="/">
+              <Logs />
             </Authenticated>
           }
         />

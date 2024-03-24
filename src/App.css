@@ -60,8 +60,16 @@ button.passwordless-link {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 } */
 
-body {
+/* body {
   margin-top: 65px;
+} */
+
+.margin-top-65 {
+  margin-top: 65px;
+}
+
+.margin-top-58 {
+  margin-top: 58px;
 }
 
 .topsecret {

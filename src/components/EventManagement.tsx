@@ -10,6 +10,7 @@ import Col from "react-bootstrap/Col";
 import FloatingLabel from "react-bootstrap/FloatingLabel";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
+import Feedback from "react-bootstrap/Feedback";
 
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
@@ -189,7 +190,7 @@ export function TransferDevEventsModal({ close }: TransferDevEventsModalProps) {
   );
 }
 
-export type ManagedEventTask = "Clone" | "Create" | "Modify" | "Migrate";
+export type ManagedEventTask = "Clone" | "Create" | "Modify" | "Migrate" | "Read" | "Restore";
 interface ManageEventModalProps {
   playersDict: PlayersDict;
   players: string[];
@@ -208,9 +209,13 @@ export function ManageEventModal({
   task,
   gameKnightEvent,
 }: ManageEventModalProps) {
-  const method = ["Create", "Clone"].includes(task) ? "POST" : ["Modify", "Migrate"].includes(task) ? "PUT" : "";
+  const method = ["Create", "Clone", "Restore"].includes(task)
+    ? "POST"
+    : ["Modify", "Migrate"].includes(task)
+    ? "PUT"
+    : "";
   const { tokens, signInStatus, tokensParsed } = usePasswordless();
-  const today_6p_local = new Date(new Date().setHours(18, 0, 0, 0)).toLocaleString("lt").replace(" ", "T");
+  const today_6p_local = new Date(new Date().setHours(18, 0, 0, 0)).toLocaleString("lt").replace(" ", "T") + "DEFAULT";
   const [eventForm, setEventForm] = useState<GameKnightEvent>(
     gameKnightEvent
       ? gameKnightEvent
@@ -230,14 +235,31 @@ export function ManageEventModal({
           organizer_pool: organizers,
         }
   );
+  const [isValid, setIsValid] = useState(() => {
+    if (task == "Create") {
+      return (
+        hosts.includes(eventForm.host) &&
+        eventForm.date !== today_6p_local &&
+        !(eventForm.game === "" || eventForm.game == undefined)
+      );
+    }
+  });
+  useEffect(() => {
+    setIsValid(
+      hosts.includes(eventForm.host) &&
+        eventForm.date !== today_6p_local &&
+        !(eventForm.game === "" || eventForm.game == undefined)
+    );
+  }, [eventForm]);
   const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
   const handleInput = (e: React.BaseSyntheticEvent) => {
     if (e.target.id == "bgg_id" || e.target.id == "total_spots") {
+      console.log(e.target.id, e.target.value, e.target.value === "");
       setEventForm({ ...eventForm, [e.target.id]: parseInt(e.target.value) });
     } else {
       setEventForm({ ...eventForm, [e.target.id]: e.target.value });
     }
-    console.log(e.target);
+    // console.log(e.target);
   };
 
   let playerNameDict: PlayerNameDict = {};
@@ -390,7 +412,8 @@ export function ManageEventModal({
                 type="datetime-local"
                 onChange={handleInput}
                 defaultValue={eventForm.date.slice(0, 16)}
-                disabled={!isAdmin}
+                disabled={!isAdmin || ["Read", "Restore"].includes(task)}
+                isInvalid={eventForm.date === today_6p_local}
               />
             </FloatingLabel>
           </Col>
@@ -400,7 +423,7 @@ export function ManageEventModal({
                 aria-label="Status"
                 onChange={handleInput}
                 defaultValue={eventForm.status ? eventForm.status : "Normal"}
-                disabled={!isAdmin}
+                disabled={!isAdmin || ["Read", "Restore"].includes(task)}
               >
                 <option value="Normal">Normal</option>
                 <option value="Cancelled">Cancelled</option>
@@ -410,24 +433,28 @@ export function ManageEventModal({
         </Row>
         <Row style={{ padding: 2 }}>
           <Col med="true" style={{ minWidth: "18rem", padding: 4 }}>
-            <FloatingLabel controlId="host" label="Host" className="mb-1">
-              <Form.Select
-                aria-label="Choose Host"
-                onChange={handleInput}
-                defaultValue={task == "Modify" || task == "Clone" ? eventForm.host : "default"}
-                disabled={!isAdmin}
-              >
-                <option hidden disabled value="default">
-                  {" "}
-                  -- choose a host --{" "}
-                </option>
-                {hosts.map((player_id: string, index: number) => (
-                  <option key={index} value={player_id}>
-                    {playersDict[player_id].attrib.given_name}
+            <Form.Group>
+              <FloatingLabel controlId="host" label="Host" className="mb-1">
+                <Form.Select
+                  aria-label="Choose Host"
+                  onChange={handleInput}
+                  defaultValue={task == "Create" ? "default" : eventForm.host}
+                  disabled={!isAdmin || ["Read", "Restore"].includes(task)}
+                  isInvalid={!hosts.includes(eventForm.host)}
+                >
+                  <option hidden disabled value="default">
+                    {" "}
+                    -- choose a host --{" "}
                   </option>
-                ))}
-              </Form.Select>
-            </FloatingLabel>
+                  {hosts.map((player_id: string, index: number) => (
+                    <option key={index} value={player_id}>
+                      {playersDict[player_id].attrib.given_name}
+                    </option>
+                  ))}
+                </Form.Select>
+              </FloatingLabel>
+              <Feedback type="invalid">Please choose a host.</Feedback>
+            </Form.Group>
           </Col>
         </Row>
         <Row style={{ padding: 2 }}>
@@ -436,7 +463,9 @@ export function ManageEventModal({
               <Form.Control
                 as="textarea"
                 onChange={handleInput}
-                defaultValue={task == "Modify" || task == "Clone" ? eventForm.game : "TBD"}
+                defaultValue={task == "Create" ? "TBD" : eventForm.game}
+                disabled={["Read", "Restore"].includes(task)}
+                isInvalid={eventForm.game === "" || eventForm.game == undefined}
               />
             </FloatingLabel>
           </Col>
@@ -444,38 +473,39 @@ export function ManageEventModal({
             <FloatingLabel controlId="bgg_id" label="BGG ID" className="mb-1">
               <Form.Control
                 type="number"
-                disabled={eventForm.game == "TBD"}
+                disabled={eventForm.game == "TBD" || ["Read", "Restore"].includes(task)}
                 onChange={handleInput}
-                defaultValue={(task == "Modify" || task == "Clone") && eventForm.bgg_id ? eventForm.bgg_id : undefined}
+                defaultValue={task == "Create" || !eventForm.bgg_id ? undefined : eventForm.bgg_id}
               />
             </FloatingLabel>
           </Col>
           <Col med="true" style={{ minWidth: "13rem", padding: 4 }}>
-            <FloatingLabel controlId="format" label="Format" className="mb-1">
-              <Form.Select
-                aria-label="Choose Format"
-                onChange={handleInput}
-                defaultValue={task == "Modify" || task == "Clone" ? eventForm.format : "default"}
-                disabled={!isAdmin}
-              >
-                <option hidden disabled value="default">
-                  {" "}
-                  -- choose the format --{" "}
-                </option>
-                <option value="Open">Open</option>
-                <option value="Reserved">Reserved</option>
-                <option value="Private">Private</option>
-              </Form.Select>
-            </FloatingLabel>
+            <Form.Group>
+              <FloatingLabel controlId="format" label="Format" className="mb-1">
+                <Form.Select
+                  aria-label="Choose Format"
+                  onChange={handleInput}
+                  defaultValue={task == "Create" ? "default" : eventForm.format}
+                  disabled={!isAdmin || ["Read", "Restore"].includes(task)}
+                  isInvalid={!["Open", "Reserved", "Private"].includes(eventForm.format)}
+                >
+                  <option hidden disabled value="default">
+                    {" "}
+                    -- choose the format --{" "}
+                  </option>
+                  <option value="Open">Open</option>
+                  <option value="Reserved">Reserved</option>
+                  <option value="Private">Private</option>
+                </Form.Select>
+              </FloatingLabel>
+            </Form.Group>
           </Col>
           <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem", padding: 4 }}>
             <FloatingLabel controlId="total_spots" label="Total Spots" className="mb-1">
               <Form.Control
-                disabled={eventForm.format == "Open"}
+                disabled={eventForm.format == "Open" || ["Read", "Restore"].includes(task)}
                 onChange={handleInput}
-                defaultValue={
-                  (task == "Modify" || task == "Clone") && eventForm.total_spots ? eventForm.total_spots : undefined
-                }
+                defaultValue={task == "Create" || !eventForm.total_spots ? undefined : eventForm.total_spots}
               />
             </FloatingLabel>
           </Col>
@@ -494,6 +524,7 @@ export function ManageEventModal({
                         label={playersDict[player_id].attrib.given_name}
                         checked={selectedPrivatePlayerPool.includes(player_id)}
                         onChange={handlePrivatePlayerPoolChange}
+                        disabled={["Read", "Restore"].includes(task)}
                         value={player_id}
                       />
                     </Col>
@@ -520,6 +551,7 @@ export function ManageEventModal({
                         label={playersDict[player_id].attrib.given_name}
                         checked={selectedAttendingOptions.includes(player_id)}
                         disabled={
+                          ["Read", "Restore"].includes(task) ||
                           (task == "Create" && eventForm.format == "Reserved") ||
                           (eventForm.format == "Private" && !eventForm.player_pool.includes(player_id)) ||
                           (eventForm.format !== "Open" &&
@@ -547,6 +579,7 @@ export function ManageEventModal({
                       label={playersDict[player_id].attrib.given_name}
                       checked={selectedNotAttendingOptions.includes(player_id)}
                       onChange={handleNAOptionChange}
+                      disabled={["Read", "Restore"].includes(task)}
                       value={player_id}
                     />
                   </Col>
@@ -568,7 +601,7 @@ export function ManageEventModal({
                         : eventForm.organizer
                       : "default"
                   }
-                  disabled={task == "Create"}
+                  disabled={["Create", "Read", "Restore"].includes(task)}
                 >
                   <option hidden disabled value="default">
                     {" "}
@@ -585,7 +618,7 @@ export function ManageEventModal({
           )}
         </Row>
       </Modal.Body>
-      {import.meta.env.MODE == "development" && (
+      {(import.meta.env.MODE == "development" || ["Read", "Restore"].includes(task)) && (
         <Accordion>
           <Accordion.Item eventKey="eventDebug">
             <Accordion.Header>Event Debug</Accordion.Header>
@@ -600,12 +633,25 @@ export function ManageEventModal({
         {/* <pre>{JSON.stringify(selectedAttendingOptions, null, 4)}</pre> */}
         {/* <pre>{JSON.stringify(selectedNotAttendingOptions, null, 4)}</pre> */}
         <span>{errorMsg}</span>
-        <Button variant="primary" type="submit" disabled={manageEventMutation.isPending}>
-          {manageEventMutation.isPending && (
-            <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
-          )}
-          {task == "Modify" ? "Update Event" : task == "Migrate" ? "Migrate Event" : "Create Event"}
-        </Button>
+        {/* || ["Read", "Restore"].includes(task) */}
+        {task !== "Read" && (
+          <Button
+            variant={task == "Restore" ? "danger" : "primary"}
+            type="submit"
+            disabled={manageEventMutation.isPending || !isValid}
+          >
+            {manageEventMutation.isPending && (
+              <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
+            )}
+            {task == "Modify"
+              ? "Update Event"
+              : task == "Migrate"
+              ? "Migrate Event"
+              : task == "Restore"
+              ? "Restore Event"
+              : "Create Event"}
+          </Button>
+        )}
         <Button variant="secondary" onClick={close} disabled={manageEventMutation.isPending}>
           Cancel
         </Button>

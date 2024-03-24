@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 export default function TbdGallery() {
   const navigate = useNavigate();
   return (
-    <>
+    <div className="margin-top-65">
       <Container fluid>
         <Row>
           <Col>
@@ -36,7 +36,7 @@ export default function TbdGallery() {
           ))}
         </Row>
       </Container>
-    </>
+    </div>
   );
 }
 

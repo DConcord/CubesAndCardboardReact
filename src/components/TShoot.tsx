@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 import axios from "axios";
 
 import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
-import { AccordionBody } from "react-bootstrap";
+// import { AccordionBody } from "react-bootstrap";
 import { PlayersDict } from "./Players";
 
 interface Props {
@@ -33,22 +33,19 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
   // API Client
   const apiClient = axios.create({
     baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
-    // headers: tokens && {
-    //   Authorization: "Bearer " + tokens.idToken,
-    // },
   });
 
   const [eventsTest, setEventsTest] = useState({});
   const fetchTest = async () => {
     try {
       let base_url = `https://${import.meta.env.VITE_API_URL}/api`;
-      let response = await axios.get(`${base_url}/players`, {
+      let response = await axios.get(`${base_url}/activitylogs`, {
         headers: tokens && {
           Authorization: "Bearer " + tokens.idToken,
         },
-        params: {
-          refresh: "yes",
-        },
+        // params: {
+        //   refresh: "yes",
+        // },
       });
 
       console.log(response.data);

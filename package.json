@@ -18,6 +18,7 @@
     "amazon-cognito-passwordless-auth": "^0.12.1",
     "axios": "^1.6.7",
     "bootstrap": "^5.3.2",
+    "js-yaml": "^4.1.0",
     "react": "^18.2.0",
     "react-bootstrap": "^2.10.1",
     "react-dom": "^18.2.0",
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "@modyfi/vite-plugin-yaml": "^1.1.0",
+    "@types/js-yaml": "^4.0.9",
     "@types/react": "^18.0.27",
     "@types/react-dom": "^18.0.10",
     "@types/react-toggle": "^4.0.5",
