@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import Container from "react-bootstrap/Container";
 import Navbar from "react-bootstrap/Navbar";
 import Offcanvas from "react-bootstrap/Offcanvas";
@@ -15,7 +15,8 @@ import { NavLink, Outlet } from "react-router-dom";
 import { THEME, initTheme, setTheme, resetTheme } from "./Theme";
 import LoginModal from "./LoginModal";
 import Authenticated, { authenticated } from "./Authenticated";
-import { ManagePlayerModal, PlayerModifySelf } from "./Players";
+import { PlayerModifySelf } from "../types/Players";
+const ManagePlayerModal = lazy(() => import("./Players").then((module) => ({ default: module.ManagePlayerModal })));
 
 initTheme();
 import Icon from "@mdi/react";
@@ -264,7 +265,9 @@ export default function NavigationBar() {
 
       {tokensParsed && (
         <Modal show={showManagePlayer} onHide={handleCloseManagePlayer} backdrop="static" keyboard={false}>
-          <ManagePlayerModal close={handleCloseManagePlayer} task="ModifySelf" player={player!} />
+          <Suspense fallback={<>...</>}>
+            <ManagePlayerModal close={handleCloseManagePlayer} task="ModifySelf" player={player!} />
+          </Suspense>
         </Modal>
       )}
       <Outlet />

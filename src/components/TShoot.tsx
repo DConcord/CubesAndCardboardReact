@@ -5,8 +5,7 @@ import axios from "axios";
 import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
-// import { AccordionBody } from "react-bootstrap";
-import { PlayersDict } from "./Players";
+import { PlayersDict } from "../types/Players";
 
 interface Props {
   events?: never[];

@@ -17,8 +17,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { Passwordless } from "amazon-cognito-passwordless-auth";
 import { PasswordlessContextProvider /*Fido2Toast*/ } from "amazon-cognito-passwordless-auth/react";
-// } from "./components/DemoContext";
-import ThemeProvider from "react-bootstrap/ThemeProvider";
+// import ThemeProvider from "react-bootstrap/ThemeProvider";
 import { RouterProvider } from "react-router-dom";
 
 Passwordless.configure({
