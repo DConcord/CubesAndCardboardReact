@@ -1,6 +1,6 @@
 import { TokensFromStorage } from "amazon-cognito-passwordless-auth/storage";
 
-import { PlayersGroups } from "./Players";
+import { PlayersGroups } from "../types/Players";
 import { queryOptions } from "@tanstack/react-query";
 import axios from "axios";
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import axios from "axios";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +19,11 @@ import FloatingLabel from "react-bootstrap/FloatingLabel";
 
 import yaml from "js-yaml";
 
-import { ManageEventModal, ManagedEventTask } from "./EventManagement";
+// import { ManageEventModal } from "./EventManagement";
+const ManageEventModal = lazy(() =>
+  import("./EventManagement").then((module) => ({ default: module.ManageEventModal }))
+);
+import { ManagedEventTask } from "../types/Events";
 import { GameKnightEvent, formatIsoDate } from "./Events";
 import { fetchPlayersOptions } from "./Queries";
 
@@ -340,15 +344,17 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
     return (
       <>
         <Modal show={showManageEvent} onHide={handleCloseManageEvent} backdrop="static" keyboard={false}>
-          <ManageEventModal
-            playersDict={playersDict}
-            players={players}
-            organizers={organizers}
-            hosts={hosts}
-            close={handleCloseManageEvent}
-            task={managedEventTask}
-            gameKnightEvent={managedEvent}
-          />
+          <Suspense fallback={<>...</>}>
+            <ManageEventModal
+              playersDict={playersDict}
+              players={players}
+              organizers={organizers}
+              hosts={hosts}
+              close={handleCloseManageEvent}
+              task={managedEventTask}
+              gameKnightEvent={managedEvent}
+            />
+          </Suspense>
         </Modal>
         <Table striped bordered hover>
           <thead>
@@ -397,7 +403,7 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
 
               return (
                 <tr key={index}>
-                  <td>{log["@timestamp"]}</td>
+                  <td>{new Date(log["@timestamp"] + " UTC").toLocaleString("lt", { timeZoneName: "short" })}</td>
                   <td>{formatIsoDate(log.date)}</td>
                   <td>{`${playersDict[log.auth_sub].attrib.given_name} (${log.auth_type})`}</td>
                   <td>{log.action}</td>
@@ -473,7 +479,7 @@ function RsvpLog({ rsvpLog }: { rsvpLog: RsvpLogType[] }) {
         <tbody>
           {rsvpLog.map((log, index) => (
             <tr key={index}>
-              <td>{log["@timestamp"]}</td>
+              <td>{new Date(log["@timestamp"] + " UTC").toLocaleString("lt", { timeZoneName: "short" })}</td>
               <td>{formatIsoDate(log.date)}</td>
               <td>{`${playersDict[log.auth_sub].attrib.given_name} (${log.auth_type})`}</td>
               <td>{log.action}</td>
@@ -515,7 +521,7 @@ function PlayerLog({ playerLog }: { playerLog: PlayerLogType[] }) {
         <tbody>
           {playerLog.map((log, index) => (
             <tr key={index}>
-              <td>{log["@timestamp"]}</td>
+              <td>{new Date(log["@timestamp"] + " UTC").toLocaleString("lt", { timeZoneName: "short" })}</td>
               <td>{`${playersDict[log.auth_sub].attrib.given_name} (${log.auth_type})`}</td>
               <td>{log.action}</td>
               <td>{playersDict[log.user_id].attrib.given_name}</td>

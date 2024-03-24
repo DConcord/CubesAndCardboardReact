@@ -1,14 +1,10 @@
-// import { useState, useEffect } from "react";
-
-import UpcomingEvents from "./components/Events";
-import NavigationBar from "./components/NavigationBar";
-import TbdGallery from "./components/TbdGallery";
-import Players from "./components/Players";
-import Logs from "./components/Logs";
+import React from "react";
 import Authenticated, { authenticated } from "./components/Authenticated";
-import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
-// import { usePasswordless } from "./components/DemoContext";
-// import NavigationBar from "./components/DemoNavigationBar";
+const UpcomingEvents = React.lazy(() => import("./components/Events"));
+const NavigationBar = React.lazy(() => import("./components/NavigationBar"));
+const TbdGallery = React.lazy(() => import("./components/TbdGallery"));
+const Players = React.lazy(() => import("./components/Players"));
+const Logs = React.lazy(() => import("./components/Logs"));
 
 import { Route, createBrowserRouter, createRoutesFromElements } from "react-router-dom";
 
@@ -16,13 +12,29 @@ export const router = createBrowserRouter(
   createRoutesFromElements(
     <>
       <Route element={<NavigationBar />}>
-        <Route path="/" element={<UpcomingEvents />} />
-        <Route path="/tbd" element={<TbdGallery />} />
+        <Route
+          path="/"
+          element={
+            <React.Suspense fallback={<>...</>}>
+              <UpcomingEvents />
+            </React.Suspense>
+          }
+        />
+        <Route
+          path="/tbd"
+          element={
+            <React.Suspense fallback={<>...</>}>
+              <TbdGallery />
+            </React.Suspense>
+          }
+        />
         <Route
           path="/players"
           element={
             <Authenticated unauthPath="/">
-              <Players />
+              <React.Suspense fallback={<>...</>}>
+                <Players />
+              </React.Suspense>
             </Authenticated>
           }
         />
@@ -30,7 +42,9 @@ export const router = createBrowserRouter(
           path="/logs"
           element={
             <Authenticated unauthPath="/">
-              <Logs />
+              <React.Suspense fallback={<>...</>}>
+                <Logs />
+              </React.Suspense>
             </Authenticated>
           }
         />

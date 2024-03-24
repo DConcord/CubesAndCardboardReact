@@ -30,6 +30,8 @@ import ConditionalWrap from "./ConditionalWrap";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { PlayersGroups, PlayerTable, Player } from "../types/Players";
+
 export function PlayersAuth() {
   const { signInStatus, tokensParsed } = usePasswordless();
   const navigate = useNavigate();
@@ -276,7 +278,7 @@ interface ManagePlayerModalProps {
   close: () => void;
 }
 export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProps) {
-  const { tokens, refreshTokens } = usePasswordless();
+  const { tokens, tokensParsed, refreshTokens } = usePasswordless();
   const method = task === "Create" ? "POST" : "PUT";
   const [playerForm, setPlayerForm] = useState<Player>(
     player
@@ -394,6 +396,7 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
   const [verifyWaiting, setVerifyWaiting] = useState(false);
   const [verifyAttribute, setVerifyAttribute] = useState(false);
   async function handleVerifySubmit(event: React.BaseSyntheticEvent) {
+    console.log(event.target.code.value);
     event.preventDefault();
     setVerifyWaiting(true);
     try {
@@ -436,7 +439,6 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
                 </Button>
               </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
-                {/* <Col> */}
                 <Button variant="primary" type="submit" disabled={verifyWaiting || resendWaiting}>
                   {verifyWaiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
                   Send
@@ -534,50 +536,81 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
         <Modal.Footer>
           <Container fluid>
             <Row style={{ justifyContent: "right", paddingLeft: 8, paddingRight: 0 }}>
-              {/* <Col xs="auto" style={{ textAlign: "right" }}></Col> */}
               <Col xs="auto" style={{ justifyContent: "left", paddingLeft: 0, paddingRight: 4 }}>
-                <Button variant="secondary" onClick={() => refreshTokens()} disabled={managePlayerMutation.isPending}>
-                  {/* Refresh */}
-                  <Icon path={mdiRefresh} size={1} />
-                </Button>
+                <div className="d-block d-sm-none">
+                  <Button variant="secondary" onClick={() => refreshTokens()} disabled={managePlayerMutation.isPending}>
+                    <Icon path={mdiRefresh} size={1} />
+                  </Button>
+                </div>
+                <div className="d-none d-sm-block">
+                  <Button variant="secondary" onClick={() => refreshTokens()} disabled={managePlayerMutation.isPending}>
+                    Refresh
+                  </Button>
+                </div>
               </Col>
-              <Col style={{ justifyContent: "left", paddingLeft: 4, paddingRight: 0 }}>
-                <Button
-                  variant="secondary"
-                  onClick={() => setVerifyAttribute(true)}
-                  disabled={managePlayerMutation.isPending}
-                  style={{ height: "100%" }}
-                >
-                  Enter Code
-                </Button>
-              </Col>
+              {!tokensParsed?.idToken.email_verified && (
+                <Col style={{ justifyContent: "left", paddingLeft: 4, paddingRight: 0 }}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => setVerifyAttribute(true)}
+                    disabled={managePlayerMutation.isPending}
+                    style={{ height: "100%" }}
+                  >
+                    Enter Code
+                  </Button>
+                </Col>
+              )}
 
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
                 <span>{errorMsg}</span>
               </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
-                <Button
-                  variant="primary"
-                  type="submit"
-                  disabled={managePlayerMutation.isPending || !inputValidated || import.meta.env.MODE !== "production"}
-                >
-                  {managePlayerMutation.isPending && (
-                    <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
-                  )}
-                  {task == "Modify" ? (
-                    "Update Player"
-                  ) : task == "ModifySelf" ? (
-                    <Icon path={mdiCheck} size={1} />
-                  ) : (
-                    "Create Player"
-                  )}
-                </Button>
+                <div className="d-block d-sm-none">
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    disabled={
+                      managePlayerMutation.isPending || !inputValidated || import.meta.env.MODE !== "production"
+                    }
+                  >
+                    {managePlayerMutation.isPending && (
+                      <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
+                    )}
+                    {task == "Modify" ? (
+                      "Update Player"
+                    ) : task == "ModifySelf" ? (
+                      <Icon path={mdiCheck} size={1} />
+                    ) : (
+                      "Create Player"
+                    )}
+                  </Button>
+                </div>
+                <div className="d-none d-sm-block">
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    disabled={
+                      managePlayerMutation.isPending || !inputValidated || import.meta.env.MODE !== "production"
+                    }
+                  >
+                    {managePlayerMutation.isPending && (
+                      <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
+                    )}
+                    {task == "Modify" ? "Update Player" : task == "ModifySelf" ? "Update" : "Create Player"}
+                  </Button>
+                </div>
               </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 8 }}>
+                {/* <div className="d-none d-sm-none">
+                  <Button variant="secondary" onClick={close} disabled={managePlayerMutation.isPending}>
+                    <Icon path={mdiClose} size={1} />
+                  </Button>
+                </div>
+                <div className="d-block d-sm-block"> */}
                 <Button variant="secondary" onClick={close} disabled={managePlayerMutation.isPending}>
-                  {/* Cancel */}
-                  <Icon path={mdiClose} size={1} />
+                  Cancel
                 </Button>
+                {/* </div> */}
               </Col>
             </Row>
           </Container>
@@ -588,49 +621,3 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
 const CustomFormControl: React.FC<FormControlProps> = (props) => {
   return <Form.Control autoComplete="off" {...props} />;
 };
-
-// https://betterprogramming.pub/5-recipes-for-setting-default-props-in-react-typescript-b52d8b6a842c
-export type PlayerNameDict = {
-  [key: PlayerGet["attrib"]["given_name"]]: string;
-};
-
-export type PlayersGroups = {
-  Users: PlayersDict;
-  Groups: {
-    [key: string]: string[];
-  };
-};
-
-export type PlayersDict = {
-  [key: string]: PlayerGet;
-};
-
-export type PlayerGet = {
-  groups: string[];
-  attrib: {
-    given_name: string;
-    family_name?: string;
-    email: string;
-    phone_number?: string;
-  };
-};
-
-type PlayerTable = PlayerExisting[];
-
-type PlayerBase = {
-  given_name: string;
-  family_name?: string;
-  email: string;
-  phone_number?: string;
-  user_id: string;
-  groups: PlayerGet["groups"];
-  accessToken: string;
-};
-
-type PlayerCreate = Omit<PlayerBase, "user_id" | "accessToken">;
-
-type PlayerExisting = Omit<PlayerBase, "accessToken">;
-
-export type PlayerModifySelf = PlayerBase;
-
-type Player = PlayerCreate | PlayerExisting | PlayerModifySelf;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import axios from "axios";
 
@@ -17,16 +17,23 @@ import Modal from "react-bootstrap/Modal";
 import "../assets/fonts/TopSecret.ttf";
 
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchPlayersApiOptions } from "./Queries";
+import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions } from "./Queries";
 
 import TShoot from "./TShoot";
-import {
-  ManageEventModal,
-  DeleteEventModal,
-  TransferDevEventsModal,
-  RsvpFooter,
-  ManagedEventTask,
-} from "./EventManagement";
+// import { ManageEventModal, DeleteEventModal, TransferDevEventsModal, RsvpFooter } from "./EventManagement";
+
+const ManageEventModal = lazy(() =>
+  import("./EventManagement").then((module) => ({ default: module.ManageEventModal }))
+);
+const DeleteEventModal = lazy(() =>
+  import("./EventManagement").then((module) => ({ default: module.DeleteEventModal }))
+);
+const TransferDevEventsModal = lazy(() =>
+  import("./EventManagement").then((module) => ({ default: module.TransferDevEventsModal }))
+);
+const RsvpFooter = lazy(() => import("./EventManagement").then((module) => ({ default: module.RsvpFooter })));
+
+import { ManagedEventTask } from "../types/Events";
 import Authenticated, { authenticated } from "./Authenticated";
 
 export default function UpcomingEvents() {
@@ -163,21 +170,27 @@ export default function UpcomingEvents() {
         </Container>
         <Authenticated>
           <Modal show={showManageEvent} onHide={handleCloseManageEvent} backdrop="static" keyboard={false}>
-            <ManageEventModal
-              playersDict={playersDict}
-              players={players}
-              organizers={organizers}
-              hosts={hosts}
-              close={handleCloseManageEvent}
-              task={managedEventTask}
-              gameKnightEvent={managedEvent}
-            />
+            <Suspense fallback={<>...</>}>
+              <ManageEventModal
+                playersDict={playersDict}
+                players={players}
+                organizers={organizers}
+                hosts={hosts}
+                close={handleCloseManageEvent}
+                task={managedEventTask}
+                gameKnightEvent={managedEvent}
+              />
+            </Suspense>
           </Modal>
           <Modal show={showDeleteEvent} onHide={handleCloseDeleteEvent}>
-            <DeleteEventModal close={handleCloseDeleteEvent} gameKnightEvent={deleteEvent!} />
+            <Suspense fallback={<>...</>}>
+              <DeleteEventModal close={handleCloseDeleteEvent} gameKnightEvent={deleteEvent!} />
+            </Suspense>
           </Modal>
           <Modal show={showTransferDevEvents} onHide={handleCloseTransferDevEvents} backdrop="static" keyboard={false}>
-            <TransferDevEventsModal close={handleCloseTransferDevEvents} />
+            <Suspense fallback={<>...</>}>
+              <TransferDevEventsModal close={handleCloseTransferDevEvents} />
+            </Suspense>
           </Modal>
           <Authenticated given_name={["Colten", "Joe"]}>
             <TShoot
@@ -393,7 +406,7 @@ export default function UpcomingEvents() {
     );
   } else {
     if (playersQuery.isLoading || eventsQuery.isLoading) {
-      console.log({ playersQuery: playersQuery.status, eventsQuery: eventsQuery.status, signInStatus: signInStatus });
+      // console.log({ playersQuery: playersQuery.status, eventsQuery: eventsQuery.status, signInStatus: signInStatus });
       if (eventsQuery.isLoading) return <div className="margin-top-65">Loading Events...</div>;
       if (playersQuery.isLoading) return <div className="margin-top-65">Loading Players...</div>;
       return <div className="margin-top-65">Loading...</div>;
@@ -410,7 +423,7 @@ export default function UpcomingEvents() {
         </div>
       );
     }
-    console.log({ playersQuery: playersQuery.status, eventsQuery: eventsQuery.status, signInStatus: signInStatus });
+    // console.log({ playersQuery: playersQuery.status, eventsQuery: eventsQuery.status, signInStatus: signInStatus });
     return <div className="margin-top-65">Loading...</div>;
   }
 }
