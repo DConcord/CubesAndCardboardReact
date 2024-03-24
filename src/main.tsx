@@ -10,9 +10,10 @@ import "./App.scss";
 import "./passwordless.css";
 import "./App.css";
 
+import { LoggingContextProvider } from "./components/LoggingContext";
 import Fido2Toast from "./components/Fido2Toast";
+import QueryClientProvider from "./components/Queries";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { Passwordless } from "amazon-cognito-passwordless-auth";
@@ -32,22 +33,15 @@ Passwordless.configure({
   },
 });
 
-// const queryClient = new QueryClient();
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5min
-    },
-  },
-});
-
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <PasswordlessContextProvider enableLocalUserCache={true}>
     <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <ReactQueryDevtools />
-        <RouterProvider router={router} />
-      </QueryClientProvider>
+      <LoggingContextProvider>
+        <QueryClientProvider>
+          <ReactQueryDevtools />
+          <RouterProvider router={router} />
+        </QueryClientProvider>
+      </LoggingContextProvider>
     </React.StrictMode>
     <Fido2Toast />
   </PasswordlessContextProvider>

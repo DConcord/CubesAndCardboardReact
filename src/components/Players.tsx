@@ -25,7 +25,7 @@ import { PatternFormat } from "react-number-format";
 
 import Authenticated, { authenticated } from "./Authenticated";
 import TShoot from "./TShoot";
-import { fetchPlayersApiOptions } from "./Queries";
+import { fetchPlayersApiOptions, fetchPlayersApi } from "./Queries";
 import ConditionalWrap from "./ConditionalWrap";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -65,19 +65,12 @@ export default function Players() {
   // const playersQuery = useQuery(fetchPlayersApiOptions({ tokens: tokens!, refresh: "no" }));
   const playersQuery = useQuery({
     queryKey: ["players"],
-    queryFn: async (): Promise<PlayersGroups> => {
-      const response = await axios.get(`https://${import.meta.env.VITE_API_URL}/api/players`, {
-        headers: { Authorization: "Bearer " + tokens!.idToken },
-        params: { refresh: "no" },
-      });
-      return response.data;
-    },
+    queryFn: () => fetchPlayersApi(tokens!, "no"),
     refetchOnMount: "always",
     // staleTime: 0,
     refetchInterval: 1000 * 60 * 20, // refetch every 20 min
   });
   const playersDict = playersQuery?.data?.Users ?? {};
-  // const groups = playersQuery?.data?.Groups ?? [];
 
   const queryClient = useQueryClient();
   const playersRefreshMutation = useMutation({

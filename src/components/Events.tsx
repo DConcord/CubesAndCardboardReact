@@ -50,7 +50,7 @@ export default function UpcomingEvents() {
     localStorage.setItem("showAdmin", JSON.stringify(showAdmin));
   }, [showAdmin]);
 
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const playersQuery = useQuery(fetchPlayersOptions());
   // const playersQuery =
   //   authenticated({ signInStatus, tokensParsed, group: ["admin"] }) && tokens

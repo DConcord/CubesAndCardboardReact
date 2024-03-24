@@ -30,7 +30,7 @@ interface DeleteEventModalProps {
 }
 export function DeleteEventModal({ close, gameKnightEvent }: DeleteEventModalProps) {
   const { tokens } = usePasswordless();
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
 
   const [notConfirmed, setNotConfirmed] = useState(true);
   function handleInput(event: React.BaseSyntheticEvent) {
@@ -94,7 +94,7 @@ interface TransferDevEventsModalProps {
 }
 export function TransferDevEventsModal({ close }: TransferDevEventsModalProps) {
   const { tokens } = usePasswordless();
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
 
   let eventDict: EventDict = {};
   for (let event of eventsQuery.data as ExistingGameKnightEvent[]) {
@@ -252,7 +252,7 @@ export function ManageEventModal({
         !(eventForm.game === "" || eventForm.game == undefined)
     );
   }, [eventForm]);
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const handleInput = (e: React.BaseSyntheticEvent) => {
     if (e.target.id == "bgg_id" || e.target.id == "total_spots") {
       console.log(e.target.id, e.target.value, e.target.value === "");
@@ -674,7 +674,7 @@ export function RsvpFooter({ event, index }: RsvpFooterProps) {
     },
   });
 
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions(tokens)) : useQuery(fetchEventsOptions());
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
 
   let player_id = "";
   if (signInStatus === "SIGNED_IN" && tokensParsed) {
