@@ -14,7 +14,7 @@ import { NavLink, Outlet } from "react-router-dom";
 
 import { THEME, initTheme, setTheme, resetTheme } from "./Theme";
 import LoginModal from "./LoginModal";
-import Authenticated, { authenticated } from "./Authenticated";
+import Authenticated, { authenticated } from "../utilities/Authenticated";
 import { PlayerModifySelf } from "../types/Players";
 const ManagePlayerModal = lazy(() => import("./Players").then((module) => ({ default: module.ManagePlayerModal })));
 

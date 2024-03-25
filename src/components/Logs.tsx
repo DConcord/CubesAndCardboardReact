@@ -23,8 +23,8 @@ import yaml from "js-yaml";
 const ManageEventModal = lazy(() =>
   import("./EventManagement").then((module) => ({ default: module.ManageEventModal }))
 );
-import { ManagedEventTask } from "../types/Events";
-import { GameKnightEvent, formatIsoDate } from "./Events";
+import { ManagedEventTask, GameKnightEvent } from "../types/Events";
+import { formatIsoDate } from "../utilities";
 import { fetchPlayersOptions, apiClient } from "./Queries";
 
 const timeInterval: { [key in IntervalType]: number } = {

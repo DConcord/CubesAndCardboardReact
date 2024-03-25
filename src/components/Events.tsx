@@ -11,14 +11,13 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 
+import { formatIsoDate } from "../utilities";
 import "../assets/fonts/TopSecret.ttf";
 
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchEventsApi } from "./Queries";
 
-import TShoot from "./TShoot";
-// import { ManageEventModal, DeleteEventModal, TransferDevEventsModal, RsvpFooter } from "./EventManagement";
-
+const TShoot = lazy(() => import("./TShoot"));
 const ManageEventModal = lazy(() =>
   import("./EventManagement").then((module) => ({ default: module.ManageEventModal }))
 );
@@ -30,8 +29,8 @@ const TransferDevEventsModal = lazy(() =>
 );
 const RsvpFooter = lazy(() => import("./EventManagement").then((module) => ({ default: module.RsvpFooter })));
 
-import { ManagedEventTask } from "../types/Events";
-import Authenticated, { authenticated } from "./Authenticated";
+import { ManagedEventTask, GameKnightEvent } from "../types/Events";
+import Authenticated, { authenticated } from "../utilities/Authenticated";
 
 export default function UpcomingEvents() {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
@@ -167,13 +166,15 @@ export default function UpcomingEvents() {
             </Suspense>
           </Modal>
           <Authenticated given_name={["Colten", "Joe"]}>
-            <TShoot
-              events={eventsQuery.data}
-              playersDict={playersDict}
-              players={players}
-              organizers={organizers}
-              hosts={hosts}
-            />
+            <Suspense fallback={<>...</>}>
+              <TShoot
+                events={eventsQuery.data}
+                playersDict={playersDict}
+                players={players}
+                organizers={organizers}
+                hosts={hosts}
+              />
+            </Suspense>
           </Authenticated>
         </Authenticated>
 
@@ -401,57 +402,4 @@ export default function UpcomingEvents() {
     // console.log({ playersQuery: playersQuery.status, eventsQuery: eventsQuery.status, signInStatus: signInStatus });
     return <div className="margin-top-65">Loading...</div>;
   }
-}
-
-export interface EventDict {
-  [key: ExistingGameKnightEvent["event_id"]]: ExistingGameKnightEvent;
-}
-
-export interface ExistingGameKnightEvent extends GameKnightEvent {
-  event_id: string;
-}
-export type GameKnightEvent = {
-  event_id?: string;
-  event_type: string;
-  date: string;
-  host: string;
-  organizer: string;
-  format: "Open" | "Reserved" | "Private";
-  game: string;
-  bgg_id?: number;
-  total_spots?: number;
-  registered?: string[];
-  attending: string[];
-  not_attending: string[];
-  player_pool: string[];
-  organizer_pool: string[];
-  tbd_pic?: string;
-  migrated?: boolean;
-  status?: "Normal" | "Cancelled";
-};
-
-export function formatIsoDate(isoString: string) {
-  return new Date(isoString).toLocaleDateString("en-US", {
-    // weekday: 'long',
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    timeZone: "America/Denver",
-  });
-  // const months = {
-  //   "01": "Jan",
-  //   "02": "Feb",
-  //   "03": "Mar",
-  //   "04": "Apr",
-  //   "05": "May",
-  //   "06": "Jun",
-  //   "07": "Jul",
-  //   "08": "Aug",
-  //   "09": "Sep",
-  //   "10": "Oct",
-  //   "11": "Nov",
-  //   "12": "Dec",
-  // };
-  // const date = isoString.split("-");
-  // return `${months[date[1] as keyof typeof months]} ${date[2]}, ${date[0]}`;
 }

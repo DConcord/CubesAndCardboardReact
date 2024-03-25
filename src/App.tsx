@@ -1,5 +1,5 @@
 import React from "react";
-import Authenticated, { authenticated } from "./components/Authenticated";
+import Authenticated, { authenticated } from "./utilities/Authenticated";
 const UpcomingEvents = React.lazy(() => import("./components/Events"));
 const NavigationBar = React.lazy(() => import("./components/NavigationBar"));
 const TbdGallery = React.lazy(() => import("./components/TbdGallery"));

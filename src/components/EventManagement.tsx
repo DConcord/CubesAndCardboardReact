@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 
 import { AxiosError } from "axios";
 
+import Alert from "react-bootstrap/Alert";
 import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
@@ -11,18 +12,30 @@ import FloatingLabel from "react-bootstrap/FloatingLabel";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Feedback from "react-bootstrap/Feedback";
+import InputGroup from "react-bootstrap/InputGroup";
+import ListGroup from "react-bootstrap/ListGroup";
+import Image from "react-bootstrap/Image";
+import Container from "react-bootstrap/Container";
+
+import Icon from "@mdi/react";
+import { mdiMagnify } from "@mdi/js";
 
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { fetchEventsApiOptions, fetchEventsOptions, apiClient } from "./Queries";
-import { authenticated } from "./Authenticated";
-import { tbd_pics } from "../types/Events";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  fetchEventsApiOptions,
+  fetchEventsOptions,
+  apiClient,
+  fetchBggThumbnailOptions,
+  fetchGameSearchOptions,
+} from "./Queries";
+import { authenticated } from "../utilities/Authenticated";
 
-import { GameKnightEvent, ExistingGameKnightEvent, EventDict, formatIsoDate } from "./Events";
+import { formatIsoDate } from "../utilities";
+import { tbd_pics, GameSearch } from "../types/Events";
 import { PlayerNameDict, PlayersDict } from "../types/Players";
-import { ManagedEventTask } from "../types/Events";
-import { Alert } from "react-bootstrap";
+import { ManagedEventTask, GameKnightEvent, ExistingGameKnightEvent, EventDict } from "../types/Events";
 
 interface DeleteEventModalProps {
   close: () => void;
@@ -243,7 +256,11 @@ export function ManageEventModal({
   const handleInput = (e: React.BaseSyntheticEvent) => {
     if (e.target.id == "bgg_id" || e.target.id == "total_spots") {
       console.log(e.target.id, e.target.value, e.target.value === "");
-      setEventForm({ ...eventForm, [e.target.id]: parseInt(e.target.value) });
+      if (e.target.value === "") {
+        setEventForm({ ...eventForm, [e.target.id]: undefined });
+      } else {
+        setEventForm({ ...eventForm, [e.target.id]: parseInt(e.target.value) });
+      }
     } else {
       setEventForm({ ...eventForm, [e.target.id]: e.target.value });
     }
@@ -378,6 +395,37 @@ export function ManageEventModal({
     },
   });
 
+  const queryClient = useQueryClient();
+  const [showBggSearch, setShowBggSearch] = useState(false);
+  const [bggSearchResults, setBggSearchResults] = useState<GameSearch[]>([]);
+  const [bggSearchError, setBggSearchError] = useState("");
+  const handleSearchBgg = async () => {
+    setBggSearchResults([]);
+    setBggSearchError("");
+    setShowBggSearch(true);
+
+    try {
+      const data = await queryClient.fetchQuery(fetchGameSearchOptions(eventForm.game.toLowerCase()));
+      try {
+        for (let result of data.slice(0, 5)) {
+          const _thumb = await queryClient.fetchQuery(fetchBggThumbnailOptions(parseInt(result.id)));
+          result.thumbnail = _thumb;
+        }
+      } catch (error) {
+        console.log(error);
+      }
+      setBggSearchResults(data.slice(0, 5));
+    } catch (error) {
+      setBggSearchError("BGG Search Failed");
+      console.log(error);
+    }
+  };
+
+  function assignBggId(event: React.BaseSyntheticEvent, bgg_id: number) {
+    event.preventDefault();
+    setEventForm({ ...eventForm, bgg_id: bgg_id });
+  }
+
   function handleSubmit(event: React.BaseSyntheticEvent) {
     event.preventDefault();
     console.log(eventForm);
@@ -413,7 +461,7 @@ export function ManageEventModal({
             </FloatingLabel>
           </Col>
         </Row>
-        <Row style={{ padding: 2 }}>
+        <Row style={{ padding: 4 }}>
           <Col med="true" style={{ minWidth: "18rem", padding: 4 }}>
             <Form.Group>
               <FloatingLabel controlId="host" label="Host" className="mb-1">
@@ -441,15 +489,23 @@ export function ManageEventModal({
         </Row>
         <Row style={{ padding: 2 }}>
           <Col med="true" style={{ minWidth: "13rem", padding: 4 }}>
-            <FloatingLabel controlId="game" label="Game" className="mb-1">
-              <Form.Control
-                as="textarea"
-                onChange={handleInput}
-                defaultValue={task == "Create" ? "TBD" : eventForm.game}
-                disabled={["Read", "Restore"].includes(task)}
-                isInvalid={eventForm.game === "" || eventForm.game == undefined}
-              />
-            </FloatingLabel>
+            <InputGroup>
+              <FloatingLabel controlId="game" label="Game">
+                <Form.Control
+                  as="textarea"
+                  onChange={handleInput}
+                  defaultValue={task == "Create" ? "TBD" : eventForm.game}
+                  disabled={["Read", "Restore"].includes(task)}
+                  isInvalid={eventForm.game === "" || eventForm.game == undefined}
+                />
+              </FloatingLabel>
+              {eventForm.game !== "" && eventForm.game !== "TBD" && (
+                <Button variant="outline-secondary" id="button-addon1" onClick={handleSearchBgg}>
+                  <Icon path={mdiMagnify} size={1} />
+                  <div style={{ fontSize: ".75rem" }}>BGG</div>
+                </Button>
+              )}
+            </InputGroup>
           </Col>
           <Col med="true" style={{ minWidth: "8rem", maxWidth: "8rem", padding: 4 }}>
             <FloatingLabel controlId="bgg_id" label="BGG ID" className="mb-1">
@@ -457,10 +513,68 @@ export function ManageEventModal({
                 type="number"
                 disabled={eventForm.game == "TBD" || ["Read", "Restore"].includes(task)}
                 onChange={handleInput}
-                defaultValue={task == "Create" || !eventForm.bgg_id ? undefined : eventForm.bgg_id}
+                value={eventForm.bgg_id ?? ""}
+                isInvalid={eventForm.game !== "TBD" && (eventForm.bgg_id == 0 || eventForm.bgg_id == undefined)}
               />
             </FloatingLabel>
           </Col>
+
+          {showBggSearch && (
+            <div>
+              {bggSearchError != "" ? (
+                bggSearchError
+              ) : bggSearchResults.length == 0 ? (
+                "Searching..."
+              ) : (
+                <ListGroup>
+                  <ListGroup.Item>
+                    <Container fluid>
+                      <Row>
+                        <Col style={{ textAlign: "left", width: "100%", transform: `scale(0.85)` }}>
+                          Game Name (Year)
+                        </Col>
+                        <Col xs="auto" style={{ textAlign: "right", transform: `scale(0.85)` }}>
+                          BGG ID
+                        </Col>
+                        <Col xs="auto" style={{ transform: `scale(0.85)` }}>
+                          Thumbnail
+                        </Col>
+                      </Row>
+                    </Container>
+                  </ListGroup.Item>
+                  {bggSearchResults.map((result: GameSearch, index: number) => {
+                    // const thumb = bggThumbnails[index];
+                    return (
+                      <ListGroup.Item
+                        action
+                        onClickCapture={(event: React.BaseSyntheticEvent) =>
+                          assignBggId(event, parseInt(result.id ?? 0))
+                        }
+                        key={index}
+                      >
+                        <Row>
+                          <Col style={{ textAlign: "left" }}>{`${result.name} (${result.yearpublished})`}</Col>
+                          <Col xs="auto" style={{ textAlign: "right" }}>{`${result.id}`}</Col>
+                          <Col xs="auto">
+                            <Image
+                              src={result.thumbnail}
+                              // alt="No Thumbnail"
+                              rounded
+                              style={{
+                                width: "4rem",
+                                height: "4rem",
+                                objectFit: "contain",
+                              }}
+                            />
+                          </Col>
+                        </Row>
+                      </ListGroup.Item>
+                    );
+                  })}
+                </ListGroup>
+              )}
+            </div>
+          )}
           <Col med="true" style={{ minWidth: "13rem", padding: 4 }}>
             <Form.Group>
               <FloatingLabel controlId="format" label="Format" className="mb-1">
