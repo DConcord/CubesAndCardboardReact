@@ -7,6 +7,10 @@ import Button from "react-bootstrap/Button";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import { PlayersDict } from "../types/Players";
 
+import { apiClient, fetchBggThumbnailOptions } from "./Queries";
+
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+
 interface Props {
   events?: never[];
   playersDict: PlayersDict;
@@ -14,7 +18,7 @@ interface Props {
   organizers?: string[];
   hosts?: string[];
 }
-export default function TShoot({ events, playersDict, players, organizers, hosts }: Props) {
+export default function xTShoot({ events, playersDict, players, organizers, hosts }: Props) {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
   const data_types = {
     events: events,
@@ -30,29 +34,35 @@ export default function TShoot({ events, playersDict, players, organizers, hosts
   }
 
   // API Client
-  const apiClient = axios.create({
-    baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
-  });
+  // const apiClient = axios.create({
+  //   baseURL: `https://${import.meta.env.VITE_API_URL}/api`,
+  // });
 
+  const queryClient = useQueryClient();
+
+  // const playersQuery = useQuery(fetchBggThumbnailOptions(143741));
   const [eventsTest, setEventsTest] = useState({});
   const fetchTest = async () => {
     try {
-      let base_url = `https://${import.meta.env.VITE_API_URL}/api`;
-      let response = await axios.get(`${base_url}/activitylogs`, {
-        headers: tokens && {
-          Authorization: "Bearer " + tokens.idToken,
-        },
-        // params: {
-        //   refresh: "yes",
-        // },
-      });
-
-      console.log(response.data);
-      setEventsTest(response.data);
+      const data = await queryClient.fetchQuery(fetchBggThumbnailOptions(143741));
+      setEventsTest(data);
     } catch (error) {
       console.log(error);
-      setEventsTest(JSON.parse(JSON.stringify(error)));
     }
+
+    // try {
+    //   let response = await apiClient.get(`/gamesearch`, {
+    //     params: {
+    //       game: "Bang!",
+    //     },
+    //   });
+
+    //   console.log(response.data);
+    //   setEventsTest(response.data);
+    // } catch (error) {
+    //   console.log(error);
+    //   setEventsTest(JSON.parse(JSON.stringify(error)));
+    // }
   };
 
   const [width, setWidth] = useState(window.innerWidth);

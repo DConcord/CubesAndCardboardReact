@@ -1,3 +1,31 @@
+export interface EventDict {
+  [key: ExistingGameKnightEvent["event_id"]]: ExistingGameKnightEvent;
+}
+
+export interface ExistingGameKnightEvent extends GameKnightEvent {
+  event_id: string;
+}
+
+export type GameKnightEvent = {
+  event_id?: string;
+  event_type: string;
+  date: string;
+  host: string;
+  organizer: string;
+  format: "Open" | "Reserved" | "Private";
+  game: string;
+  bgg_id?: number;
+  total_spots?: number;
+  registered?: string[];
+  attending: string[];
+  not_attending: string[];
+  player_pool: string[];
+  organizer_pool: string[];
+  tbd_pic?: string;
+  migrated?: boolean;
+  status?: "Normal" | "Cancelled";
+};
+
 export type ManagedEventTask = "Clone" | "Create" | "Modify" | "Migrate" | "Read" | "Restore";
 
 export const tbd_pics = [
@@ -19,3 +47,10 @@ export const tbd_pics = [
   "Game_TBD_34.jpeg",
   "Game_TBD_33.jpeg",
 ];
+
+export type GameSearch = {
+  id: string;
+  name: string;
+  yearpublished: string;
+  thumbnail: string;
+};

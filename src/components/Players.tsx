@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
@@ -22,8 +22,8 @@ import Tooltip from "react-bootstrap/Tooltip";
 
 import { PatternFormat } from "react-number-format";
 
-import Authenticated, { authenticated } from "./Authenticated";
-import TShoot from "./TShoot";
+import Authenticated, { authenticated } from "../utilities/Authenticated";
+const TShoot = lazy(() => import("./TShoot"));
 import { fetchPlayersApiOptions, fetchPlayersApi, apiClient } from "./Queries";
 import ConditionalWrap from "./ConditionalWrap";
 
@@ -123,7 +123,9 @@ export default function Players() {
     return (
       <div className="margin-top-65">
         <Authenticated given_name={["Colten"]}>
-          <TShoot playersDict={playersDict} />
+          <Suspense fallback={<>...</>}>
+            <TShoot playersDict={playersDict} />
+          </Suspense>
         </Authenticated>
         <Container fluid>
           {/* <Row xs={1} sm={2}> */}
