@@ -120,7 +120,7 @@ export default function CustomQueryClientProvider(props: { children: React.React
   useEffect(() => {
     if (tokens) {
       apiClient.defaults.headers.common["Authorization"] = "Bearer " + tokens.idToken;
-      console.log("apiClient Bearer token updated");
+      // console.log("apiClient Bearer token updated");
     }
   }, [tokens]);
 

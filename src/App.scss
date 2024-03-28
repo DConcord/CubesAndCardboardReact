@@ -1,4 +1,4 @@
-
+@import "../node_modules/bootstrap/scss/functions";
 // @import "node_modules/bootstrap/scss/variables";
 /* make the customizations */
 // $theme-colors: (
@@ -29,6 +29,8 @@
 // ) !default;
 // scss-docs-start grid-breakpoints
 
+$enable-validation-icons: false;
+
 $grid-breakpoints: (
   xs: 0,
   sm: 440px, // 576px,
@@ -37,16 +39,6 @@ $grid-breakpoints: (
   xl: 992px, //1200
   xxl: 1310px
 );
-
-// $grid-breakpoints: (
-//   xs: 0,
-//   sm: 650px, // 576px,
-//   md: 768px,
-//   lg: 992px,
-//   xl: 1310px, //1200
-//   xxl: 1400px
-// );
-// scss-docs-end grid-breakpoints
 
 
 // // scss-docs-start grid-breakpoints
@@ -59,5 +51,44 @@ $grid-breakpoints: (
 //   xxl: 1400px
 // );
 
+// @import "../node_modules/bootstrap/scss/variables";
+// @import "../node_modules/bootstrap/scss/variables-dark";
+// @import "../node_modules/bootstrap/scss/mixins";
+
+// @import "../node_modules/bootstrap/scss/maps";
+// @import "../node_modules/bootstrap/scss/root";
+// @import "../node_modules/bootstrap/scss/utilities";
+// @import "../node_modules/bootstrap/scss/reboot";
+// @import "../node_modules/bootstrap/scss/type";
+// @import "../node_modules/bootstrap/scss/images";
+// @import "../node_modules/bootstrap/scss/containers";
+// @import "../node_modules/bootstrap/scss/grid";
+
 /* import bootstrap to set changes */
-@import "node_modules/bootstrap/scss/bootstrap";
+@import "../node_modules/bootstrap/scss/bootstrap";
+
+// // @import "../node_modules/bootstrap/scss/themeprovider";
+// @import "../node_modules/bootstrap/scss/buttons";
+// @import "../node_modules/bootstrap/scss/accordion";
+// @import "../node_modules/bootstrap/scss/card";
+// // @import "../node_modules/bootstrap/scss/overlaytrigger";
+// @import "../node_modules/bootstrap/scss/tooltip";
+// // @import "../node_modules/bootstrap/scss/row";
+// // @import "../node_modules/bootstrap/scss/col";
+// @import "../node_modules/bootstrap/scss/modal";
+// @import "../node_modules/bootstrap/scss/tables";
+// @import "../node_modules/bootstrap/scss/spinners";
+// // @import "../node_modules/bootstrap/scss/floatinglabel";
+// @import "../node_modules/bootstrap/scss/forms";
+// @import "../node_modules/bootstrap/scss/alert";
+// // @import "../node_modules/bootstrap/scss/buttongroup";
+// // @import "../node_modules/bootstrap/scss/feedback";
+// // @import "../node_modules/bootstrap/scss/inputgroup";
+// @import "../node_modules/bootstrap/scss/list-group";
+// // @import "../node_modules/bootstrap/scss/tab";
+// @import "../node_modules/bootstrap/scss/nav";
+// @import "../node_modules/bootstrap/scss/dropdown";
+// // @import "../node_modules/bootstrap/scss/dropdownbutton";
+// @import "../node_modules/bootstrap/scss/navbar";
+// @import "../node_modules/bootstrap/scss/offcanvas";
+// // @import "../node_modules/bootstrap/scss/navdropdown";

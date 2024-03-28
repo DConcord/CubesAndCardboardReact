@@ -18,7 +18,7 @@ import Image from "react-bootstrap/Image";
 import Container from "react-bootstrap/Container";
 
 import Icon from "@mdi/react";
-import { mdiMagnify } from "@mdi/js";
+import { mdiMagnify, mdiClose, mdiPlus } from "@mdi/js";
 
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
@@ -238,19 +238,18 @@ export function ManageEventModal({
   );
   const [isValid, setIsValid] = useState(() => {
     if (task == "Create") {
-      return (
-        hosts.includes(eventForm.host) &&
-        eventForm.date !== today_6p_local &&
-        !(eventForm.game === "" || eventForm.game == undefined)
-      );
+      return validateEventForm();
     }
   });
-  useEffect(() => {
-    setIsValid(
+  function validateEventForm() {
+    return (
       hosts.includes(eventForm.host) &&
-        eventForm.date !== today_6p_local &&
-        !(eventForm.game === "" || eventForm.game == undefined)
+      eventForm.date !== today_6p_local &&
+      !(eventForm.game === "" || eventForm.game == undefined)
     );
+  }
+  useEffect(() => {
+    setIsValid(validateEventForm());
   }, [eventForm]);
   const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const handleInput = (e: React.BaseSyntheticEvent) => {
@@ -431,6 +430,54 @@ export function ManageEventModal({
     console.log(eventForm);
     manageEventMutation.mutate({ body: eventForm, method: method });
   }
+
+  const pastEvent = Date.parse(eventForm.date) <= Date.parse(new Date().toString());
+  const [validFinalScore, setValidFinalScore] = useState(false);
+  const [finalScorePlayers, setFinalScorePlayers] = useState<string[]>([]);
+  const [finalScore, setFinalScore] = useState(() => {
+    if (eventForm.finalScore) return eventForm.finalScore;
+    else return initFinalScore();
+  });
+  function initFinalScore() {
+    return eventForm.attending.map((item, index: number) => ({ place: index + 1, player: "", score: "" }));
+  }
+  const findArrayDuplicates = (arr: string[]) => arr.filter((item, index) => arr.indexOf(item) !== index);
+  function clearFinalScore() {
+    setFinalScore(initFinalScore());
+    setEventForm({ ...eventForm, finalScore: undefined });
+    // setEventForm({ ...eventForm, finalScore: undefined });
+  }
+  useEffect(() => {
+    if (finalScore) {
+      const _rankings = finalScore.map(({ place }) => place);
+      const _players = finalScore.map(({ player }) => player);
+      const _scores = finalScore.map(({ score }) => score);
+      const _duplicates = findArrayDuplicates(_players);
+      const _validRankings = _rankings.map((place) => place > 0);
+      const _validPlayers = _players.map((player) => !!playersDict[player]);
+      const _validScores = _scores.map((score) => score !== "");
+      // console.log({
+      //   _players: _players,
+      //   _duplicates: _duplicates,
+      //   _validPlayers: _validPlayers,
+      //   every_validPlayers: _validPlayers.every(Boolean),
+      // });
+      setFinalScorePlayers(_players);
+      setValidFinalScore(
+        _duplicates.length == 0 &&
+          _validRankings.every(Boolean) &&
+          _validPlayers.every(Boolean) &&
+          _validScores.every(Boolean)
+      );
+    }
+    console.log(finalScorePlayers, findArrayDuplicates(finalScorePlayers));
+  }, [finalScore]);
+
+  const onChangeTableInput = (e: React.BaseSyntheticEvent, index: number) => {
+    const { id, value } = e.target;
+    const editData = finalScore.map((item, _index) => (_index === index && id ? { ...item, [id]: value } : item));
+    setFinalScore(editData);
+  };
   return (
     <Form onSubmit={handleSubmit}>
       <Modal.Body className="text-center">
@@ -499,7 +546,7 @@ export function ManageEventModal({
                   isInvalid={eventForm.game === "" || eventForm.game == undefined}
                 />
               </FloatingLabel>
-              {eventForm.game !== "" && eventForm.game !== "TBD" && (
+              {["Read", "Restore"].includes(task) == false && eventForm.game !== "" && eventForm.game !== "TBD" && (
                 <Button variant="outline-secondary" id="button-addon1" onClick={handleSearchBgg}>
                   <Icon path={mdiMagnify} size={1} />
                   <div style={{ fontSize: ".75rem" }}>BGG</div>
@@ -605,6 +652,7 @@ export function ManageEventModal({
               />
             </FloatingLabel>
           </Col>
+          <hr />
           {eventForm.format == "Private" && (
             <Col med="true" style={{ minWidth: "18rem" }}>
               <Form.Group controlId="choosePrivatePlayerPool" className="mb-1">
@@ -629,6 +677,7 @@ export function ManageEventModal({
               </Form.Group>
             </Col>
           )}
+          <hr />
           <Col med="true" style={{ minWidth: "18rem" }}>
             <Form.Group controlId="chooseAttendingPlayers" className="mb-1">
               <Form.Label aria-label="Choose Attending Players">
@@ -662,6 +711,7 @@ export function ManageEventModal({
               </Row>
             </Form.Group>
           </Col>
+          <hr />
           <Col med="true" style={{ minWidth: "18rem" }}>
             <Form.Group controlId="chooseNotAttendingPlayers" className="mb-1">
               <Form.Label aria-label="Choose Not Attending Players">Choose Not Attending Players</Form.Label>
@@ -713,8 +763,157 @@ export function ManageEventModal({
             </Col>
           )}
         </Row>
+        {pastEvent && (
+          <>
+            <hr></hr>
+            <div>Final Scores</div>
+            <table>
+              <thead>
+                <tr>
+                  <th style={{ width: "17%" }}>Place</th>
+                  <th style={{ width: "36%" }}>Player</th>
+                  <th>Score</th>
+                  {eventForm.attending.length !== finalScore.length && <th></th>}
+                </tr>
+              </thead>
+              <tbody>
+                {finalScore.map(({ place, player, score }, index) => (
+                  // <Form>
+                  <tr key={index}>
+                    <td style={{ maxWidth: "min-content" }}>
+                      <Form.Control
+                        id="place"
+                        value={place == 0 ? "" : place}
+                        type="number"
+                        onChange={(e: React.BaseSyntheticEvent) => onChangeTableInput(e, index)}
+                        placeholder="Place"
+                        className="no-validate-badge"
+                        isValid={
+                          eventForm.finalScore &&
+                          eventForm.finalScore[index] &&
+                          eventForm.finalScore[index].place === place &&
+                          !["Read", "Restore"].includes(task)
+                        }
+                        isInvalid={place == 0}
+                        disabled={["Read", "Restore"].includes(task)}
+                      />
+                    </td>
+                    <td>
+                      <Form.Select
+                        id="player"
+                        aria-label="Choose Player"
+                        onChange={(e: React.BaseSyntheticEvent) => onChangeTableInput(e, index)}
+                        value={player ? player : "default"}
+                        className="no-validate-badge"
+                        isValid={
+                          eventForm.finalScore &&
+                          eventForm.finalScore[index] &&
+                          eventForm.finalScore[index].player === player &&
+                          !["Read", "Restore"].includes(task)
+                        }
+                        isInvalid={!playersDict[player] || findArrayDuplicates(finalScorePlayers).includes(player)}
+                        disabled={["Read", "Restore"].includes(task)}
+                      >
+                        <option hidden disabled value="default">
+                          Player
+                        </option>
+                        {eventForm.attending.map((player_id: string, index: number) => (
+                          <option key={index} value={player_id}>
+                            {playersDict[player_id].attrib.given_name}
+                          </option>
+                        ))}
+                      </Form.Select>
+                    </td>
+                    <td>
+                      <Form.Control
+                        id="score"
+                        type="text"
+                        value={score}
+                        onChange={(e: React.BaseSyntheticEvent) => onChangeTableInput(e, index)}
+                        placeholder="Score"
+                        className="no-validate-badge"
+                        isValid={
+                          eventForm.finalScore &&
+                          eventForm.finalScore[index] &&
+                          eventForm.finalScore[index].score === score &&
+                          !["Read", "Restore"].includes(task)
+                        }
+                        isInvalid={score == ""}
+                        disabled={["Read", "Restore"].includes(task)}
+                      />
+                    </td>
+                    {eventForm.attending.length !== finalScore.length && !["Read", "Restore"].includes(task) && (
+                      <td>
+                        <Button
+                          className="link-no-blue"
+                          style={{ padding: "1px" }}
+                          variant="link"
+                          onClick={() => {
+                            setFinalScore(finalScore.filter((row, _index) => _index !== index));
+                          }}
+                          disabled={eventForm.attending.length > finalScore.length}
+                        >
+                          <Icon path={mdiClose} size={1} />
+                        </Button>
+                      </td>
+                    )}
+                  </tr>
+                  // </Form>
+                ))}
+                <tr>
+                  <td />
+                  <td />
+                  <td />
+                  {eventForm.attending.length !== finalScore.length && !["Read", "Restore"].includes(task) && (
+                    <td>
+                      <Button
+                        className="link-no-blue"
+                        style={{ padding: "1px" }}
+                        variant="link"
+                        onClick={() => {
+                          setFinalScore([...finalScore, { place: eventForm.attending.length, player: "", score: "" }]);
+                          // eventForm.attending.length
+                        }}
+                        disabled={eventForm.attending.length < finalScore.length}
+                      >
+                        <Icon path={mdiPlus} size={1} />
+                      </Button>
+                    </td>
+                  )}
+                </tr>
+              </tbody>
+            </table>
+
+            {!["Read", "Restore"].includes(task) && (
+              <Container fluid>
+                <Row>
+                  <Col style={{ textAlign: "right", padding: "4px" }}>
+                    <Button
+                      disabled={!validFinalScore || JSON.stringify(finalScore) == JSON.stringify(eventForm.finalScore)}
+                      variant={
+                        JSON.stringify(finalScore) == JSON.stringify(eventForm.finalScore)
+                          ? "outline-success"
+                          : "primary"
+                      }
+                      onClick={() => {
+                        setEventForm({ ...eventForm, finalScore: finalScore.length == 0 ? undefined : finalScore });
+                      }}
+                    >
+                      Save Scores
+                    </Button>
+                  </Col>
+                  <Col xs="auto" style={{ textAlign: "right", padding: "4px" }}>
+                    <Button variant="danger" onClick={clearFinalScore}>
+                      Clear Table
+                    </Button>
+                  </Col>
+                </Row>
+              </Container>
+            )}
+          </>
+        )}
       </Modal.Body>
-      {(import.meta.env.MODE == "development" || ["Read", "Restore"].includes(task)) && (
+      {(import.meta.env.MODE !== "production" || ["Read", "Restore"].includes(task)) && (
         <Accordion>
           <Accordion.Item eventKey="eventDebug">
             <Accordion.Header>Event Debug</Accordion.Header>

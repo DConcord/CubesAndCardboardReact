@@ -24,6 +24,13 @@ export type GameKnightEvent = {
   tbd_pic?: string;
   migrated?: boolean;
   status?: "Normal" | "Cancelled";
+  finalScore?: PlayerScore[];
+};
+
+export type PlayerScore = {
+  place: number;
+  player: string;
+  score: string;
 };
 
 export type ManagedEventTask = "Clone" | "Create" | "Modify" | "Migrate" | "Read" | "Restore";
