@@ -28,18 +28,24 @@ export const fetchEventsJson = async (): Promise<[]> => {
   return response.data;
 };
 
-export function fetchEventsApiOptions() {
+export function fetchEventsApiOptions(refetchInterval = 1000 * 60 * 10) {
   return queryOptions({
     queryKey: ["events"],
-    queryFn: () => fetchEventsApi(),
-    refetchInterval: 1000 * 60 * 10, // refetch every 10 min
+    queryFn: () => fetchEventsApi({}),
+    refetchInterval: refetchInterval,
+    // 1000 * 60 * 10, // refetch every 10 min
   });
 }
 
-export const fetchEventsApi = async (): Promise<[]> => {
-  const response = await apiClient.get(`/events`);
+interface fetchEventsApiProps {
+  dateLte?: string;
+  dateGte?: string;
+}
+export const fetchEventsApi = async ({ dateLte, dateGte }: fetchEventsApiProps): Promise<[]> => {
+  const response = await apiClient.get(`/events`, { params: { dateLte: dateLte, dateGte: dateGte } });
   return response.data;
 };
+//
 
 ///// Players /////
 export function fetchPlayersOptions() {

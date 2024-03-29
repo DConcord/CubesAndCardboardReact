@@ -245,7 +245,8 @@ export function ManageEventModal({
     return (
       hosts.includes(eventForm.host) &&
       eventForm.date !== today_6p_local &&
-      !(eventForm.game === "" || eventForm.game == undefined)
+      !(eventForm.game === "" || eventForm.game == undefined) &&
+      !(eventForm.game !== "TBD" && (eventForm.bgg_id == 0 || eventForm.bgg_id == undefined))
     );
   }
   useEffect(() => {
@@ -377,7 +378,7 @@ export function ManageEventModal({
         console.log(body);
       }
 
-      await apiClient({
+      const response = await apiClient({
         method: method,
         url: "event",
         data: body,
@@ -439,7 +440,7 @@ export function ManageEventModal({
     else return initFinalScore();
   });
   function initFinalScore() {
-    return eventForm.attending.map((item, index: number) => ({ place: index + 1, player: "", score: "" }));
+    return eventForm.attending.map((player, index: number) => ({ place: index + 1, player: player, score: "" }));
   }
   const findArrayDuplicates = (arr: string[]) => arr.filter((item, index) => arr.indexOf(item) !== index);
   function clearFinalScore() {
@@ -470,13 +471,18 @@ export function ManageEventModal({
           _validScores.every(Boolean)
       );
     }
-    console.log(finalScorePlayers, findArrayDuplicates(finalScorePlayers));
+    // console.log(finalScorePlayers, findArrayDuplicates(finalScorePlayers));
   }, [finalScore]);
 
   const onChangeTableInput = (e: React.BaseSyntheticEvent, index: number) => {
     const { id, value } = e.target;
     const editData = finalScore.map((item, _index) => (_index === index && id ? { ...item, [id]: value } : item));
     setFinalScore(editData);
+  };
+  const [refresh, setRefresh] = useState(0);
+  const sortFinalScore = (e: React.BaseSyntheticEvent) => {
+    setFinalScore(finalScore.sort((a, b) => a.place - b.place));
+    setRefresh(refresh + 1);
   };
   return (
     <Form onSubmit={handleSubmit}>
@@ -786,6 +792,8 @@ export function ManageEventModal({
                         value={place == 0 ? "" : place}
                         type="number"
                         onChange={(e: React.BaseSyntheticEvent) => onChangeTableInput(e, index)}
+                        onBlur={sortFinalScore}
+                        // onBlur={() => setFinalScore(finalScore.sort((a, b) => a.place - b.place))}
                         placeholder="Place"
                         className="no-validate-badge"
                         isValid={

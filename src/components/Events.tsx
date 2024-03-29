@@ -86,7 +86,7 @@ export default function UpcomingEvents() {
 
   const queryClient = useQueryClient();
   const eventsApiRefreshMutation = useMutation({
-    mutationFn: () => fetchEventsApi(),
+    mutationFn: () => fetchEventsApi({}),
     onSuccess: (data) => {
       queryClient.setQueryData(["events"], data);
     },
@@ -203,7 +203,14 @@ export default function UpcomingEvents() {
               const futureEvent = Date.parse(event.date) >= Date.parse(new Date().toString());
               if (playersDict) {
                 try {
-                  attending_names = event.attending.map((player_id) => playersDict[player_id].attrib.given_name);
+                  attending_names = event.attending.map((player_id) => {
+                    if (event.organizer && event.organizer == player_id) {
+                      return `${playersDict[player_id].attrib.given_name} (O)`;
+                    } else if (event.host && event.host == player_id) {
+                      return `${playersDict[player_id].attrib.given_name} (H)`;
+                    }
+                    return playersDict[player_id].attrib.given_name;
+                  });
                   not_attending_names = event.not_attending.map(
                     (player_id) => playersDict[player_id].attrib.given_name
                   );
