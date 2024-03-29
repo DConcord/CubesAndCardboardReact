@@ -31,6 +31,7 @@ const RsvpFooter = lazy(() => import("./EventManagement").then((module) => ({ de
 
 import { ManagedEventTask, GameKnightEvent } from "../types/Events";
 import Authenticated, { authenticated } from "../utilities/Authenticated";
+import { Table } from "react-bootstrap";
 
 export default function UpcomingEvents() {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
@@ -114,7 +115,7 @@ export default function UpcomingEvents() {
               <Col>
                 <Row style={{ justifyContent: "right", padding: 4 }} className="align-items-center">
                   {showAdmin &&
-                    import.meta.env.MODE == "development" &&
+                    import.meta.env.MODE == "test" &&
                     import.meta.env.VITE_API_URL == "eventsdev.dissonantconcord.com" && (
                       <>
                         <Col xs="auto" style={{ textAlign: "right", padding: 4 }}>
@@ -306,13 +307,33 @@ export default function UpcomingEvents() {
                           </div>
                         </Card.Text>
                       </Card.Body>
-                      {!futureEvent && import.meta.env.MODE == "development" && (
+                      {!futureEvent && event.finalScore && (
                         <Accordion
                           className={showAdmin && tokens && isAdmin ? "accordion-card-middle" : "accordion-card-bottom"}
                         >
                           <Accordion.Item eventKey="scores">
                             <Accordion.Header>Final Scores</Accordion.Header>
-                            <Accordion.Body>Coming Soon!</Accordion.Body>
+                            <Accordion.Body>
+                              <Table>
+                                <thead>
+                                  <tr>
+                                    <th style={{ width: "17%" }}>Place</th>
+                                    <th style={{ width: "36%" }}>Player</th>
+                                    <th>Score</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {event.finalScore.map(({ place, player, score }, index) => (
+                                    <tr key={index}>
+                                      <td style={{ maxWidth: "min-content" }}>{place}</td>
+                                      <td>{playersDict[player]?.attrib.given_name ?? "Unknown"}</td>
+                                      <td>{score}</td>
+                                    </tr>
+                                    // </Form>
+                                  ))}
+                                </tbody>
+                              </Table>
+                            </Accordion.Body>
                           </Accordion.Item>
                         </Accordion>
                       )}

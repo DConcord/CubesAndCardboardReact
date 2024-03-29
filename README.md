@@ -12,6 +12,8 @@ run a local webserver on http://localhost:8080
 
 npm run dev
 
+npm run test
+
 Toggle VITE_API_URL in ./src/env/.env.development
 
 ## Build and Deploy to S3

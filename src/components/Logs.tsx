@@ -23,7 +23,7 @@ import yaml from "js-yaml";
 const ManageEventModal = lazy(() =>
   import("./EventManagement").then((module) => ({ default: module.ManageEventModal }))
 );
-import { ManagedEventTask, GameKnightEvent } from "../types/Events";
+import { ManagedEventTask, GameKnightEvent, PlayerScore } from "../types/Events";
 import { formatIsoDate } from "../utilities";
 import { fetchPlayersOptions, apiClient } from "./Queries";
 
@@ -59,12 +59,12 @@ export default function Logs() {
   useEffect(() => {
     setStartTime(String(Date.now() - timeInterval[startIntervalType] * startInterval).slice(0, 10));
     setEndTime(null);
-    console.log({
-      startInterval: startInterval,
-      startIntervalType: startIntervalType,
-      startTime: startTime,
-      endTime: endTime,
-    });
+    // console.log({
+    //   startInterval: startInterval,
+    //   startIntervalType: startIntervalType,
+    //   startTime: startTime,
+    //   endTime: endTime,
+    // });
   }, [startInterval, startIntervalType]);
   const logsQuery = useQuery({
     queryKey: ["logs"],
@@ -252,7 +252,9 @@ export default function Logs() {
                 <Nav variant="underline" className="me-auto">
                   <Nav.Link eventKey="rsvp">RSVPs</Nav.Link>
                   <Nav.Link eventKey="event">Events</Nav.Link>
-                  {import.meta.env.MODE === "production" && <Nav.Link eventKey="player">Players</Nav.Link>}
+                  {["production", "test"].includes(import.meta.env.MODE) && (
+                    <Nav.Link eventKey="player">Players</Nav.Link>
+                  )}
                 </Nav>
               </Col>
               <Col xs="auto" style={{ textAlign: "right", padding: "4px" }}>
@@ -340,9 +342,12 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
     setManagedEventTask(task);
     setShowManageEvent(true);
   };
-  if (eventLog.length === 0) {
+  if (playersQuery.isLoading) return <p>Loading...</p>;
+  else if (playersQuery.isError) return <p>playersQuery Error</p>;
+  else if (eventLog.length === 0) {
     return <p>No logs to display</p>;
   } else {
+    if (!playersDict) return <p>Players not loaded</p>;
     return (
       <>
         <Modal show={showManageEvent} onHide={handleCloseManageEvent} backdrop="static" keyboard={false}>
@@ -371,7 +376,7 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
           </thead>
           <tbody>
             {eventLog.map((log, index) => {
-              const listKeysToNormalize = ["attending", "not_attending"];
+              const listKeysToNormalize = ["attending", "not_attending", "finalScore"];
               const stringKeysToNormalize = ["host", "organizer"];
               const actionTypesToConvert = ["update", "modify"];
               const event_prev =
@@ -379,6 +384,16 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
                   ? Object.fromEntries(
                       Object.entries(log.previous).map(([key, value]) => {
                         if (listKeysToNormalize.includes(key)) {
+                          if (key === "finalScore") {
+                            return [
+                              key,
+                              value.map(({ place, player, score }: PlayerScore) => ({
+                                place: place,
+                                player: player ? playersDict[player].attrib.given_name : player,
+                                score: score,
+                              })),
+                            ];
+                          }
                           return [key, value.map((user_id: string) => playersDict[user_id].attrib.given_name)];
                         } else if (stringKeysToNormalize.includes(key)) {
                           return [key, playersDict[value].attrib.given_name];
@@ -393,6 +408,16 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
                   ? Object.fromEntries(
                       Object.entries(log.new).map(([key, value]) => {
                         if (listKeysToNormalize.includes(key)) {
+                          if (key === "finalScore") {
+                            return [
+                              key,
+                              value.map(({ place, player, score }: PlayerScore) => ({
+                                place: place,
+                                player: player ? playersDict[player].attrib.given_name : player,
+                                score: score,
+                              })),
+                            ];
+                          }
                           return [key, value.map((user_id: string) => playersDict[user_id].attrib.given_name)];
                         } else if (stringKeysToNormalize.includes(key)) {
                           return [key, playersDict[value].attrib.given_name];

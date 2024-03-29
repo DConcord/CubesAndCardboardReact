@@ -90,6 +90,7 @@ export default function xTShoot({ events, playersDict, players, organizers, host
           <Accordion.Body>
             <div>{"signInStatus: " + signInStatus}</div>
             <div>{"Window Width: " + width}</div>
+            <div>{"Mode: " + import.meta.env.MODE}</div>
             <Accordion>
               <Accordion.Item eventKey="idToken">
                 <Accordion.Header>idToken</Accordion.Header>

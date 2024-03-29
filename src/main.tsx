@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import { router } from "./App";
 // import "./assets/startbootstrap-grayscale-gh-pages/css/styles.css";
 // import "./assets/colormind-material-dashboard.css";
-import "bootstrap/dist/css/bootstrap.css";
+// import "bootstrap/dist/css/bootstrap.css";
 import "./App.scss";
 
 // import "amazon-cognito-passwordless-auth/passwordless.css";

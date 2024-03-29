@@ -161,7 +161,7 @@ export default function Players() {
                 </Col>
                 <Col xs="auto" style={{ textAlign: "right" }}>
                   <ConditionalWrap
-                    condition={import.meta.env.MODE !== "production"}
+                    condition={!["production", "test"].includes(import.meta.env.MODE)}
                     wrap={(children) => (
                       <OverlayTrigger
                         placement="bottom"
@@ -175,7 +175,7 @@ export default function Players() {
                     <Button
                       size="sm"
                       id="NewPlayer"
-                      disabled={import.meta.env.MODE !== "production"}
+                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
                       variant="primary"
                       onClick={() => handleShowManagePlayer({ task: "Create" })}
                     >
@@ -204,7 +204,7 @@ export default function Players() {
               <tr key={index}>
                 <td>
                   <ConditionalWrap
-                    condition={import.meta.env.MODE !== "production"}
+                    condition={!["production", "test"].includes(import.meta.env.MODE)}
                     wrap={(children) => (
                       <OverlayTrigger
                         placement="right"
@@ -219,7 +219,7 @@ export default function Players() {
                       size="sm"
                       variant="secondary"
                       onClick={() => handleShowManagePlayer({ task: "Modify", managedPlayer: row })}
-                      disabled={import.meta.env.MODE !== "production"}
+                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
                     >
                       Edit
                     </Button>
@@ -557,7 +557,7 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
                     disabled={
                       managePlayerMutation.isPending ||
                       !inputValidated ||
-                      (task !== "ModifySelf" && import.meta.env.MODE !== "production")
+                      (task !== "ModifySelf" && !["production", "test"].includes(import.meta.env.MODE))
                     }
                   >
                     {managePlayerMutation.isPending && (
@@ -579,7 +579,7 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
                     disabled={
                       managePlayerMutation.isPending ||
                       !inputValidated ||
-                      (task !== "ModifySelf" && import.meta.env.MODE !== "production")
+                      (task !== "ModifySelf" && !["production", "test"].includes(import.meta.env.MODE))
                     }
                   >
                     {managePlayerMutation.isPending && (
