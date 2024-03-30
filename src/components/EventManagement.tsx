@@ -29,6 +29,7 @@ import {
   apiClient,
   fetchBggThumbnailOptions,
   fetchGameSearchOptions,
+  fetchPlayersOptions,
 } from "./Queries";
 import { authenticated } from "../utilities/Authenticated";
 
@@ -193,23 +194,11 @@ export function TransferDevEventsModal({ close }: TransferDevEventsModalProps) {
 }
 
 interface ManageEventModalProps {
-  playersDict: PlayersDict;
-  players: string[];
-  organizers: string[];
-  hosts: string[];
   close: () => void;
   task: ManagedEventTask;
   gameKnightEvent?: GameKnightEvent | null;
 }
-export function ManageEventModal({
-  playersDict,
-  players,
-  organizers,
-  hosts,
-  close,
-  task,
-  gameKnightEvent,
-}: ManageEventModalProps) {
+export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventModalProps) {
   const method = ["Create", "Clone", "Restore"].includes(task)
     ? "POST"
     : ["Modify", "Migrate"].includes(task)
@@ -217,6 +206,12 @@ export function ManageEventModal({
     : "";
   const { tokens, signInStatus, tokensParsed } = usePasswordless();
   const today_6p_local = new Date(new Date().setHours(18, 0, 0, 0)).toLocaleString("lt").replace(" ", "T") + "DEFAULT";
+  const playersQuery = useQuery(fetchPlayersOptions());
+  const playersDict = playersQuery?.data?.Users ?? {};
+  const players = playersQuery?.data?.Groups?.player ?? [];
+  const organizers = playersQuery?.data?.Groups?.organizer ?? [];
+  const hosts = playersQuery?.data?.Groups?.host ?? [];
+
   const [eventForm, setEventForm] = useState<GameKnightEvent>(
     gameKnightEvent
       ? gameKnightEvent
@@ -707,7 +702,11 @@ export function ManageEventModal({
                           (eventForm.format == "Private" && !eventForm.player_pool.includes(player_id)) ||
                           (eventForm.format !== "Open" &&
                             !eventForm.player_pool.includes(player_id) &&
-                            !(eventForm.organizer_pool.includes(player_id) && eventForm.organizer == ""))
+                            !(
+                              eventForm.organizer_pool &&
+                              eventForm.organizer_pool.includes(player_id) &&
+                              eventForm.organizer == ""
+                            ))
                         }
                         onChange={handleOptionChange}
                         value={player_id}

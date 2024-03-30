@@ -124,7 +124,7 @@ export default function Players() {
       <div className="margin-top-65">
         <Authenticated given_name={["Colten"]}>
           <Suspense fallback={<>...</>}>
-            <TShoot playersDict={playersDict} />
+            <TShoot />
           </Suspense>
         </Authenticated>
         <Container fluid>

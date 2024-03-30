@@ -352,15 +352,7 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
       <>
         <Modal show={showManageEvent} onHide={handleCloseManageEvent} backdrop="static" keyboard={false}>
           <Suspense fallback={<>...</>}>
-            <ManageEventModal
-              playersDict={playersDict}
-              players={players}
-              organizers={organizers}
-              hosts={hosts}
-              close={handleCloseManageEvent}
-              task={managedEventTask}
-              gameKnightEvent={managedEvent}
-            />
+            <ManageEventModal close={handleCloseManageEvent} task={managedEventTask} gameKnightEvent={managedEvent} />
           </Suspense>
         </Modal>
         <Table striped bordered hover>
@@ -385,6 +377,11 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
                       Object.entries(log.previous).map(([key, value]) => {
                         if (listKeysToNormalize.includes(key)) {
                           if (key === "finalScore") {
+                            if (value instanceof Array == false) {
+                              console.log({ Error: "unexpected finalScore string", log: log });
+                              key = `${key} (STR)`;
+                              value = JSON.parse(value);
+                            }
                             return [
                               key,
                               value.map(({ place, player, score }: PlayerScore) => ({
@@ -412,6 +409,11 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
                       Object.entries(log.new).map(([key, value]) => {
                         if (listKeysToNormalize.includes(key)) {
                           if (key === "finalScore") {
+                            if (value instanceof Array == false) {
+                              console.log({ Error: "unexpected finalScore string", log: log });
+                              key = `${key} (STR)`;
+                              value = JSON.parse(value);
+                            }
                             return [
                               key,
                               value.map(({ place, player, score }: PlayerScore) => ({
