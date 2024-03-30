@@ -10,18 +10,20 @@ import { PlayersDict } from "../types/Players";
 import { apiClient, fetchBggThumbnailOptions } from "./Queries";
 
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions } from "./Queries";
 
-interface Props {
-  events?: never[];
-  playersDict: PlayersDict;
-  players?: string[];
-  organizers?: string[];
-  hosts?: string[];
-}
-export default function xTShoot({ events, playersDict, players, organizers, hosts }: Props) {
+export default function TShoot() {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
+
+  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
+  const playersQuery = useQuery(fetchPlayersOptions());
+  const playersDict = playersQuery?.data?.Users ?? {};
+  const players = playersQuery?.data?.Groups?.player ?? [];
+  const organizers = playersQuery?.data?.Groups?.organizer ?? [];
+  const hosts = playersQuery?.data?.Groups?.host ?? [];
+
   const data_types = {
-    events: events,
+    events: eventsQuery.data,
     playersDict: playersDict,
     players: players,
     organizers: organizers,

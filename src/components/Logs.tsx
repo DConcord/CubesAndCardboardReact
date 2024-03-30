@@ -352,15 +352,7 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
       <>
         <Modal show={showManageEvent} onHide={handleCloseManageEvent} backdrop="static" keyboard={false}>
           <Suspense fallback={<>...</>}>
-            <ManageEventModal
-              playersDict={playersDict}
-              players={players}
-              organizers={organizers}
-              hosts={hosts}
-              close={handleCloseManageEvent}
-              task={managedEventTask}
-              gameKnightEvent={managedEvent}
-            />
+            <ManageEventModal close={handleCloseManageEvent} task={managedEventTask} gameKnightEvent={managedEvent} />
           </Suspense>
         </Modal>
         <Table striped bordered hover>
@@ -385,18 +377,26 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
                       Object.entries(log.previous).map(([key, value]) => {
                         if (listKeysToNormalize.includes(key)) {
                           if (key === "finalScore") {
+                            if (value instanceof Array == false) {
+                              console.log({ Error: "unexpected finalScore string", log: log });
+                              key = `${key} (STR)`;
+                              value = JSON.parse(value);
+                            }
                             return [
                               key,
                               value.map(({ place, player, score }: PlayerScore) => ({
                                 place: place,
-                                player: player ? playersDict[player].attrib.given_name : player,
+                                player: player ? playersDict[player]?.attrib.given_name ?? player : player,
                                 score: score,
                               })),
                             ];
                           }
-                          return [key, value.map((user_id: string) => playersDict[user_id].attrib.given_name)];
+                          return [
+                            key,
+                            value.map((user_id: string) => playersDict[user_id]?.attrib.given_name ?? user_id),
+                          ];
                         } else if (stringKeysToNormalize.includes(key)) {
-                          return [key, playersDict[value].attrib.given_name];
+                          return [key, playersDict[value]?.attrib.given_name ?? value];
                         } else {
                           return [key, value];
                         }
@@ -409,6 +409,11 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
                       Object.entries(log.new).map(([key, value]) => {
                         if (listKeysToNormalize.includes(key)) {
                           if (key === "finalScore") {
+                            if (value instanceof Array == false) {
+                              console.log({ Error: "unexpected finalScore string", log: log });
+                              key = `${key} (STR)`;
+                              value = JSON.parse(value);
+                            }
                             return [
                               key,
                               value.map(({ place, player, score }: PlayerScore) => ({
@@ -418,9 +423,12 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
                               })),
                             ];
                           }
-                          return [key, value.map((user_id: string) => playersDict[user_id].attrib.given_name)];
+                          return [
+                            key,
+                            value.map((user_id: string) => playersDict[user_id]?.attrib.given_name ?? user_id),
+                          ];
                         } else if (stringKeysToNormalize.includes(key)) {
-                          return [key, playersDict[value].attrib.given_name];
+                          return [key, playersDict[value]?.attrib.given_name ?? value];
                         } else {
                           return [key, value];
                         }
@@ -432,7 +440,7 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
                 <tr key={index}>
                   <td>{new Date(log["@timestamp"] + " UTC").toLocaleString("lt", { timeZoneName: "short" })}</td>
                   <td>{formatIsoDate(log.date)}</td>
-                  <td>{`${playersDict[log.auth_sub].attrib.given_name} (${log.auth_type})`}</td>
+                  <td>{`${playersDict[log.auth_sub]?.attrib?.given_name ?? log.auth_sub} (${log.auth_type})`}</td>
                   <td>{log.action}</td>
                   <td>
                     {log.previous && actionTypesToConvert.includes(log.action) ? (
@@ -508,9 +516,9 @@ function RsvpLog({ rsvpLog }: { rsvpLog: RsvpLogType[] }) {
             <tr key={index}>
               <td>{new Date(log["@timestamp"] + " UTC").toLocaleString("lt", { timeZoneName: "short" })}</td>
               <td>{formatIsoDate(log.date)}</td>
-              <td>{`${playersDict[log.auth_sub].attrib.given_name} (${log.auth_type})`}</td>
+              <td>{`${playersDict[log.auth_sub]?.attrib.given_name ?? log.auth_sub} (${log.auth_type})`}</td>
               <td>{log.action}</td>
-              <td>{playersDict[log.user_id].attrib.given_name}</td>
+              <td>{playersDict[log.user_id]?.attrib.given_name ?? log.user_id}</td>
               <td>{log.action == "delete" ? log.rsvp : log.action == "update" && rsvp_change[log.rsvp]}</td>
               <td>{["update", "add"].includes(log.action) && log.rsvp}</td>
             </tr>
@@ -546,15 +554,23 @@ function PlayerLog({ playerLog }: { playerLog: PlayerLogType[] }) {
           </tr>
         </thead>
         <tbody>
-          {playerLog.map((log, index) => (
-            <tr key={index}>
-              <td>{new Date(log["@timestamp"] + " UTC").toLocaleString("lt", { timeZoneName: "short" })}</td>
-              <td>{`${playersDict[log.auth_sub].attrib.given_name} (${log.auth_type})`}</td>
-              <td>{log.action}</td>
-              <td>{playersDict[log.user_id].attrib.given_name}</td>
-              <td>{log.attrib.replace("groups,", "groups:")}</td>
-            </tr>
-          ))}
+          {playerLog.map((log, index) => {
+            try {
+              return (
+                <tr key={index}>
+                  <td>{new Date(log["@timestamp"] + " UTC").toLocaleString("lt", { timeZoneName: "short" })}</td>
+                  <td>{`${playersDict[log.auth_sub].attrib.given_name} (${log.auth_type})`}</td>
+                  <td>{log.action}</td>
+                  <td>{playersDict[log.user_id].attrib.given_name}</td>
+                  <td>{log && log.attrib ? log.attrib.replace("groups,", "groups:") : !log ? log : log.attrib}</td>
+                </tr>
+              );
+            } catch (e) {
+              console.log(log);
+              console.error(e);
+              return <></>;
+            }
+          })}
         </tbody>
       </Table>
       // </div>

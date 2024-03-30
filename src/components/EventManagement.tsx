@@ -29,6 +29,7 @@ import {
   apiClient,
   fetchBggThumbnailOptions,
   fetchGameSearchOptions,
+  fetchPlayersOptions,
 } from "./Queries";
 import { authenticated } from "../utilities/Authenticated";
 
@@ -193,23 +194,11 @@ export function TransferDevEventsModal({ close }: TransferDevEventsModalProps) {
 }
 
 interface ManageEventModalProps {
-  playersDict: PlayersDict;
-  players: string[];
-  organizers: string[];
-  hosts: string[];
   close: () => void;
   task: ManagedEventTask;
   gameKnightEvent?: GameKnightEvent | null;
 }
-export function ManageEventModal({
-  playersDict,
-  players,
-  organizers,
-  hosts,
-  close,
-  task,
-  gameKnightEvent,
-}: ManageEventModalProps) {
+export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventModalProps) {
   const method = ["Create", "Clone", "Restore"].includes(task)
     ? "POST"
     : ["Modify", "Migrate"].includes(task)
@@ -217,6 +206,12 @@ export function ManageEventModal({
     : "";
   const { tokens, signInStatus, tokensParsed } = usePasswordless();
   const today_6p_local = new Date(new Date().setHours(18, 0, 0, 0)).toLocaleString("lt").replace(" ", "T") + "DEFAULT";
+  const playersQuery = useQuery(fetchPlayersOptions());
+  const playersDict = playersQuery?.data?.Users ?? {};
+  const players = playersQuery?.data?.Groups?.player ?? [];
+  const organizers = playersQuery?.data?.Groups?.organizer ?? [];
+  const hosts = playersQuery?.data?.Groups?.host ?? [];
+
   const [eventForm, setEventForm] = useState<GameKnightEvent>(
     gameKnightEvent
       ? gameKnightEvent
@@ -245,7 +240,8 @@ export function ManageEventModal({
     return (
       hosts.includes(eventForm.host) &&
       eventForm.date !== today_6p_local &&
-      !(eventForm.game === "" || eventForm.game == undefined)
+      !(eventForm.game === "" || eventForm.game == undefined) &&
+      !(eventForm.game !== "TBD" && (eventForm.bgg_id == 0 || eventForm.bgg_id == undefined))
     );
   }
   useEffect(() => {
@@ -377,7 +373,7 @@ export function ManageEventModal({
         console.log(body);
       }
 
-      await apiClient({
+      const response = await apiClient({
         method: method,
         url: "event",
         data: body,
@@ -439,7 +435,7 @@ export function ManageEventModal({
     else return initFinalScore();
   });
   function initFinalScore() {
-    return eventForm.attending.map((item, index: number) => ({ place: index + 1, player: "", score: "" }));
+    return eventForm.attending.map((player, index: number) => ({ place: index + 1, player: player, score: "" }));
   }
   const findArrayDuplicates = (arr: string[]) => arr.filter((item, index) => arr.indexOf(item) !== index);
   function clearFinalScore() {
@@ -470,13 +466,18 @@ export function ManageEventModal({
           _validScores.every(Boolean)
       );
     }
-    console.log(finalScorePlayers, findArrayDuplicates(finalScorePlayers));
+    // console.log(finalScorePlayers, findArrayDuplicates(finalScorePlayers));
   }, [finalScore]);
 
   const onChangeTableInput = (e: React.BaseSyntheticEvent, index: number) => {
     const { id, value } = e.target;
     const editData = finalScore.map((item, _index) => (_index === index && id ? { ...item, [id]: value } : item));
     setFinalScore(editData);
+  };
+  const [refresh, setRefresh] = useState(0);
+  const sortFinalScore = (e: React.BaseSyntheticEvent) => {
+    setFinalScore(finalScore.sort((a, b) => a.place - b.place));
+    setRefresh(refresh + 1);
   };
   return (
     <Form onSubmit={handleSubmit}>
@@ -701,7 +702,11 @@ export function ManageEventModal({
                           (eventForm.format == "Private" && !eventForm.player_pool.includes(player_id)) ||
                           (eventForm.format !== "Open" &&
                             !eventForm.player_pool.includes(player_id) &&
-                            !(eventForm.organizer_pool.includes(player_id) && eventForm.organizer == ""))
+                            !(
+                              eventForm.organizer_pool &&
+                              eventForm.organizer_pool.includes(player_id) &&
+                              eventForm.organizer == ""
+                            ))
                         }
                         onChange={handleOptionChange}
                         value={player_id}
@@ -786,6 +791,8 @@ export function ManageEventModal({
                         value={place == 0 ? "" : place}
                         type="number"
                         onChange={(e: React.BaseSyntheticEvent) => onChangeTableInput(e, index)}
+                        onBlur={sortFinalScore}
+                        // onBlur={() => setFinalScore(finalScore.sort((a, b) => a.place - b.place))}
                         placeholder="Place"
                         className="no-validate-badge"
                         isValid={
