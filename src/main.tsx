@@ -26,7 +26,7 @@ Passwordless.configure({
   cognitoIdpEndpoint: "us-east-1",
   debug: console.trace,
   fido2: {
-    baseUrl: "https://ewq7x06vu1.execute-api.us-east-1.amazonaws.com/v1/",
+    baseUrl: "https://events.cubesandcardboard.net/auth/",
     authenticatorSelection: {
       userVerification: "required",
     },

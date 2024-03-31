@@ -14,17 +14,18 @@ import DropdownButton from "react-bootstrap/DropdownButton";
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import FloatingLabel from "react-bootstrap/FloatingLabel";
+import Spinner from "react-bootstrap/Spinner";
 
 import loggingContext, { IntervalType } from "./LoggingContext";
 
 import yaml from "js-yaml";
+import { parseISO } from "date-fns";
 
-// import { ManageEventModal } from "./EventManagement";
 const ManageEventModal = lazy(() => import("./EventManagement"));
 
 import { ManagedEventTask, GameKnightEvent, PlayerScore } from "../types/Events";
 import { formatIsoDate } from "../utilities";
-import { fetchPlayersOptions, apiClient } from "./Queries";
+import { fetchPlayersOptions, apiClient, publicClient } from "./Queries";
 
 const timeInterval: { [key in IntervalType]: number } = {
   Minutes: 60 * 1000,
@@ -58,13 +59,8 @@ export default function Logs() {
   useEffect(() => {
     setStartTime(String(Date.now() - timeInterval[startIntervalType] * startInterval).slice(0, 10));
     setEndTime(null);
-    // console.log({
-    //   startInterval: startInterval,
-    //   startIntervalType: startIntervalType,
-    //   startTime: startTime,
-    //   endTime: endTime,
-    // });
   }, [startInterval, startIntervalType]);
+  const playersQuery = useQuery(fetchPlayersOptions());
   const logsQuery = useQuery({
     queryKey: ["logs"],
     queryFn: async (): Promise<[]> => {
@@ -93,6 +89,7 @@ export default function Logs() {
     },
     staleTime: Infinity,
     refetchInterval: false, // No auto-refetch
+    enabled: false, // Disable the query initially
   });
 
   useEffect(() => {
@@ -147,9 +144,6 @@ export default function Logs() {
       }
     }
   };
-  // useEffect(() => {
-  //   console.log({ customTimeRange: customTimeRange, startTime: startTime, endTime: endTime });
-  // }, [startTime, endTime]);
 
   return (
     <div className="margin-top-58 bg-body-tertiary">
@@ -240,64 +234,95 @@ export default function Logs() {
           </Button>
         </Modal.Footer>
       </Modal>
-      <Tab.Container defaultActiveKey="rsvp" id="logs-tabs">
-        <div
-          className="bg-body-tertiary "
-          style={{ position: "sticky", top: "58px", minHeight: "42px", maxHeight: "42px", overflow: "auto" }}
-        >
-          <Container fluid>
-            <Row>
-              <Col>
-                <Nav variant="underline" className="me-auto">
-                  <Nav.Link eventKey="rsvp">RSVPs</Nav.Link>
-                  <Nav.Link eventKey="event">Events</Nav.Link>
-                  {["production", "test"].includes(import.meta.env.MODE) && (
-                    <Nav.Link eventKey="player">Players</Nav.Link>
-                  )}
-                </Nav>
-              </Col>
-              <Col xs="auto" style={{ textAlign: "right", padding: "4px" }}>
-                <Button
-                  disabled={logsQuery.isFetching || logsQuery.isLoading}
-                  onClick={() => {
-                    queryClient.invalidateQueries({ queryKey: ["logs"] });
-                    // logsQuery.refetch;
-                  }}
-                  size="sm"
-                >
-                  {(logsQuery.isFetching || logsQuery.isLoading) && (
-                    <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
-                  )}
-                  Run
-                </Button>
-              </Col>
-              <Col xs="auto" style={{ textAlign: "right", padding: "4px", paddingRight: "10px" }}>
-                <Button size="sm" variant="primary" onClick={handleShowTimeModal}>
-                  {customTimeRange ? "Custom" : `${startInterval}${timeIntervalShort[startIntervalType]}`}
-                </Button>
-              </Col>
-            </Row>
-          </Container>
+      {playersQuery.isLoading ? (
+        <Row style={{ padding: "5rem" }} className="bg-body justify-content-center align-items-center">
+          <Col xs="auto" style={{ padding: 0 }}>
+            <Spinner animation="border" size="sm" />
+          </Col>
+          <Col xs="auto">Loading Players</Col>
+        </Row>
+      ) : playersQuery.isError ? (
+        <div style={{ padding: "1rem" }} className="bg-body">
+          Error Loading Players
         </div>
-        <Tab.Content>
-          <Tab.Pane eventKey="rsvp" title="RSVPs">
-            {logsQuery.isLoading ? "Loading..." : null}
-            {logsQuery.isError ? "Error Loading RSVP Logs!" : null}
-            {logsQuery.isSuccess && <RsvpLog rsvpLog={rsvpLog} />}
-          </Tab.Pane>
-          <Tab.Pane eventKey="event" title="Events">
-            {logsQuery.isLoading ? "Loading..." : null}
-            {logsQuery.isError ? "Error Loading Event Logs!" : null}
-            {logsQuery.isSuccess && <EventLog eventLog={eventLog} />}
-          </Tab.Pane>
-          <Tab.Pane eventKey="player" title="Players">
-            {logsQuery.isLoading ? "Loading..." : null}
-            {logsQuery.isError ? "Error Loading Event Logs!" : null}
-            {logsQuery.isSuccess && <PlayerLog playerLog={playerLog} />}
-            {/* {logsQuery.isSuccess && <pre>{JSON.stringify(playerLog, null, 2)}</pre>} */}
-          </Tab.Pane>
-        </Tab.Content>
-      </Tab.Container>
+      ) : !playersQuery.isSuccess ? (
+        <div style={{ padding: "1rem" }} className="bg-body">
+          Players not loaded
+        </div>
+      ) : (
+        <Tab.Container defaultActiveKey="rsvp" id="logs-tabs">
+          <div
+            className="bg-body-tertiary"
+            style={{ position: "sticky", top: "58px", minHeight: "42px", maxHeight: "42px", overflow: "auto" }}
+          >
+            <Container fluid>
+              <Row>
+                {logsQuery.isPending ? (
+                  <Col className="d-flex align-items-center" style={{ paddingLeft: "1rem" }}>
+                    <div>Run a query:</div>
+                  </Col>
+                ) : (
+                  <Col>
+                    <Nav variant="underline" className="me-auto">
+                      <Nav.Link eventKey="rsvp">RSVPs</Nav.Link>
+                      <Nav.Link eventKey="event">Events</Nav.Link>
+                      {["production", "test"].includes(import.meta.env.MODE) && (
+                        <Nav.Link eventKey="player">Players</Nav.Link>
+                      )}
+                    </Nav>
+                  </Col>
+                )}
+                <Col xs="auto" style={{ textAlign: "right", padding: "4px" }}>
+                  <Button
+                    disabled={logsQuery.isFetching || logsQuery.isLoading}
+                    onClick={() => {
+                      queryClient.invalidateQueries({ queryKey: ["logs"] });
+                      logsQuery.refetch();
+                    }}
+                    size="sm"
+                  >
+                    {(logsQuery.isFetching || logsQuery.isLoading) && (
+                      <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
+                    )}
+                    Run
+                  </Button>
+                </Col>
+                <Col xs="auto" style={{ textAlign: "right", padding: "4px", paddingRight: "10px" }}>
+                  <Button size="sm" variant="primary" onClick={handleShowTimeModal}>
+                    {customTimeRange ? "Custom" : `${startInterval}${timeIntervalShort[startIntervalType]}`}
+                  </Button>
+                </Col>
+              </Row>
+            </Container>
+          </div>
+          {logsQuery.isLoading ? (
+            <Row style={{ padding: "5rem" }} className="bg-body justify-content-center align-items-center">
+              <Col xs="auto" style={{ padding: 0 }}>
+                <Spinner animation="border" size="sm" />
+              </Col>
+              <Col xs="auto">Running</Col>
+            </Row>
+          ) : logsQuery.isError ? (
+            <div style={{ padding: "1rem" }} className="bg-body">
+              Error Loading Logs
+            </div>
+          ) : logsQuery.isSuccess ? (
+            <Tab.Content>
+              <Tab.Pane eventKey="rsvp" title="RSVPs">
+                <RsvpLog rsvpLog={rsvpLog} />
+              </Tab.Pane>
+              <Tab.Pane eventKey="event" title="Events">
+                <EventLog eventLog={eventLog} />
+              </Tab.Pane>
+              <Tab.Pane eventKey="player" title="Players">
+                <PlayerLog playerLog={playerLog} />
+              </Tab.Pane>
+            </Tab.Content>
+          ) : (
+            logsQuery.isPending && null
+          )}
+        </Tab.Container>
+      )}
     </div>
   );
 }
@@ -323,9 +348,6 @@ type PlayerLogType = Omit<LogType, "date" | "previous" | "new" | "event_id" | "r
 function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
   const playersQuery = useQuery(fetchPlayersOptions());
   const playersDict = playersQuery?.data?.Users ?? {};
-  const players = playersQuery?.data?.Groups?.player ?? [];
-  const organizers = playersQuery?.data?.Groups?.organizer ?? [];
-  const hosts = playersQuery?.data?.Groups?.host ?? [];
 
   // Create "Manage Event" PopUp ("Modal")
   const [managedEvent, setManagedEvent] = useState<GameKnightEvent | null>(null);
@@ -437,7 +459,7 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
 
               return (
                 <tr key={index}>
-                  <td>{new Date(log["@timestamp"] + " UTC").toLocaleString("lt", { timeZoneName: "short" })}</td>
+                  <td>{parseISO(log["@timestamp"] + "Z").toLocaleString("lt", { timeZoneName: "short" })}</td>
                   <td>{formatIsoDate(log.date)}</td>
                   <td>{`${playersDict[log.auth_sub]?.attrib?.given_name ?? log.auth_sub} (${log.auth_type})`}</td>
                   <td>{log.action}</td>
@@ -513,7 +535,7 @@ function RsvpLog({ rsvpLog }: { rsvpLog: RsvpLogType[] }) {
         <tbody>
           {rsvpLog.map((log, index) => (
             <tr key={index}>
-              <td>{new Date(log["@timestamp"] + " UTC").toLocaleString("lt", { timeZoneName: "short" })}</td>
+              <td>{parseISO(log["@timestamp"] + "Z").toLocaleString("lt", { timeZoneName: "short" })}</td>
               <td>{formatIsoDate(log.date)}</td>
               <td>{`${playersDict[log.auth_sub]?.attrib.given_name ?? log.auth_sub} (${log.auth_type})`}</td>
               <td>{log.action}</td>
@@ -557,7 +579,7 @@ function PlayerLog({ playerLog }: { playerLog: PlayerLogType[] }) {
             try {
               return (
                 <tr key={index}>
-                  <td>{new Date(log["@timestamp"] + " UTC").toLocaleString("lt", { timeZoneName: "short" })}</td>
+                  <td>{parseISO(log["@timestamp"] + "Z").toLocaleString("lt", { timeZoneName: "short" })}</td>
                   <td>{`${playersDict[log.auth_sub].attrib.given_name} (${log.auth_type})`}</td>
                   <td>{log.action}</td>
                   <td>{playersDict[log.user_id].attrib.given_name}</td>

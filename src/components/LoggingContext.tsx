@@ -20,7 +20,7 @@ function _loggingContext() {
   const [customTimeRange, setCustomTimeRange] = useState(false);
   const [startInterval, setStartInterval] = useState(1);
   const [startIntervalType, setStartIntervalType] = useState<IntervalType>("Days");
-  const [startTime, setStartTime] = useState<string>(String(Date.now() - 60 * 60 * 1000).slice(0, 10)); // 1hr ago
+  const [startTime, setStartTime] = useState<string>(String(Date.now() - 24 * 60 * 60 * 1000).slice(0, 10)); // 1 day ago
   const [endTime, setEndTime] = useState<string | null>(null);
 
   return {
