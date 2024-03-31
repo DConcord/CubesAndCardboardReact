@@ -20,6 +20,7 @@ import Form from "react-bootstrap/Form";
 import { FormControlProps } from "react-bootstrap/FormControl";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
+import Alert from "react-bootstrap/Alert";
 
 import { PatternFormat } from "react-number-format";
 
@@ -278,9 +279,16 @@ interface ManagePlayerModalProps {
   task: "Create" | "Modify" | "ModifySelf";
   player?: Player;
   playerAttrib?: PlayerGet;
+  resetManagePlayerModal?: () => void;
   close: () => void;
 }
-export function ManagePlayerModal({ task, player, playerAttrib, close }: ManagePlayerModalProps) {
+export function ManagePlayerModal({
+  task,
+  player,
+  playerAttrib,
+  resetManagePlayerModal,
+  close,
+}: ManagePlayerModalProps) {
   const { tokensParsed, refreshTokens } = usePasswordless();
   const method = task === "Create" ? "POST" : "PUT";
   const [playerForm, setPlayerForm] = useState<Player>(
@@ -298,6 +306,12 @@ export function ManagePlayerModal({ task, player, playerAttrib, close }: ManageP
 
   const playersQuery = useQuery(fetchPlayersApiOptions({ refresh: "no" }));
   const groups = playersQuery?.data?.Groups ?? [];
+
+  // validCode handleVerificationInput
+  const [validCode, setValidCode] = useState(false);
+  const handleVerificationInput = (e: React.BaseSyntheticEvent) => {
+    setValidCode(/^\d{6}$/.test(e.target.value));
+  };
 
   const [inputValidated, setInputValidated] = useState(false);
   const handleInput = (e: React.BaseSyntheticEvent) => {
@@ -375,20 +389,6 @@ export function ManagePlayerModal({ task, player, playerAttrib, close }: ManageP
     managePlayerMutation.mutate({ body: playerForm, method: method });
   }
 
-  const [resendWaiting, setResendWaiting] = useState(false);
-  async function handleResendCode() {
-    setResendWaiting(true);
-    try {
-      await getUserAttributeVerificationCode({
-        attributeName: "email",
-      });
-      setResendWaiting(false);
-    } catch (error) {
-      console.error(error);
-      setResendWaiting(false);
-    }
-  }
-
   const [verifyWaiting, setVerifyWaiting] = useState(false);
   const [verifyAttribute, setVerifyAttribute] = useState(false);
   async function handleVerifySubmit(event: React.BaseSyntheticEvent) {
@@ -410,40 +410,50 @@ export function ManagePlayerModal({ task, player, playerAttrib, close }: ManageP
       setVerifyWaiting(false);
     }
   }
-  // CodeDeliveryDetailsList
+
+  const [areYouSure, setAreYouSure] = useState(false);
 
   if (verifyAttribute) {
     return (
       <Form onSubmit={handleVerifySubmit}>
+        <Modal.Header>Enter the verification code sent to your email:</Modal.Header>
         <Modal.Body className="text-center">
-          <div>Enter the verification code sent to your email:</div>
-          <Row>
+          <Row xs={1}>
             <Col med="true" style={{ minWidth: "18rem" }}>
               <FloatingLabel controlId="code" label="Email Verification Code" className="mb-3">
-                <Form.Control placeholder="code" as="textarea" />
+                <Form.Control isValid={validCode} onInput={handleVerificationInput} placeholder="code" type="number" />
               </FloatingLabel>
             </Col>
+            {areYouSure && (
+              <Col>
+                <Alert>
+                  <div>Are you sure? You cannot sign in with your updated address until it is verified.</div>
+                  <br />
+                  <div>To get another code, you can try changing your email address again.</div>
+                </Alert>
+              </Col>
+            )}
           </Row>
         </Modal.Body>
         <Modal.Footer>
           <Container fluid>
             <Row style={{ justifyContent: "right", paddingLeft: 8, paddingRight: 0 }}>
-              <Col style={{ justifyContent: "left", paddingLeft: 0, paddingRight: 0 }}>
-                <Button variant="secondary" onClick={handleResendCode} disabled={verifyWaiting || resendWaiting}>
-                  {resendWaiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
-                  Resend Code
-                </Button>
-              </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
-                <Button variant="primary" type="submit" disabled={verifyWaiting || resendWaiting}>
+                <Button variant="primary" type="submit" disabled={verifyWaiting || !validCode}>
                   {verifyWaiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
                   Send
                 </Button>
               </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 8 }}>
-                <Button variant="secondary" onClick={close} disabled={verifyWaiting || resendWaiting}>
-                  Cancel
-                </Button>
+                {areYouSure ? (
+                  <Button variant="secondary" onClick={close} disabled={verifyWaiting}>
+                    Yes, Cancel
+                  </Button>
+                ) : (
+                  <Button variant="secondary" onClick={() => setAreYouSure(true)} disabled={verifyWaiting}>
+                    Cancel
+                  </Button>
+                )}
               </Col>
             </Row>
           </Container>
@@ -543,19 +553,29 @@ export function ManagePlayerModal({ task, player, playerAttrib, close }: ManageP
         <Modal.Footer>
           {/* import.meta.env.MODE == "test" */}
           <Container fluid>
-            <Row style={{ justifyContent: "right", paddingLeft: 8, paddingRight: 0 }}>
-              <Col xs="auto" style={{ justifyContent: "left", paddingLeft: 0, paddingRight: 4 }}>
-                <div className="d-block d-sm-none">
-                  <Button variant="secondary" onClick={() => refreshTokens()} disabled={managePlayerMutation.isPending}>
-                    <Icon path={mdiRefresh} size={1} />
-                  </Button>
-                </div>
-                <div className="d-none d-sm-block">
-                  <Button variant="secondary" onClick={() => refreshTokens()} disabled={managePlayerMutation.isPending}>
+            <Row style={{ justifyContent: "right", paddingLeft: 0, paddingRight: 0 }}>
+              {!!resetManagePlayerModal && (
+                <Col xs="auto" style={{ justifyContent: "left", paddingLeft: 0, paddingRight: 4 }}>
+                  {/* <div className="d-block d-sm-none">
+                    <Button
+                      variant="secondary"
+                      onClick={() => resetManagePlayerModal()}
+                      disabled={managePlayerMutation.isPending}
+                    >
+                      <Icon path={mdiRefresh} size={1} />
+                    </Button>
+                  </div>
+                  <div className="d-none d-sm-block"> */}
+                  <Button
+                    variant="secondary"
+                    onClick={() => resetManagePlayerModal()}
+                    disabled={managePlayerMutation.isPending}
+                  >
                     Refresh
                   </Button>
-                </div>
-              </Col>
+                  {/* </div> */}
+                </Col>
+              )}
               <Col style={{ justifyContent: "left", paddingLeft: 4, paddingRight: 0 }}>
                 {!tokensParsed?.idToken.email_verified && (
                   <Button
@@ -573,7 +593,7 @@ export function ManagePlayerModal({ task, player, playerAttrib, close }: ManageP
                 <span>{errorMsg}</span>
               </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
-                <div className="d-block d-sm-none">
+                {/* <div className="d-block d-sm-none">
                   <Button
                     variant="primary"
                     type="submit"
@@ -595,24 +615,24 @@ export function ManagePlayerModal({ task, player, playerAttrib, close }: ManageP
                     )}
                   </Button>
                 </div>
-                <div className="d-none d-sm-block">
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    disabled={
-                      managePlayerMutation.isPending ||
-                      !inputValidated ||
-                      (task !== "ModifySelf" && !["production", "test"].includes(import.meta.env.MODE))
-                    }
-                  >
-                    {managePlayerMutation.isPending && (
-                      <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
-                    )}
-                    {task == "Modify" ? "Update Player" : task == "ModifySelf" ? "Update" : "Create Player"}
-                  </Button>
-                </div>
+                <div className="d-none d-sm-block"> */}
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={
+                    managePlayerMutation.isPending ||
+                    !inputValidated ||
+                    (task !== "ModifySelf" && !["production", "test"].includes(import.meta.env.MODE))
+                  }
+                >
+                  {managePlayerMutation.isPending && (
+                    <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
+                  )}
+                  {task == "Modify" ? "Update Player" : task == "ModifySelf" ? "Update" : "Create Player"}
+                </Button>
+                {/* </div> */}
               </Col>
-              <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 8 }}>
+              <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 0 }}>
                 {/* <div className="d-none d-sm-none">
                   <Button variant="secondary" onClick={close} disabled={managePlayerMutation.isPending}>
                     <Icon path={mdiClose} size={1} />

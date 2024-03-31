@@ -42,7 +42,15 @@ export default function NavigationBar() {
     toggleShowAuthenticatorManager,
     tokensParsed,
     tokens,
+    refreshTokens,
   } = usePasswordless();
+
+  const [managePlayerModalSeed, setManagePlayerModalSeed] = useState(1);
+  const resetManagePlayerModal = async () => {
+    await refreshTokens();
+    setManagePlayerModalSeed(Math.random());
+    console.log(managePlayerModalSeed);
+  };
 
   var player: PlayerModifySelf;
   if (tokensParsed && tokens) {
@@ -267,7 +275,13 @@ export default function NavigationBar() {
       {tokensParsed && (
         <Modal show={showManagePlayer} onHide={handleCloseManagePlayer} backdrop="static" keyboard={false}>
           <Suspense fallback={<>...</>}>
-            <ManagePlayerModal close={handleCloseManagePlayer} task="ModifySelf" player={player!} />
+            <ManagePlayerModal
+              key={managePlayerModalSeed}
+              resetManagePlayerModal={resetManagePlayerModal}
+              close={handleCloseManagePlayer}
+              task="ModifySelf"
+              player={player!}
+            />
           </Suspense>
         </Modal>
       )}
