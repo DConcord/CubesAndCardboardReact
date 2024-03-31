@@ -7,6 +7,7 @@ import { mdiRefresh, mdiClose, mdiCheck } from "@mdi/js";
 
 import { verifyUserAttribute, getUserAttributeVerificationCode } from "amazon-cognito-passwordless-auth/cognito-api";
 
+import Accordion from "react-bootstrap/Accordion";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
@@ -29,7 +30,7 @@ import ConditionalWrap from "./ConditionalWrap";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { PlayerTable, Player } from "../types/Players";
+import { PlayerTable, Player, PlayerGet } from "../types/Players";
 
 export function PlayersAuth() {
   const { signInStatus, tokensParsed } = usePasswordless();
@@ -85,6 +86,7 @@ export default function Players() {
 
   // Create "Manage Event" PopUp ("Modal")
   const [managedPlayer, setManagedPlayer] = useState<Player>();
+  const [managedPlayerAttrib, setManagedPlayerAttrib] = useState<PlayerGet>();
   const [managedPlayerTask, setManagedPlayerTask] = useState<"Create" | "Modify">("Create");
   const [showManagePlayer, setShowManagePlayer] = useState(false);
   const handleCloseManagePlayer = () => setShowManagePlayer(false);
@@ -95,6 +97,9 @@ export default function Players() {
   const handleShowManagePlayer = ({ managedPlayer, task }: ShowManagePlayerProps) => {
     setManagedPlayer(managedPlayer ? managedPlayer : undefined);
     setManagedPlayerTask(task);
+    setManagedPlayerAttrib(
+      managedPlayer && "user_id" in managedPlayer ? playersDict[managedPlayer.user_id] : undefined
+    );
     setShowManagePlayer(true);
   };
 
@@ -237,7 +242,12 @@ export default function Players() {
         </Table>
 
         <Modal show={showManagePlayer} onHide={handleCloseManagePlayer} backdrop="static" keyboard={false}>
-          <ManagePlayerModal close={handleCloseManagePlayer} task={managedPlayerTask} player={managedPlayer} />
+          <ManagePlayerModal
+            close={handleCloseManagePlayer}
+            task={managedPlayerTask}
+            playerAttrib={managedPlayerAttrib}
+            player={managedPlayer}
+          />
         </Modal>
       </div>
     );
@@ -267,9 +277,10 @@ export default function Players() {
 interface ManagePlayerModalProps {
   task: "Create" | "Modify" | "ModifySelf";
   player?: Player;
+  playerAttrib?: PlayerGet;
   close: () => void;
 }
-export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProps) {
+export function ManagePlayerModal({ task, player, playerAttrib, close }: ManagePlayerModalProps) {
   const { tokensParsed, refreshTokens } = usePasswordless();
   const method = task === "Create" ? "POST" : "PUT";
   const [playerForm, setPlayerForm] = useState<Player>(
@@ -518,7 +529,19 @@ export function ManagePlayerModal({ task, player, close }: ManagePlayerModalProp
             )}
           </Row>
         </Modal.Body>
+
+        {import.meta.env.MODE == "test" && (
+          <Accordion>
+            <Accordion.Item eventKey="playerDebug">
+              <Accordion.Header>Player Debug</Accordion.Header>
+              <Accordion.Body>
+                <pre>{JSON.stringify(playerAttrib ? playerAttrib : playerForm, null, 2)}</pre>
+              </Accordion.Body>
+            </Accordion.Item>
+          </Accordion>
+        )}
         <Modal.Footer>
+          {/* import.meta.env.MODE == "test" */}
           <Container fluid>
             <Row style={{ justifyContent: "right", paddingLeft: 8, paddingRight: 0 }}>
               <Col xs="auto" style={{ justifyContent: "left", paddingLeft: 0, paddingRight: 4 }}>
