@@ -18,15 +18,8 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchEventsApi } from "./Queries";
 
 const TShoot = lazy(() => import("./TShoot"));
-const ManageEventModal = lazy(() =>
-  import("./EventManagement").then((module) => ({ default: module.ManageEventModal }))
-);
-const DeleteEventModal = lazy(() =>
-  import("./EventManagement").then((module) => ({ default: module.DeleteEventModal }))
-);
-const TransferDevEventsModal = lazy(() =>
-  import("./EventManagement").then((module) => ({ default: module.TransferDevEventsModal }))
-);
+const ManageEventModal = lazy(() => import("./EventManagement"));
+const TransferProdEventsModal = lazy(() => import("./TransferProdEvents"));
 const RsvpFooter = lazy(() => import("./EventManagement").then((module) => ({ default: module.RsvpFooter })));
 
 import { ManagedEventTask, GameKnightEvent } from "../types/Events";
@@ -66,10 +59,10 @@ export default function UpcomingEvents() {
     setShowManageEvent(true);
   };
 
-  const [showTransferDevEvents, setShowTransferDevEvents] = useState(false);
-  const handleCloseTransferDevEvents = () => setShowTransferDevEvents(false);
-  const handleShowTransferDevEvents = () => {
-    setShowTransferDevEvents(true);
+  const [showTransferProdEvents, setShowTransferProdEvents] = useState(false);
+  const handleCloseTransferProdEvents = () => setShowTransferProdEvents(false);
+  const handleShowTransferProdEvents = () => {
+    setShowTransferProdEvents(true);
   };
 
   const queryClient = useQueryClient();
@@ -105,17 +98,17 @@ export default function UpcomingEvents() {
                       {!showPrevEvents ? "Previous Events" : "Hide Prev Events"}
                     </Button>
                   </Col>
-                  {/* {showAdmin &&
+                  {showAdmin &&
                     import.meta.env.MODE == "test" &&
                     import.meta.env.VITE_API_URL == "eventsdev.dissonantconcord.com" && (
                       <>
                         <Col xs="auto" style={{ textAlign: "right", padding: 4 }}>
-                          <Button size="sm" variant="secondary" onClick={handleShowTransferDevEvents}>
+                          <Button size="sm" variant="secondary" onClick={handleShowTransferProdEvents}>
                             Transfer
                           </Button>
                         </Col>
                       </>
-                    )} */}
+                    )}
                   <Authenticated group={["admin"]}>
                     {showAdmin && (
                       <Col xs="auto" style={{ textAlign: "right", padding: 4 }}>
@@ -147,11 +140,18 @@ export default function UpcomingEvents() {
               <ManageEventModal close={handleCloseManageEvent} task={managedEventTask} gameKnightEvent={managedEvent} />
             </Suspense>
           </Modal>
-          <Modal show={showTransferDevEvents} onHide={handleCloseTransferDevEvents} backdrop="static" keyboard={false}>
-            <Suspense fallback={<>...</>}>
-              <TransferDevEventsModal close={handleCloseTransferDevEvents} />
-            </Suspense>
-          </Modal>
+          {import.meta.env.MODE == "test" && (
+            <Modal
+              show={showTransferProdEvents}
+              onHide={handleCloseTransferProdEvents}
+              backdrop="static"
+              keyboard={false}
+            >
+              <Suspense fallback={<>...</>}>
+                <TransferProdEventsModal close={handleCloseTransferProdEvents} />
+              </Suspense>
+            </Modal>
+          )}
         </Authenticated>
         <EventCards events={eventsQuery.data} showAdmin={showAdmin} />
       </div>
@@ -195,9 +195,9 @@ export function PreviousEvents({ showAdmin }: { showAdmin: boolean }) {
     return (
       <Accordion defaultActiveKey={[...years].slice(-1)} style={{ paddingBottom: ".5rem" }}>
         {[...years].map((year: string) => (
-          <Accordion.Item eventKey={year}>
-            <Accordion.Header>{year} Events</Accordion.Header>
-            <Accordion.Body>
+          <Accordion.Item key={year + "_item"} eventKey={year}>
+            <Accordion.Header key={year + "_header"}>{year} Events</Accordion.Header>
+            <Accordion.Body key={year + "_body"}>
               <EventCards
                 events={eventsQuery.data.filter((event: GameKnightEvent) => event.date.startsWith(year))}
                 showAdmin={showAdmin}
@@ -224,15 +224,6 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
   const playersQuery = useQuery(fetchPlayersOptions());
   const playersDict = playersQuery?.data?.Users ?? {};
 
-  // Create "Delete Event" PopUp ("Modal")
-  const [deleteEvent, setDeleteEvent] = useState<GameKnightEvent>();
-  const [showDeleteEvent, setShowDeleteEvent] = useState(false);
-  const handleCloseDeleteEvent = () => setShowDeleteEvent(false);
-  const handleShowDeleteEvent = ({ deleteEvent }: { deleteEvent: GameKnightEvent }) => {
-    setDeleteEvent(deleteEvent);
-    setShowDeleteEvent(true);
-  };
-
   // Create "Manage Event" PopUp ("Modal")
   const [managedEvent, setManagedEvent] = useState<GameKnightEvent | null>(null);
   const [managedEventTask, setManagedEventTask] = useState<ManagedEventTask>("Clone");
@@ -254,11 +245,6 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
         <Modal show={showManageEvent} onHide={handleCloseManageEvent} backdrop="static" keyboard={false}>
           <Suspense fallback={<>...</>}>
             <ManageEventModal close={handleCloseManageEvent} task={managedEventTask} gameKnightEvent={managedEvent} />
-          </Suspense>
-        </Modal>
-        <Modal show={showDeleteEvent} onHide={handleCloseDeleteEvent}>
-          <Suspense fallback={<>...</>}>
-            <DeleteEventModal close={handleCloseDeleteEvent} gameKnightEvent={deleteEvent!} />
           </Suspense>
         </Modal>
       </Authenticated>
@@ -284,15 +270,21 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
 
             const futureEvent = Date.parse(event.date) >= Date.parse(new Date().toString());
             if (playersDict) {
+              if (event.host && event.host in playersDict && event.attending.includes(event.host))
+                attending_names.push(`${playersDict[event.host].attrib.given_name} (H)`);
+              if (event.organizer && event.organizer in playersDict && event.attending.includes(event.organizer))
+                attending_names.push(`${playersDict[event.organizer].attrib.given_name} (O)`);
               try {
-                attending_names = event.attending.map((player_id) => {
-                  if (event.organizer && event.organizer == player_id) {
-                    return `${playersDict[player_id].attrib.given_name} (O)`;
-                  } else if (event.host && event.host == player_id) {
-                    return `${playersDict[player_id].attrib.given_name} (H)`;
-                  }
-                  return playersDict[player_id].attrib.given_name;
-                });
+                attending_names.push(
+                  ...event.attending
+                    .map((player_id) => {
+                      if (event.organizer && event.organizer == player_id) return "";
+                      if (event.host && event.host == player_id) return "";
+                      return playersDict[player_id].attrib.given_name;
+                    })
+                    .filter((player) => player != "")
+                    .sort()
+                );
                 not_attending_names = event.not_attending.map((player_id) => playersDict[player_id].attrib.given_name);
               } catch (error) {
                 console.error(event);
@@ -457,7 +449,7 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                                   size="sm"
                                   key={"Delete" + index}
                                   variant="danger"
-                                  onClick={() => handleShowDeleteEvent({ deleteEvent: event })}
+                                  onClick={() => handleShowManageEvent({ managedEvent: event, task: "Delete" })}
                                 >
                                   Delete
                                 </Button>

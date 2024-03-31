@@ -35,170 +35,15 @@ import { authenticated } from "../utilities/Authenticated";
 
 import { formatIsoDate } from "../utilities";
 import { tbd_pics, GameSearch } from "../types/Events";
-import { PlayerNameDict, PlayersDict } from "../types/Players";
-import { ManagedEventTask, GameKnightEvent, ExistingGameKnightEvent, EventDict } from "../types/Events";
-
-interface DeleteEventModalProps {
-  close: () => void;
-  gameKnightEvent: GameKnightEvent;
-}
-export function DeleteEventModal({ close, gameKnightEvent }: DeleteEventModalProps) {
-  const { tokens } = usePasswordless();
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
-
-  const [notConfirmed, setNotConfirmed] = useState(true);
-  function handleInput(event: React.BaseSyntheticEvent) {
-    if (event.target.value == "DELETE") setNotConfirmed(false);
-  }
-
-  const [errorMsg, setErrorMsg] = useState("");
-  const deleteEventMutation = useMutation({
-    mutationFn: async () => {
-      await apiClient.delete("event", {
-        params: { event_id: gameKnightEvent.event_id },
-      });
-    },
-    onSuccess: async (data) => {
-      console.log(data);
-      await eventsQuery.refetch();
-      close();
-    },
-    onError: (error) => {
-      console.error(error);
-      setErrorMsg(`Delete Event failed`);
-    },
-  });
-
-  async function handleSubmit(event: React.BaseSyntheticEvent) {
-    event.preventDefault();
-    deleteEventMutation.mutate();
-  }
-
-  return (
-    <Form onSubmit={handleSubmit}>
-      <Modal.Header className="text-center">
-        Are you sure you want to delete {formatIsoDate(gameKnightEvent.date)} event?
-      </Modal.Header>
-      <Modal.Body className="text-center">
-        Type DELETE to permanently delete event
-        <Form.Control type="textarea" id="delete_event" aria-describedby="delete_event" onChange={handleInput} />
-        <Button variant="danger" type="submit" disabled={notConfirmed || deleteEventMutation.isPending}>
-          {deleteEventMutation.isPending && (
-            <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
-          )}
-          Delete
-        </Button>
-        <Button variant="secondary" onClick={close} disabled={deleteEventMutation.isPending}>
-          Cancel
-        </Button>
-      </Modal.Body>
-    </Form>
-  );
-}
-
-interface TransferDevEventsModalProps {
-  close: () => void;
-}
-export function TransferDevEventsModal({ close }: TransferDevEventsModalProps) {
-  const { tokens } = usePasswordless();
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
-
-  let eventDict: EventDict = {};
-  for (let event of eventsQuery.data as ExistingGameKnightEvent[]) {
-    eventDict[event["event_id"]] = event;
-  }
-
-  // Handle Transfer Event Checkboxes
-  const [selectedTransferOptions, setSelectedTransferOptions] = useState<string[]>(Object.keys(eventDict));
-  const handleOptionChange = (event: React.BaseSyntheticEvent) => {
-    const event_id = event.target.value;
-    const isChecked = event.target.checked;
-
-    if (isChecked) {
-      setSelectedTransferOptions([...selectedTransferOptions, event_id]);
-    } else {
-      setSelectedTransferOptions(selectedTransferOptions.filter((id) => id !== event_id));
-    }
-  };
-
-  const [waiting, setWaiting] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const transferEventMutation = useMutation({
-    mutationFn: async (body: ExistingGameKnightEvent) => {
-      await apiClient.post("event", {
-        body: body,
-      });
-    },
-    onSuccess: async (data) => {
-      console.log(data);
-    },
-    onError: (error) => {
-      console.error(error);
-      setErrorMsg(`Transfer Events failed`);
-    },
-  });
-
-  async function handleSubmit(event: React.BaseSyntheticEvent) {
-    setWaiting(true);
-    event.preventDefault();
-    for (let event_id of selectedTransferOptions) {
-      const body = eventDict[event_id];
-      transferEventMutation.mutate(body);
-    }
-
-    await eventsQuery.refetch();
-    close();
-    setWaiting(false);
-    if (errorMsg == "") close();
-  }
-  if (eventsQuery.isSuccess) {
-    return (
-      <Form onSubmit={handleSubmit}>
-        <Modal.Header className="text-center">Transfer selected events to the Dev DB:</Modal.Header>
-        <Modal.Body className="text-center">
-          <Form.Group controlId="chooseNotAttendingPlayers" className="mb-1">
-            {eventsQuery.data.map((event: ExistingGameKnightEvent, index: number) => (
-              <Row key={index} style={{ minWidth: "min-content", maxWidth: "min-content" }}>
-                <Form.Check
-                  key={index}
-                  type="checkbox"
-                  id={`option_${index}`}
-                  label={`${event.date} (${event.event_id})`}
-                  checked={selectedTransferOptions.includes(event.event_id)}
-                  onChange={handleOptionChange}
-                  value={event.event_id}
-                />
-              </Row>
-            ))}
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer>
-          <span>{errorMsg}</span>
-          <pre>{JSON.stringify(selectedTransferOptions, null, 2)}</pre>
-          <Button variant="danger" type="submit" disabled={waiting}>
-            {waiting && <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>}
-            Transfer
-          </Button>
-          <Button variant="secondary" onClick={close} disabled={waiting}>
-            Cancel
-          </Button>
-        </Modal.Footer>
-      </Form>
-    );
-  }
-  return (
-    <div>
-      <p>Loading...</p>
-    </div>
-  );
-}
+import { PlayerNameDict } from "../types/Players";
+import { ManagedEventTask, GameKnightEvent } from "../types/Events";
 
 interface ManageEventModalProps {
   close: () => void;
   task: ManagedEventTask;
   gameKnightEvent?: GameKnightEvent | null;
 }
-export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventModalProps) {
+export default function ManageEventModal({ close, task, gameKnightEvent }: ManageEventModalProps) {
   const method = ["Create", "Clone", "Restore"].includes(task)
     ? "POST"
     : ["Modify", "Migrate"].includes(task)
@@ -244,12 +89,19 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
       !(eventForm.game !== "TBD" && (eventForm.bgg_id == 0 || eventForm.bgg_id == undefined))
     );
   }
+
+  const [deleteNotConfirmed, setDeleteNotConfirmed] = useState(true);
+
   useEffect(() => {
     setIsValid(validateEventForm());
   }, [eventForm]);
   const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const handleInput = (e: React.BaseSyntheticEvent) => {
-    if (e.target.id == "bgg_id" || e.target.id == "total_spots") {
+    if (e.target.id === "delete_event" && e.target.value == "DELETE") {
+      setDeleteNotConfirmed(false);
+    } else if (e.target.id == "format" && e.target.value === "Private") {
+      setEventForm({ ...eventForm, [e.target.id]: e.target.value, player_pool: selectedPrivatePlayerPool });
+    } else if (e.target.id == "bgg_id" || e.target.id == "total_spots") {
       console.log(e.target.id, e.target.value, e.target.value === "");
       if (e.target.value === "") {
         setEventForm({ ...eventForm, [e.target.id]: undefined });
@@ -257,6 +109,7 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
         setEventForm({ ...eventForm, [e.target.id]: parseInt(e.target.value) });
       }
     } else {
+      if (e.target.id == "host") handleHostChange(e.target.value);
       setEventForm({ ...eventForm, [e.target.id]: e.target.value });
     }
     // console.log(e.target);
@@ -267,6 +120,20 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
     playerNameDict[player["attrib"]["given_name"]] = player_id;
   }
   // console.log(playerNameDict);
+
+  //Handle Host Change
+  const handleHostChange = (player_id: string) => {
+    if (!selectedAttendingOptions.includes(player_id)) {
+      setSelectedAttendingOptions([...selectedAttendingOptions, player_id]);
+    }
+    if (selectedNotAttendingOptions.includes(player_id)) {
+      // Remove from not_attending:
+      setSelectedNotAttendingOptions(selectedNotAttendingOptions.filter((id) => id !== player_id));
+    }
+    if (!selectedPrivatePlayerPool.includes(player_id)) {
+      setSelectedPrivatePlayerPool([...selectedPrivatePlayerPool, player_id]);
+    }
+  };
 
   // Handle Private Player Pool Checkboxes
   const [selectedPrivatePlayerPool, setSelectedPrivatePlayerPool] = useState(eventForm.player_pool);
@@ -328,6 +195,23 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
   const isAdmin = authenticated({ signInStatus, tokensParsed, group: ["admin"] });
 
   const [errorMsg, setErrorMsg] = useState("");
+  const deleteEventMutation = useMutation({
+    mutationFn: async () => {
+      await apiClient.delete("event", {
+        params: { event_id: gameKnightEvent!.event_id },
+      });
+    },
+    onSuccess: async (data) => {
+      console.log(data);
+      if (prevEvents !== undefined) queryClient.invalidateQueries({ queryKey: ["events", "all", "14d"] });
+      await eventsQuery.refetch();
+      close();
+    },
+    onError: (error) => {
+      console.error(error);
+      setErrorMsg(`Delete Event failed`);
+    },
+  });
   const manageEventMutation = useMutation({
     mutationFn: async ({ body, method }: { body: GameKnightEvent; method: string }) => {
       // const start = Date.parse(new Date().toISOString());
@@ -381,6 +265,7 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
     },
     onSuccess: async (data) => {
       console.log(data);
+      if (prevEvents !== undefined) queryClient.invalidateQueries({ queryKey: ["events", "all", "14d"] });
       await eventsQuery.refetch();
       close();
     },
@@ -391,6 +276,7 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
   });
 
   const queryClient = useQueryClient();
+  const prevEvents = queryClient.getQueryData(["events", "all", "14d"]);
   const [showBggSearch, setShowBggSearch] = useState(false);
   const [bggSearchResults, setBggSearchResults] = useState<GameSearch[]>([]);
   const [bggSearchError, setBggSearchError] = useState("");
@@ -423,8 +309,12 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
 
   function handleSubmit(event: React.BaseSyntheticEvent) {
     event.preventDefault();
-    console.log(eventForm);
-    manageEventMutation.mutate({ body: eventForm, method: method });
+    // console.log(eventForm);
+    if (task == "Delete") {
+      deleteEventMutation.mutate();
+    } else {
+      manageEventMutation.mutate({ body: eventForm, method: method });
+    }
   }
 
   const pastEvent = Date.parse(eventForm.date) <= Date.parse(new Date().toString());
@@ -452,12 +342,6 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
       const _validRankings = _rankings.map((place) => place > 0);
       const _validPlayers = _players.map((player) => !!playersDict[player]);
       const _validScores = _scores.map((score) => score !== "");
-      // console.log({
-      //   _players: _players,
-      //   _duplicates: _duplicates,
-      //   _validPlayers: _validPlayers,
-      //   every_validPlayers: _validPlayers.every(Boolean),
-      // });
       setFinalScorePlayers(_players);
       setValidFinalScore(
         _duplicates.length == 0 &&
@@ -466,7 +350,6 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
           _validScores.every(Boolean)
       );
     }
-    // console.log(finalScorePlayers, findArrayDuplicates(finalScorePlayers));
   }, [finalScore]);
 
   const onChangeTableInput = (e: React.BaseSyntheticEvent, index: number) => {
@@ -479,6 +362,28 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
     setFinalScore(finalScore.sort((a, b) => a.place - b.place));
     setRefresh(refresh + 1);
   };
+  if (task == "Delete") {
+    return (
+      <Form onSubmit={handleSubmit}>
+        <Modal.Header className="text-center">
+          Are you sure you want to delete {formatIsoDate(gameKnightEvent!.date)} event?
+        </Modal.Header>
+        <Modal.Body className="text-center">
+          Type DELETE to permanently delete event
+          <Form.Control type="textarea" id="delete_event" aria-describedby="delete_event" onChange={handleInput} />
+          <Button variant="danger" type="submit" disabled={deleteNotConfirmed || deleteEventMutation.isPending}>
+            {deleteEventMutation.isPending && (
+              <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
+            )}
+            Delete
+          </Button>
+          <Button variant="secondary" onClick={close} disabled={deleteEventMutation.isPending}>
+            Cancel
+          </Button>
+        </Modal.Body>
+      </Form>
+    );
+  }
   return (
     <Form onSubmit={handleSubmit}>
       <Modal.Body className="text-center">
@@ -661,17 +566,19 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
                 <Row>
                   {players.map((player_id: string, index: number) => (
                     <Col key={player_id} style={{ minWidth: "min-content" }}>
-                      <Form.Check
-                        // style={{ marginLeft: "10%" }}
-                        key={index}
-                        type="checkbox"
-                        id={`option_${index}`}
-                        label={playersDict[player_id].attrib.given_name}
-                        checked={selectedPrivatePlayerPool.includes(player_id)}
-                        onChange={handlePrivatePlayerPoolChange}
-                        disabled={["Read", "Restore"].includes(task)}
-                        value={player_id}
-                      />
+                      <div style={{ maxWidth: "min-content" }}>
+                        <Form.Check
+                          // style={{ marginLeft: "10%" }}
+                          key={index}
+                          type="checkbox"
+                          id={`option_${index}`}
+                          label={playersDict[player_id].attrib.given_name}
+                          checked={selectedPrivatePlayerPool.includes(player_id)}
+                          onChange={handlePrivatePlayerPoolChange}
+                          disabled={["Read", "Restore"].includes(task) || eventForm.host == player_id}
+                          value={player_id}
+                        />
+                      </div>
                     </Col>
                   ))}
                 </Row>
@@ -689,28 +596,30 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
                 {!(task == "Create" && eventForm.format == "Reserved") &&
                   players.map((player_id: string, index: number) => (
                     <Col key={player_id} style={{ minWidth: "min-content" }}>
-                      <Form.Check
-                        // style={{ marginLeft: "10%" }}
-                        key={index}
-                        type="checkbox"
-                        id={`option_${index}`}
-                        label={playersDict[player_id].attrib.given_name}
-                        checked={selectedAttendingOptions.includes(player_id)}
-                        disabled={
-                          ["Read", "Restore"].includes(task) ||
-                          (task == "Create" && eventForm.format == "Reserved") ||
-                          (eventForm.format == "Private" && !eventForm.player_pool.includes(player_id)) ||
-                          (eventForm.format !== "Open" &&
-                            !eventForm.player_pool.includes(player_id) &&
-                            !(
-                              eventForm.organizer_pool &&
-                              eventForm.organizer_pool.includes(player_id) &&
-                              eventForm.organizer == ""
-                            ))
-                        }
-                        onChange={handleOptionChange}
-                        value={player_id}
-                      />
+                      <div style={{ maxWidth: "min-content" }}>
+                        <Form.Check
+                          key={index}
+                          type="checkbox"
+                          id={`option_${index}`}
+                          label={playersDict[player_id].attrib.given_name}
+                          checked={selectedAttendingOptions.includes(player_id)}
+                          disabled={
+                            ["Read", "Restore"].includes(task) ||
+                            (task == "Create" && eventForm.format == "Reserved") ||
+                            (eventForm.format == "Private" && !eventForm.player_pool.includes(player_id)) ||
+                            eventForm.host == player_id ||
+                            (eventForm.format !== "Open" &&
+                              !eventForm.player_pool.includes(player_id) &&
+                              !(
+                                eventForm.organizer_pool &&
+                                eventForm.organizer_pool.includes(player_id) &&
+                                eventForm.organizer == ""
+                              ))
+                          }
+                          onChange={handleOptionChange}
+                          value={player_id}
+                        />
+                      </div>
                     </Col>
                   ))}
               </Row>
@@ -723,16 +632,18 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
               <Row>
                 {players.map((player_id: string, index: number) => (
                   <Col key={index} style={{ minWidth: "min-content" }}>
-                    <Form.Check
-                      key={index}
-                      type="checkbox"
-                      id={`option_${index}`}
-                      label={playersDict[player_id].attrib.given_name}
-                      checked={selectedNotAttendingOptions.includes(player_id)}
-                      onChange={handleNAOptionChange}
-                      disabled={["Read", "Restore"].includes(task)}
-                      value={player_id}
-                    />
+                    <div style={{ maxWidth: "min-content" }}>
+                      <Form.Check
+                        key={index}
+                        type="checkbox"
+                        id={`option_${index}`}
+                        label={playersDict[player_id].attrib.given_name}
+                        checked={selectedNotAttendingOptions.includes(player_id)}
+                        onChange={handleNAOptionChange}
+                        disabled={["Read", "Restore"].includes(task) || eventForm.host == player_id}
+                        value={player_id}
+                      />
+                    </div>
                   </Col>
                 ))}
               </Row>
@@ -755,9 +666,9 @@ export function ManageEventModal({ close, task, gameKnightEvent }: ManageEventMo
                   disabled={["Create", "Read", "Restore"].includes(task)}
                 >
                   <option hidden disabled value="default">
-                    {" "}
-                    -- manually choose/override the organizer --{" "}
+                    {"-- manually choose/override the organizer --"}
                   </option>
+                  <option value="">{"(None)"}</option>
                   {organizers.map((player_id: string, index: number) => (
                     <option key={index} value={player_id}>
                       {playersDict[player_id].attrib.given_name}

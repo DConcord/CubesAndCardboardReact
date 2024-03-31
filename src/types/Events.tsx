@@ -33,7 +33,7 @@ export type PlayerScore = {
   score: string;
 };
 
-export type ManagedEventTask = "Clone" | "Create" | "Modify" | "Migrate" | "Read" | "Restore";
+export type ManagedEventTask = "Clone" | "Create" | "Modify" | "Migrate" | "Read" | "Restore" | "Delete";
 
 export const tbd_pics = [
   "Game_TBD_17.jpeg",

@@ -20,9 +20,8 @@ import loggingContext, { IntervalType } from "./LoggingContext";
 import yaml from "js-yaml";
 
 // import { ManageEventModal } from "./EventManagement";
-const ManageEventModal = lazy(() =>
-  import("./EventManagement").then((module) => ({ default: module.ManageEventModal }))
-);
+const ManageEventModal = lazy(() => import("./EventManagement"));
+
 import { ManagedEventTask, GameKnightEvent, PlayerScore } from "../types/Events";
 import { formatIsoDate } from "../utilities";
 import { fetchPlayersOptions, apiClient } from "./Queries";
