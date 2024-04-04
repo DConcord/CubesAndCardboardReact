@@ -316,8 +316,12 @@ export function ManagePlayerModal({
   const [inputValidated, setInputValidated] = useState(false);
   const handleInput = (e: React.BaseSyntheticEvent) => {
     if (e.target.id === "phone_number") return;
-    setPlayerForm({ ...playerForm, [e.target.id]: e.target.value });
-    console.log(e.target.id, e.target.value);
+    let value = e.target.value;
+    if (e.target.id === "email") value = value.toLowerCase();
+    // console.log(value);
+
+    setPlayerForm({ ...playerForm, [e.target.id]: value });
+    console.log(e.target.id, value);
   };
   useEffect(() => {
     if (!phone) {
@@ -495,8 +499,7 @@ export function ManagePlayerModal({
                   type="email"
                   as="textarea"
                   onChange={handleInput}
-                  // disabled={task == "ModifySelf"}
-                  defaultValue={task.startsWith("Modify") ? playerForm.email : ""}
+                  value={playerForm.email}
                 />
               </FloatingLabel>
             </Col>
