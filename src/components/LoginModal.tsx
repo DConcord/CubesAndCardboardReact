@@ -177,7 +177,7 @@ const LoginModal = ({ onLogin }: Props) => {
               <input
                 className="passwordless-email-input"
                 value={newUsername}
-                onChange={(e) => setNewUsername(e.target.value)}
+                onChange={(e) => setNewUsername(e.target.value.toLowerCase())}
                 placeholder="E-mail"
                 type="email"
                 disabled={busy}
