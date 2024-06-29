@@ -15,7 +15,13 @@ import { formatIsoDate } from "../utilities";
 import "../assets/fonts/TopSecret.ttf";
 
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchEventsApi } from "./Queries";
+import {
+  fetchEventsOptions,
+  fetchEventsApiOptions,
+  fetchPlayersOptions,
+  fetchEventsApi,
+  fetchPlayersApiOptions,
+} from "./Queries";
 
 const TShoot = lazy(() => import("./TShoot"));
 const ManageEventModal = lazy(() => import("./EventManagement"));
@@ -41,8 +47,11 @@ export default function UpcomingEvents() {
 
   const [showPrevEvents, setShowPrevEvents] = useState(false);
 
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
+  console.log("signInStatus", signInStatus);
+  const eventsQuery =
+    tokens && signInStatus == "SIGNED_IN" ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const playersQuery = useQuery(fetchPlayersOptions());
+  // const playersQuery = useQuery(fetchPlayersApiOptions({ refresh: "no" }));
 
   // Create "Manage Event" PopUp ("Modal")
   const [managedEvent, setManagedEvent] = useState<GameKnightEvent | null>(null);
@@ -280,12 +289,14 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                     .map((player_id) => {
                       if (event.organizer && event.organizer == player_id) return "";
                       if (event.host && event.host == player_id) return "";
-                      return playersDict[player_id].attrib.given_name;
+                      return playersDict[player_id]?.attrib.given_name || "unknown";
                     })
                     .filter((player) => player != "")
                     .sort()
                 );
-                not_attending_names = event.not_attending.map((player_id) => playersDict[player_id].attrib.given_name);
+                not_attending_names = event.not_attending.map(
+                  (player_id) => playersDict[player_id]?.attrib.given_name || "unknown"
+                );
               } catch (error) {
                 console.error(event);
                 console.error(playersDict);

@@ -51,9 +51,14 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
     : "";
   const { tokens, signInStatus, tokensParsed } = usePasswordless();
   const today_6p_local = new Date(new Date().setHours(18, 0, 0, 0)).toLocaleString("lt").replace(" ", "T") + "DEFAULT";
+  // const pastEvent = Date.parse(eventForm.date) <= Date.parse(new Date().toString());
+  const pastEvent = gameKnightEvent ? Date.parse(gameKnightEvent.date) <= Date.parse(new Date().toString()) : false;
   const playersQuery = useQuery(fetchPlayersOptions());
   const playersDict = playersQuery?.data?.Users ?? {};
-  const players = playersQuery?.data?.Groups?.player ?? [];
+  const players =
+    pastEvent && gameKnightEvent
+      ? [...new Set([...gameKnightEvent.player_pool, ...(playersQuery?.data?.Groups?.player ?? [])])]
+      : playersQuery?.data?.Groups?.player ?? [];
   const organizers = playersQuery?.data?.Groups?.organizer ?? [];
   const hosts = playersQuery?.data?.Groups?.host ?? [];
 
@@ -76,6 +81,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
           organizer_pool: organizers,
         }
   );
+
   const [isValid, setIsValid] = useState(() => {
     if (task == "Create") {
       return validateEventForm();
@@ -317,7 +323,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
     }
   }
 
-  const pastEvent = Date.parse(eventForm.date) <= Date.parse(new Date().toString());
   const [validFinalScore, setValidFinalScore] = useState(false);
   const [finalScorePlayers, setFinalScorePlayers] = useState<string[]>([]);
   const [finalScore, setFinalScore] = useState(() => {
@@ -431,7 +436,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                   </option>
                   {hosts.map((player_id: string, index: number) => (
                     <option key={index} value={player_id}>
-                      {playersDict[player_id].attrib.given_name}
+                      {playersDict[player_id]?.attrib.given_name ?? "unknown"}
                     </option>
                   ))}
                 </Form.Select>
@@ -572,7 +577,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                           key={index}
                           type="checkbox"
                           id={`option_${index}`}
-                          label={playersDict[player_id].attrib.given_name}
+                          label={playersDict[player_id]?.attrib.given_name ?? "unknown"}
                           checked={selectedPrivatePlayerPool.includes(player_id)}
                           onChange={handlePrivatePlayerPoolChange}
                           disabled={["Read", "Restore"].includes(task) || eventForm.host == player_id}
@@ -601,7 +606,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                           key={index}
                           type="checkbox"
                           id={`option_${index}`}
-                          label={playersDict[player_id].attrib.given_name}
+                          label={playersDict[player_id]?.attrib.given_name || "unknown"}
                           checked={selectedAttendingOptions.includes(player_id)}
                           disabled={
                             ["Read", "Restore"].includes(task) ||
@@ -637,7 +642,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                         key={index}
                         type="checkbox"
                         id={`option_${index}`}
-                        label={playersDict[player_id].attrib.given_name}
+                        label={playersDict[player_id]?.attrib.given_name || "unknown"}
                         checked={selectedNotAttendingOptions.includes(player_id)}
                         onChange={handleNAOptionChange}
                         disabled={["Read", "Restore"].includes(task) || eventForm.host == player_id}
@@ -671,7 +676,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                   <option value="">{"(None)"}</option>
                   {organizers.map((player_id: string, index: number) => (
                     <option key={index} value={player_id}>
-                      {playersDict[player_id].attrib.given_name}
+                      {playersDict[player_id]?.attrib.given_name ?? "unknown"}
                     </option>
                   ))}
                 </Form.Select>
@@ -737,7 +742,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                         </option>
                         {eventForm.attending.map((player_id: string, index: number) => (
                           <option key={index} value={player_id}>
-                            {playersDict[player_id].attrib.given_name}
+                            {playersDict[player_id]?.attrib.given_name ?? "unknown"}
                           </option>
                         ))}
                       </Form.Select>
