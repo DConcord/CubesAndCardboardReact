@@ -47,7 +47,6 @@ export default function UpcomingEvents() {
 
   const [showPrevEvents, setShowPrevEvents] = useState(false);
 
-  console.log("signInStatus", signInStatus);
   const eventsQuery =
     tokens && signInStatus == "SIGNED_IN" ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const playersQuery = useQuery(fetchPlayersOptions());
