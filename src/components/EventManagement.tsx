@@ -72,6 +72,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
           host: "",
           organizer: "",
           format: "Open",
+          open_rsvp_eligibility: false,
           game: "TBD",
           bgg_id: undefined,
           total_spots: undefined,
@@ -103,7 +104,10 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
   }, [eventForm]);
   const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const handleInput = (e: React.BaseSyntheticEvent) => {
-    if (e.target.id === "delete_event" && e.target.value == "DELETE") {
+    if (e.target.id == "open_rsvp_eligibility") {
+      console.log(e.target.id, e.target.checked, e.target.checked === true);
+      setEventForm({ ...eventForm, [e.target.id]: e.target.checked });
+    } else if (e.target.id === "delete_event" && e.target.value == "DELETE") {
       setDeleteNotConfirmed(false);
     } else if (e.target.id == "format" && e.target.value === "Private") {
       setEventForm({ ...eventForm, [e.target.id]: e.target.value, player_pool: selectedPrivatePlayerPool });
@@ -563,32 +567,49 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
               />
             </FloatingLabel>
           </Col>
-          <hr />
-          {eventForm.format == "Private" && (
-            <Col med="true" style={{ minWidth: "18rem" }}>
-              <Form.Group controlId="choosePrivatePlayerPool" className="mb-1">
-                <Form.Label aria-label="Choose Private Player Pool">Choose Private Player Pool</Form.Label>
-                <Row>
-                  {players.map((player_id: string, index: number) => (
-                    <Col key={player_id} style={{ minWidth: "min-content" }}>
-                      <div style={{ maxWidth: "min-content" }}>
-                        <Form.Check
-                          // style={{ marginLeft: "10%" }}
-                          key={index}
-                          type="checkbox"
-                          id={`option_${index}`}
-                          label={playersDict[player_id]?.attrib.given_name ?? "unknown"}
-                          checked={selectedPrivatePlayerPool.includes(player_id)}
-                          onChange={handlePrivatePlayerPoolChange}
-                          disabled={["Read", "Restore"].includes(task) || eventForm.host == player_id}
-                          value={player_id}
-                        />
-                      </div>
-                    </Col>
-                  ))}
-                </Row>
+          {eventForm.format == "Reserved" && (
+            <Col med="true" style={{ minWidth: "18rem" }} className="d-flex justify-content-start">
+              <Form.Group>
+                <Form.Check
+                  type="checkbox"
+                  id="open_rsvp_eligibility"
+                  label="Open RSVP Eligibility (Special Event)"
+                  checked={eventForm.open_rsvp_eligibility ?? false}
+                  onChange={handleInput}
+                  disabled={["Read", "Restore"].includes(task)}
+                />
+                <Feedback type="invalid">Please choose a host.</Feedback>
               </Form.Group>
             </Col>
+          )}
+          {eventForm.format == "Private" && (
+            <>
+              <hr />
+              <Col med="true" style={{ minWidth: "18rem" }}>
+                <Form.Group controlId="choosePrivatePlayerPool" className="mb-1">
+                  <Form.Label aria-label="Choose Private Player Pool">Choose Private Player Pool</Form.Label>
+                  <Row>
+                    {players.map((player_id: string, index: number) => (
+                      <Col key={player_id} style={{ minWidth: "min-content" }}>
+                        <div style={{ maxWidth: "min-content" }}>
+                          <Form.Check
+                            // style={{ marginLeft: "10%" }}
+                            key={index}
+                            type="checkbox"
+                            id={`option_${index}`}
+                            label={playersDict[player_id]?.attrib.given_name ?? "unknown"}
+                            checked={selectedPrivatePlayerPool.includes(player_id)}
+                            onChange={handlePrivatePlayerPoolChange}
+                            disabled={["Read", "Restore"].includes(task) || eventForm.host == player_id}
+                            value={player_id}
+                          />
+                        </div>
+                      </Col>
+                    ))}
+                  </Row>
+                </Form.Group>
+              </Col>
+            </>
           )}
           <hr />
           <Col med="true" style={{ minWidth: "18rem" }}>
@@ -614,6 +635,11 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                             (eventForm.format == "Private" && !eventForm.player_pool.includes(player_id)) ||
                             eventForm.host == player_id ||
                             (eventForm.format !== "Open" &&
+                              !(
+                                eventForm.format == "Reserved" &&
+                                !!eventForm.open_rsvp_eligibility &&
+                                eventForm.open_rsvp_eligibility === true
+                              ) &&
                               !eventForm.player_pool.includes(player_id) &&
                               !(
                                 eventForm.organizer_pool &&

@@ -13,6 +13,7 @@ export type GameKnightEvent = {
   host: string;
   organizer: string;
   format: "Open" | "Reserved" | "Private";
+  open_rsvp_eligibility?: boolean;
   game: string;
   bgg_id?: number;
   total_spots?: number;
