@@ -51,7 +51,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
     : "";
   const { tokens, signInStatus, tokensParsed } = usePasswordless();
   const today_6p_local = new Date(new Date().setHours(18, 0, 0, 0)).toLocaleString("lt").replace(" ", "T") + "DEFAULT";
-  // const pastEvent = Date.parse(eventForm.date) <= Date.parse(new Date().toString());
   const pastEvent = gameKnightEvent ? Date.parse(gameKnightEvent.date) <= Date.parse(new Date().toString()) : false;
   const playersQuery = useQuery(fetchPlayersOptions());
   const playersDict = playersQuery?.data?.Users ?? {};
@@ -92,7 +91,9 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
     return (
       hosts.includes(eventForm.host) &&
       eventForm.date !== today_6p_local &&
-      !(eventForm.game === "" || eventForm.game == undefined) &&
+      eventForm.game !== "" &&
+      eventForm.game !== undefined &&
+      !(eventForm.format === "Reserved" && (!eventForm.total_spots || eventForm.total_spots < 2)) &&
       !(eventForm.game !== "TBD" && (eventForm.bgg_id == 0 || eventForm.bgg_id == undefined))
     );
   }
@@ -102,7 +103,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
   useEffect(() => {
     setIsValid(validateEventForm());
   }, [eventForm]);
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const handleInput = (e: React.BaseSyntheticEvent) => {
     if (e.target.id == "open_rsvp_eligibility") {
       console.log(e.target.id, e.target.checked, e.target.checked === true);
@@ -122,14 +122,12 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
       if (e.target.id == "host") handleHostChange(e.target.value);
       setEventForm({ ...eventForm, [e.target.id]: e.target.value });
     }
-    // console.log(e.target);
   };
 
   let playerNameDict: PlayerNameDict = {};
   for (let [player_id, player] of Object.entries(playersDict)) {
     playerNameDict[player["attrib"]["given_name"]] = player_id;
   }
-  // console.log(playerNameDict);
 
   //Handle Host Change
   const handleHostChange = (player_id: string) => {
@@ -214,7 +212,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
     onSuccess: async (data) => {
       console.log(data);
       if (prevEvents !== undefined) queryClient.invalidateQueries({ queryKey: ["events", "all", "14d"] });
-      await eventsQuery.refetch();
+      await queryClient.refetchQueries(fetchEventsApiOptions());
       close();
     },
     onError: (error) => {
@@ -224,19 +222,17 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
   });
   const manageEventMutation = useMutation({
     mutationFn: async ({ body, method }: { body: GameKnightEvent; method: string }) => {
-      // const start = Date.parse(new Date().toISOString());
       if (task == "Clone") delete body.event_id;
       if (body.total_spots == null) body.total_spots = undefined;
       if (body.bgg_id == null) body.bgg_id = undefined;
+      if (body.game === "TBD" && (body.bgg_id || eventForm.bgg_id === 0)) body.bgg_id = undefined;
       if (body.game == "TBD" && eventForm && eventForm.tbd_pic && task !== "Clone") {
         body.tbd_pic = eventForm.tbd_pic;
-      } else if (body.game == "TBD" && (!body.tbd_pic || body.tbd_pic != "")) {
-        let active_tbd_pics: string[] = []; // as GameKnightEvent[];
-        for (let game_event of eventsQuery.data! as GameKnightEvent[]) {
-          if (game_event.game == "TBD" && game_event.tbd_pic && game_event.tbd_pic != "") {
-            active_tbd_pics.push(game_event.tbd_pic);
-          }
-        }
+      } else if (body.game == "TBD" && (!body.tbd_pic || body.tbd_pic == "")) {
+        const eventsQuery = await queryClient.ensureQueryData(fetchEventsApiOptions());
+        const active_tbd_pics = eventsQuery
+          .filter((game_event) => game_event.game == "TBD" && game_event.tbd_pic && game_event.tbd_pic != "" && true)
+          .map((game_event) => game_event.tbd_pic);
         let available_tbd_pics = tbd_pics.filter((n) => !active_tbd_pics.includes(n));
         body.tbd_pic = available_tbd_pics[~~(Math.random() * available_tbd_pics.length)];
       } else if (body.game !== "TBD" && body.tbd_pic) body.tbd_pic = "";
@@ -276,7 +272,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
     onSuccess: async (data) => {
       console.log(data);
       if (prevEvents !== undefined) queryClient.invalidateQueries({ queryKey: ["events", "all", "14d"] });
-      await eventsQuery.refetch();
+      await queryClient.refetchQueries(fetchEventsApiOptions());
       close();
     },
     onError: (error) => {
@@ -319,7 +315,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
 
   function handleSubmit(event: React.BaseSyntheticEvent) {
     event.preventDefault();
-    // console.log(eventForm);
     if (task == "Delete") {
       deleteEventMutation.mutate();
     } else {
@@ -340,7 +335,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
   function clearFinalScore() {
     setFinalScore(initFinalScore());
     setEventForm({ ...eventForm, finalScore: undefined });
-    // setEventForm({ ...eventForm, finalScore: undefined });
   }
   useEffect(() => {
     if (finalScore) {
@@ -505,7 +499,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                     </Container>
                   </ListGroup.Item>
                   {bggSearchResults.map((result: GameSearch, index: number) => {
-                    // const thumb = bggThumbnails[index];
                     return (
                       <ListGroup.Item
                         action
@@ -520,7 +513,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                           <Col xs="auto">
                             <Image
                               src={result.thumbnail}
-                              // alt="No Thumbnail"
                               rounded
                               style={{
                                 width: "4rem",
@@ -564,6 +556,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                 disabled={eventForm.format == "Open" || ["Read", "Restore"].includes(task)}
                 onChange={handleInput}
                 defaultValue={task == "Create" || !eventForm.total_spots ? undefined : eventForm.total_spots}
+                isInvalid={eventForm.format === "Reserved" && (!eventForm.total_spots || eventForm.total_spots < 2)}
               />
             </FloatingLabel>
           </Col>
@@ -593,7 +586,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                       <Col key={player_id} style={{ minWidth: "min-content" }}>
                         <div style={{ maxWidth: "min-content" }}>
                           <Form.Check
-                            // style={{ marginLeft: "10%" }}
                             key={index}
                             type="checkbox"
                             id={`option_${index}`}
@@ -725,7 +717,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
               </thead>
               <tbody>
                 {finalScore.map(({ place, player, score }, index) => (
-                  // <Form>
                   <tr key={index}>
                     <td style={{ maxWidth: "min-content" }}>
                       <Form.Control
@@ -734,7 +725,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                         type="number"
                         onChange={(e: React.BaseSyntheticEvent) => onChangeTableInput(e, index)}
                         onBlur={sortFinalScore}
-                        // onBlur={() => setFinalScore(finalScore.sort((a, b) => a.place - b.place))}
                         placeholder="Place"
                         className="no-validate-badge"
                         isValid={
@@ -807,7 +797,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                       </td>
                     )}
                   </tr>
-                  // </Form>
                 ))}
                 <tr>
                   <td />
@@ -821,7 +810,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                         variant="link"
                         onClick={() => {
                           setFinalScore([...finalScore, { place: eventForm.attending.length, player: "", score: "" }]);
-                          // eventForm.attending.length
                         }}
                         disabled={eventForm.attending.length < finalScore.length}
                       >
@@ -877,7 +865,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
         {/* <pre>{JSON.stringify(selectedAttendingOptions, null, 4)}</pre> */}
         {/* <pre>{JSON.stringify(selectedNotAttendingOptions, null, 4)}</pre> */}
         <span>{errorMsg}</span>
-        {/* || ["Read", "Restore"].includes(task) */}
         {task !== "Read" && (
           <Button
             variant={task == "Restore" ? "danger" : "primary"}
@@ -911,7 +898,7 @@ interface RsvpFooterProps {
 export function RsvpFooter({ event, index }: RsvpFooterProps) {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
 
-  const eventsQuery = tokens ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
+  const queryClient = useQueryClient();
 
   let player_id = "";
   if (signInStatus === "SIGNED_IN" && tokensParsed) {
@@ -974,7 +961,7 @@ export function RsvpFooter({ event, index }: RsvpFooterProps) {
     },
     onSuccess: async (data) => {
       console.log(data);
-      await eventsQuery.refetch();
+      await queryClient.refetchQueries(fetchEventsApiOptions());
       setYesWaiting(false);
       setNoWaiting(false);
     },

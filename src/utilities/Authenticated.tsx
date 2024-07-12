@@ -19,16 +19,8 @@ interface AuthenticatedProps {
   unauthPath?: string;
   show?: boolean;
 }
-export default function Authenticated({
-  children,
-  user_id,
-  given_name,
-  group,
-  unauthPath,
-  show = true,
-}: AuthenticatedProps) {
+export default function Authenticated({ children, user_id, given_name, group, unauthPath }: AuthenticatedProps) {
   const { signInStatus, tokensParsed } = usePasswordless();
-  if (!show) return <></>;
   if (["REFRESHING_SIGN_IN", "SIGNING_IN", "CHECKING"].includes(signInStatus)) {
     return <></>;
   }

@@ -42,4 +42,26 @@ export type PlayerExisting = Omit<PlayerBase, "accessToken">;
 
 export type PlayerModifySelf = PlayerBase;
 
-export type Player = PlayerCreate | PlayerExisting | PlayerModifySelf;
+export type Player = PlayerModifySelf | PlayerCreate | PlayerExisting;
+
+/// Email Alert Subscriptions
+
+export type AllEmailAlertPreferences = {
+  rsvp_all: string[];
+  rsvp_hosted: string[];
+};
+
+export type PlayerEmailAlertPreferences = {
+  [key in keyof AllEmailAlertPreferences]: boolean;
+};
+
+interface IemailAlertTypeReadble {
+  rsvp_all: string;
+  rsvp_hosted: string;
+}
+export const emailAlertTypeReadble = {
+  rsvp_all: "All Event RSVPs",
+  rsvp_hosted: "RSVPs for Events I'm hosting",
+};
+
+export type EmailAlertType = Array<keyof AllEmailAlertPreferences>;
