@@ -18,6 +18,8 @@ import Authenticated, { authenticated } from "../utilities/Authenticated";
 import { PlayerModifySelf } from "../types/Players";
 const ManagePlayerModal = lazy(() => import("./Players").then((module) => ({ default: module.ManagePlayerModal })));
 
+import { useQueryClient } from "@tanstack/react-query";
+
 initTheme();
 import Icon from "@mdi/react";
 import { mdiThemeLightDark, mdiWeatherNight, mdiBrightnessAuto, mdiWeatherSunny, mdiAccount } from "@mdi/js";
@@ -44,6 +46,12 @@ export default function NavigationBar() {
     tokens,
     refreshTokens,
   } = usePasswordless();
+
+  const queryClient = useQueryClient();
+  const handleSignout = () => {
+    signOut();
+    queryClient.clear();
+  };
 
   const [managePlayerModalSeed, setManagePlayerModalSeed] = useState(1);
   const resetManagePlayerModal = async () => {
@@ -84,8 +92,6 @@ export default function NavigationBar() {
   const location = useLocation();
   return (
     <>
-      {/* <h2>{location.pathname}</h2>
-      <h2>{pathMap[location.pathname].title}</h2> */}
       <Navbar
         fixed="top"
         expand={expand ? expand : true}
@@ -93,7 +99,6 @@ export default function NavigationBar() {
         className="bg-body-tertiary mb-3"
         style={{ minHeight: "58px" }}
       >
-        {/* collapseOnSelect */}
         <Container fluid>
           <Navbar.Brand href="https://cubesandcardboard.net/">Cubes & Cardboard</Navbar.Brand>
           <Navbar.Toggle className="order-3" aria-controls={`offcanvasNavbar-expand-${expand}`} onClick={toggleMenu} />
@@ -103,7 +108,6 @@ export default function NavigationBar() {
             placement="end"
             show={showMenu}
             onHide={handleCloseMenu}
-            // onShow={handleShowMenu}
           >
             <Offcanvas.Header closeButton>
               <Offcanvas.Title id={`offcanvasNavbarLabel-expand-${expand}`}>Menu</Offcanvas.Title>
@@ -130,14 +134,12 @@ export default function NavigationBar() {
                     </Nav.Link>
                   </Nav>
                 </div>
-                {/* <div className="d-none d-md-block d-lg-none"> */}
                 <div className="d-none d-md-block d-xl-none">
                   <Nav className="order-0 navbar-nav-left-side flex-grow-1">
                     <NavDropdown
                       title={pathMap[location.pathname as keyof typeof pathMap].title}
                       id="basic-nav-dropdown"
                     >
-                      {/* <NavDropdown.Item href="#action/3.1">Action</NavDropdown.Item> */}
                       <NavDropdown.Item as={NavLink} to="/" className="navLink">
                         Events
                       </NavDropdown.Item>
@@ -154,8 +156,6 @@ export default function NavigationBar() {
                   </Nav>
                 </div>
               </Authenticated>
-              {/* <Nav className="justify-content-end flex-grow-1 pe-3 gap-2 order-1"> */}
-              {/* <Nav className="navbar-nav-right-side"> */}
               <Nav className="justify-content-end flex-grow-1">
                 {signInStatus !== "SIGNED_IN" ? (
                   <>
@@ -192,9 +192,6 @@ export default function NavigationBar() {
                         </div>
                       )
                     )}
-                    {/* <Nav.Link onClick={handleShowLogin} eventKey="Admin">
-                      Admin
-                    </Nav.Link> */}
                     <Button onClick={handleShowLogin}>Sign In</Button>
                   </>
                 ) : (
@@ -205,7 +202,7 @@ export default function NavigationBar() {
                         <Icon className="align-top" path={mdiAccount} size={1} />
                       </Nav.Link>
                     )}
-                    <Nav.Link eventKey="SignOut" onClick={signOut}>
+                    <Nav.Link eventKey="SignOut" onClick={handleSignout}>
                       Sign Out
                     </Nav.Link>
                     <Nav.Link
@@ -215,19 +212,12 @@ export default function NavigationBar() {
                     >
                       Manage Credentials
                     </Nav.Link>
-                    {/* <Authenticated group={["admin"]}>
-                      <Nav.Link eventKey="TBDGallery" onClick={() => navigate("/tbd")}>
-                        TBD Gallery
-                      </Nav.Link>
-                    </Authenticated> */}
                   </>
                 )}
                 <NavDropdown
                   style={{ maxWidth: "min-content" }}
                   id="theme-dropdown"
                   title={<Icon path={mdiThemeLightDark} size={1} />}
-                  // drop="down"
-                  // align={{ sm: "end" }}
                   align="end"
                 >
                   <a className="dropdown-item gap-2" onClick={() => setTheme(THEME.LIGHT)}>

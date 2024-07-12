@@ -29,6 +29,8 @@ const TransferProdEventsModal = lazy(() => import("./TransferProdEvents"));
 const RsvpFooter = lazy(() => import("./EventManagement").then((module) => ({ default: module.RsvpFooter })));
 
 import { ManagedEventTask, GameKnightEvent } from "../types/Events";
+import { PlayersGroups } from "../types/Players";
+
 import Authenticated, { authenticated } from "../utilities/Authenticated";
 import { Table } from "react-bootstrap";
 
@@ -50,7 +52,6 @@ export default function UpcomingEvents() {
   const eventsQuery =
     tokens && signInStatus == "SIGNED_IN" ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const playersQuery = useQuery(fetchPlayersOptions());
-  // const playersQuery = useQuery(fetchPlayersApiOptions({ refresh: "no" }));
 
   // Create "Manage Event" PopUp ("Modal")
   const [managedEvent, setManagedEvent] = useState<GameKnightEvent | null>(null);
@@ -106,18 +107,18 @@ export default function UpcomingEvents() {
                       {!showPrevEvents ? "Previous Events" : "Hide Prev Events"}
                     </Button>
                   </Col>
-                  {showAdmin &&
-                    import.meta.env.MODE == "test" &&
-                    import.meta.env.VITE_API_URL == "eventsdev.dissonantconcord.com" && (
-                      <>
-                        <Col xs="auto" style={{ textAlign: "right", padding: 4 }}>
-                          <Button size="sm" variant="secondary" onClick={handleShowTransferProdEvents}>
-                            Transfer
-                          </Button>
-                        </Col>
-                      </>
-                    )}
                   <Authenticated group={["admin"]}>
+                    {showAdmin &&
+                      import.meta.env.MODE == "test" &&
+                      import.meta.env.VITE_API_URL == "eventsdev.dissonantconcord.com" && (
+                        <>
+                          <Col xs="auto" style={{ textAlign: "right", padding: 4 }}>
+                            <Button size="sm" variant="secondary" onClick={handleShowTransferProdEvents}>
+                              Transfer
+                            </Button>
+                          </Col>
+                        </>
+                      )}
                     {showAdmin && (
                       <Col xs="auto" style={{ textAlign: "right", padding: 4 }}>
                         <Button size="sm" variant="primary" onClick={() => handleShowManageEvent({ task: "Create" })}>
@@ -166,7 +167,6 @@ export default function UpcomingEvents() {
     );
   } else {
     if (playersQuery.isLoading || eventsQuery.isLoading) {
-      // console.log({ playersQuery: playersQuery.status, eventsQuery: eventsQuery.status, signInStatus: signInStatus });
       if (eventsQuery.isLoading) return <div className="margin-top-65">Loading Events...</div>;
       if (playersQuery.isLoading) return <div className="margin-top-65">Loading Players...</div>;
       return <div className="margin-top-65">Loading...</div>;
@@ -183,7 +183,6 @@ export default function UpcomingEvents() {
         </div>
       );
     }
-    // console.log({ playersQuery: playersQuery.status, eventsQuery: eventsQuery.status, signInStatus: signInStatus });
     return <div className="margin-top-65">Loading...</div>;
   }
 }
@@ -221,7 +220,7 @@ export function PreviousEvents({ showAdmin }: { showAdmin: boolean }) {
 }
 
 interface EventCardsProps {
-  events: never[];
+  events: GameKnightEvent[];
   showAdmin: boolean;
 }
 function EventCards({ events, showAdmin }: EventCardsProps) {
@@ -229,8 +228,9 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
   const user_id = tokensParsed ? tokensParsed.idToken.sub : "";
   const isAdmin = authenticated({ signInStatus, tokensParsed, group: ["admin"] });
 
-  const playersQuery = useQuery(fetchPlayersOptions());
-  const playersDict = playersQuery?.data?.Users ?? {};
+  const queryClient = useQueryClient();
+  const playersQuery: PlayersGroups | undefined = queryClient.getQueryData(["players"]);
+  const playersDict = playersQuery?.Users ?? {};
 
   // Create "Manage Event" PopUp ("Modal")
   const [managedEvent, setManagedEvent] = useState<GameKnightEvent | null>(null);
@@ -423,7 +423,6 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                                     <td>{playersDict[player]?.attrib.given_name ?? "Unknown"}</td>
                                     <td>{score}</td>
                                   </tr>
-                                  // </Form>
                                 ))}
                               </tbody>
                             </Table>
