@@ -44,6 +44,7 @@ import {
   PlayerGet,
   PlayerEmailAlertPreferences,
   emailAlertTypeReadble,
+  EmailAlertType,
 } from "../types/Players";
 
 import { AxiosError } from "axios";
@@ -277,23 +278,23 @@ export default function Players() {
   }
 }
 
-type ManagePlayerModalProps =
-  | {
-      task: "Create";
-      close: () => void;
-    }
-  | {
-      task: "Modify";
-      player: PlayerExisting;
-      playerAttrib: PlayerGet;
-      close: () => void;
-    }
-  | {
-      task: "ModifySelf";
-      player: PlayerModifySelf;
-      resetManagePlayerModal: () => void;
-      close: () => void;
-    };
+type CreatePlayerModalProps = {
+  task: "Create";
+  close: () => void;
+};
+type ModifyPlayerModalProps = {
+  task: "Modify";
+  player: PlayerExisting;
+  playerAttrib: PlayerGet;
+  close: () => void;
+};
+type ModifySelfPlayerModalProps = {
+  task: "ModifySelf";
+  player: PlayerModifySelf;
+  resetManagePlayerModal: () => void;
+  close: () => void;
+};
+type ManagePlayerModalProps = CreatePlayerModalProps | ModifyPlayerModalProps | ModifySelfPlayerModalProps;
 export function ManagePlayerModal(props: ManagePlayerModalProps) {
   const { signInStatus, tokensParsed, refreshTokens } = usePasswordless();
   const { task, close } = props;
@@ -321,6 +322,7 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
     playerEmailAlertSubscriptionsQuery && playerEmailAlertSubscriptionsQuery.isSuccess
       ? playerEmailAlertSubscriptionsQuery.data
       : {
+          rsvp_all_debug: false,
           rsvp_all: false,
           rsvp_hosted: false,
         }
@@ -336,8 +338,15 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
     const alertType = event.target.value;
     const subscribed = event.target.checked;
 
-    if (alertType == "rsvp_all" && subscribed) {
-      setAlertSubs({ ...alertSubs, [alertType]: subscribed, rsvp_hosted: false });
+    // Admins can only be in one of the three following subscriptions
+    const adminSubs: { [key: string]: boolean } = {
+      rsvp_all_debug: false,
+      rsvp_all: false,
+      rsvp_hosted: false,
+    };
+    if (alertType in adminSubs) {
+      adminSubs[alertType] = subscribed;
+      setAlertSubs({ ...alertSubs, ...adminSubs });
     } else {
       setAlertSubs({ ...alertSubs, [alertType]: subscribed });
     }
@@ -493,6 +502,8 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
 
   const [areYouSure, setAreYouSure] = useState(false);
 
+  console.log(playerForm.groups);
+
   if (verifyAttribute) {
     return (
       <Form onSubmit={handleVerifySubmit}>
@@ -617,63 +628,72 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
               </Col>
             )}
           </Row>
-          <Authenticated group={["admin", "host"]}>
-            <hr />
-            {task === "Create" ? (
-              <>
-                <div>Email Alert Subscriptions</div>
-                <div>(Configure Subscriptions after Player creation)</div>
-              </>
-            ) : playerEmailAlertSubscriptionsQuery!.isSuccess ? (
-              <Col med="true" style={{ minWidth: "18rem" }}>
-                <Form.Group controlId="emailAlertSubs" className="mb-3">
-                  <Form.Label aria-label="Email Alert Subscriptions">Email Alert Subscriptions</Form.Label>
-                  <Row xs={2} className="justify-content-center">
-                    {Object.entries(alertSubs).map(([alertType, subscribed], index: number) => {
-                      // Only admins can subscribe to rsvp_all
-                      if (!authenticated({ signInStatus, tokensParsed, group: ["admin"] }) && alertType == "rsvp_all")
-                        return;
-
-                      // Only admins or hosts can subscribe to rsvp_hosted
-                      if (
-                        !authenticated({ signInStatus, tokensParsed, group: ["admin", "host"] }) &&
-                        alertType == "rsvp_hosted"
-                      )
-                        return;
-
-                      return (
-                        <Col key={alertType} style={{ minWidth: "max-content", maxWidth: "max-content" }}>
-                          <Form.Check
-                            key={index}
-                            type="checkbox"
-                            id={alertType}
-                            label={emailAlertTypeReadble[alertType as keyof PlayerEmailAlertPreferences]}
-                            checked={subscribed}
-                            onChange={handleAlertsSubChange}
-                            value={alertType}
-                            disabled={alertType === "rsvp_hosted" && alertSubs.rsvp_all === true ? true : false}
-                          />
-                        </Col>
-                      );
-                    })}
-                  </Row>
-                </Form.Group>
-              </Col>
-            ) : playerEmailAlertSubscriptionsQuery && playerEmailAlertSubscriptionsQuery.isLoading ? (
-              <>
-                <div>Email Alert Subscriptions</div>
-                <div>Loading...</div>
-              </>
-            ) : (
-              playerEmailAlertSubscriptionsQuery &&
-              playerEmailAlertSubscriptionsQuery.isError && (
+          {/* <Authenticated group={["admin", "host"]}> */}
+          {(task === "Create" || props.player.groups.includes("admin") || props.player.groups.includes("host")) && (
+            <>
+              <hr />
+              {task === "Create" ? (
                 <>
                   <div>Email Alert Subscriptions</div>
-                  <div>Error Fetching Alert Subscriptions</div>
+                  <div>(Configure Subscriptions after Player creation)</div>
                 </>
-              )
-            )}
-          </Authenticated>
+              ) : playerEmailAlertSubscriptionsQuery!.isSuccess ? (
+                <Col med="true" style={{ minWidth: "18rem" }}>
+                  <Form.Group controlId="emailAlertSubs" className="mb-3">
+                    <Form.Label aria-label="Email Alert Subscriptions">Email Alert Subscriptions</Form.Label>
+                    <Row xs={2} className="justify-content-center">
+                      {Object.entries(alertSubs).map(([alertType, subscribed], index: number) => {
+                        // Only admins can subscribe to rsvp_all and rsvp_all_debug
+                        if (
+                          // !authenticated({ signInStatus, tokensParsed, group: ["admin"] }) &&
+                          !props.player.groups.includes("admin") &&
+                          ["rsvp_all", "rsvp_all_debug"].includes(alertType)
+                        )
+                          return;
+
+                        // Only admins or hosts can subscribe to rsvp_hosted
+                        if (
+                          // !authenticated({ signInStatus, tokensParsed, group: ["admin", "host"] }) &&
+                          !props.player.groups.includes("admin") &&
+                          !props.player.groups.includes("host") &&
+                          alertType == "rsvp_hosted"
+                        )
+                          return;
+
+                        return (
+                          <Col key={alertType} style={{ minWidth: "max-content", maxWidth: "max-content" }}>
+                            <Form.Check
+                              key={index}
+                              type="checkbox"
+                              id={alertType}
+                              label={emailAlertTypeReadble[alertType as keyof PlayerEmailAlertPreferences]}
+                              checked={subscribed}
+                              onChange={handleAlertsSubChange}
+                              value={alertType}
+                            />
+                          </Col>
+                        );
+                      })}
+                    </Row>
+                  </Form.Group>
+                </Col>
+              ) : playerEmailAlertSubscriptionsQuery && playerEmailAlertSubscriptionsQuery.isLoading ? (
+                <>
+                  <div>Email Alert Subscriptions</div>
+                  <div>Loading...</div>
+                </>
+              ) : (
+                playerEmailAlertSubscriptionsQuery &&
+                playerEmailAlertSubscriptionsQuery.isError && (
+                  <>
+                    <div>Email Alert Subscriptions</div>
+                    <div>Error Fetching Alert Subscriptions</div>
+                  </>
+                )
+              )}
+            </>
+          )}
+          {/* </Authenticated> */}
         </Modal.Body>
 
         {import.meta.env.MODE == "test" && (

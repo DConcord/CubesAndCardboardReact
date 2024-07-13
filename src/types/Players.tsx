@@ -47,6 +47,7 @@ export type Player = PlayerModifySelf | PlayerCreate | PlayerExisting;
 /// Email Alert Subscriptions
 
 export type AllEmailAlertPreferences = {
+  rsvp_all_debug: string[];
   rsvp_all: string[];
   rsvp_hosted: string[];
 };
@@ -55,11 +56,8 @@ export type PlayerEmailAlertPreferences = {
   [key in keyof AllEmailAlertPreferences]: boolean;
 };
 
-interface IemailAlertTypeReadble {
-  rsvp_all: string;
-  rsvp_hosted: string;
-}
 export const emailAlertTypeReadble = {
+  rsvp_all_debug: "All Event RSVPs (DEBUG)",
   rsvp_all: "All Event RSVPs",
   rsvp_hosted: "RSVPs for Events I'm hosting",
 };
