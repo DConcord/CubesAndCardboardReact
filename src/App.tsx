@@ -1,5 +1,5 @@
 import React from "react";
-import Authenticated, { authenticated } from "./utilities/Authenticated";
+import Authenticated from "./utilities/Authenticated";
 const UpcomingEvents = React.lazy(() => import("./components/Events"));
 const NavigationBar = React.lazy(() => import("./components/NavigationBar"));
 const TbdGallery = React.lazy(() => import("./components/TbdGallery"));
@@ -41,7 +41,7 @@ export const router = createBrowserRouter(
         <Route
           path="/logs"
           element={
-            <Authenticated unauthPath="/">
+            <Authenticated unauthPath="/" group={["admin"]}>
               <React.Suspense fallback={<>...</>}>
                 <Logs />
               </React.Suspense>
@@ -52,42 +52,3 @@ export const router = createBrowserRouter(
     </>
   )
 );
-
-// export default function App() {
-//   // const { signInStatus, tokensParsed, tokens } = usePasswordless();
-//   return (
-//     <>
-//       <BrowserRouter>
-//         <NavigationBar />
-//         <Routes>
-//           <Route path="/" element={<UpcomingEvents />} />
-//           <Route path="/tbd" element={<TbdGallery />} />
-//           <Route
-//             path="/players"
-//             // element={
-//             //   ["REFRESHING_SIGN_IN", "SIGNING_IN", "CHECKING"].includes(signInStatus) ? (
-//             //     <></>
-//             //   ) : authenticated({
-//             //       signInStatus,
-//             //       tokensParsed,
-//             //       group: ["admin"],
-//             //     }) ? (
-//             //     <Players />
-//             //   ) : (
-//             //     <Navigate replace to="/" />
-//             //   )
-//             // }
-//             // re-read: https://blog.logrocket.com/authentication-react-router-v6/
-//             // element={<Players />}
-//             // element={authenticated({ group: ["admin"] }) ? <Players /> : <Navigate replace to="/" />}
-//             element={
-//               <Authenticated unauthPath="/">
-//                 <Players />
-//               </Authenticated>
-//             }
-//           />
-//         </Routes>
-//       </BrowserRouter>
-//     </>
-//   );
-// }

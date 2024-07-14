@@ -26,50 +26,31 @@ import { PatternFormat } from "react-number-format";
 
 import Authenticated, { authenticated } from "../utilities/Authenticated";
 const TShoot = lazy(() => import("./TShoot"));
-import { fetchPlayersApiOptions, fetchPlayersApi, apiClient } from "./Queries";
+import {
+  fetchPlayersApiOptions,
+  apiClient,
+  fetchPlayerEmailAlertSubscriptionsOptions,
+  fetchAllEmailAlertSubscriptionsOptions,
+} from "./Queries";
 import ConditionalWrap from "./ConditionalWrap";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { PlayerTable, Player, PlayerGet } from "../types/Players";
+import {
+  PlayerTable,
+  Player,
+  PlayerExisting,
+  PlayerModifySelf,
+  PlayerGet,
+  PlayerEmailAlertPreferences,
+  emailAlertTypeReadble,
+  EmailAlertType,
+} from "../types/Players";
 
-export function PlayersAuth() {
-  const { signInStatus, tokensParsed } = usePasswordless();
-  const navigate = useNavigate();
-  if (["REFRESHING_SIGN_IN", "SIGNING_IN", "CHECKING"].includes(signInStatus)) {
-    return (
-      <>
-        <Container fluid>
-          <Row>
-            <Col style={{ textAlign: "right" }}>
-              <Spinner animation="border" role="status">
-                <span className="visually-hidden">Loading...</span>
-              </Spinner>
-            </Col>
-            <Col>
-              <h2>Loading...</h2>
-            </Col>
-          </Row>
-        </Container>
-      </>
-    );
-  } else if (authenticated({ signInStatus, tokensParsed, group: ["admin"] })) {
-    navigate("/players");
-  } else {
-    navigate("/");
-  }
-  return <></>;
-}
+import { AxiosError } from "axios";
 
 export default function Players() {
-  // const playersQuery = useQuery(fetchPlayersApiOptions({ tokens: tokens!, refresh: "no" }));
-  const playersQuery = useQuery({
-    queryKey: ["players"],
-    queryFn: () => fetchPlayersApi("no"),
-    refetchOnMount: "always",
-    // staleTime: 0,
-    refetchInterval: 1000 * 60 * 20, // refetch every 20 min
-  });
+  const playersQuery = useQuery(fetchPlayersApiOptions({ refresh: "no" }));
   const playersDict = playersQuery?.data?.Users ?? {};
 
   const queryClient = useQueryClient();
@@ -82,25 +63,34 @@ export default function Players() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["players"], data);
+      queryClient.setQueryData(["players", "api"], data);
     },
   });
 
+  const allEmailAlertSubscriptionsQuery = useQuery(fetchAllEmailAlertSubscriptionsOptions());
+
   // Create "Manage Event" PopUp ("Modal")
-  const [managedPlayer, setManagedPlayer] = useState<Player>();
+  const [managedPlayer, setManagedPlayer] = useState<PlayerExisting>();
   const [managedPlayerAttrib, setManagedPlayerAttrib] = useState<PlayerGet>();
   const [managedPlayerTask, setManagedPlayerTask] = useState<"Create" | "Modify">("Create");
   const [showManagePlayer, setShowManagePlayer] = useState(false);
   const handleCloseManagePlayer = () => setShowManagePlayer(false);
-  interface ShowManagePlayerProps {
-    managedPlayer?: typeof managedPlayer;
-    task: "Create" | "Modify";
-  }
-  const handleShowManagePlayer = ({ managedPlayer, task }: ShowManagePlayerProps) => {
-    setManagedPlayer(managedPlayer ? managedPlayer : undefined);
+  type ShowManagePlayerProps =
+    | {
+        task: "Create";
+      }
+    | {
+        managedPlayer: PlayerExisting;
+        task: "Modify";
+      };
+  const handleShowManagePlayer = (props: ShowManagePlayerProps) => {
+    const { task } = props;
+    if (task === "Modify") {
+      const { managedPlayer } = props;
+      setManagedPlayer(managedPlayer);
+      setManagedPlayerAttrib(playersDict[managedPlayer.user_id]);
+    }
     setManagedPlayerTask(task);
-    setManagedPlayerAttrib(
-      managedPlayer && "user_id" in managedPlayer ? playersDict[managedPlayer.user_id] : undefined
-    );
     setShowManagePlayer(true);
   };
 
@@ -108,23 +98,20 @@ export default function Players() {
   const toggleShowUserId = () => setShowUserId(!showUserId);
 
   if (playersDict) {
-    let tabData: PlayerTable = [];
-    for (let [player_id, player] of Object.entries(playersDict)) {
-      tabData.push({
+    const tableData: PlayerTable = Object.entries(playersDict)
+      .map(([player_id, player]) => ({
         given_name: player.attrib.given_name,
         family_name: player.attrib.family_name,
         email: player.attrib.email,
         phone_number: player.attrib.phone_number,
         user_id: player_id,
         groups: player.groups,
+      }))
+      .sort(function (a, b) {
+        if (a.given_name < b.given_name) return -1;
+        if (a.given_name > b.given_name) return 1;
+        return 0;
       });
-    }
-
-    tabData.sort(function (a, b) {
-      if (a.given_name < b.given_name) return -1;
-      if (a.given_name > b.given_name) return 1;
-      return 0;
-    });
 
     return (
       <div className="margin-top-65">
@@ -134,108 +121,118 @@ export default function Players() {
           </Suspense>
         </Authenticated>
         <Container fluid>
-          {/* <Row xs={1} sm={2}> */}
           <Row xs={1} sm={2} className="align-items-center">
             <Col xs="auto">
               {/* <h2>Manage Players</h2> */}
               <h2>{import.meta.env.VITE_PLAYERS_TITLE}</h2>
             </Col>
-            <Col>
-              <Row style={{ justifyContent: "right" }}>
-                <Col xs="auto" style={{ textAlign: "right" }}>
-                  <Button
-                    disabled={playersRefreshMutation.isPending}
-                    className="align-top"
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      playersRefreshMutation.mutate();
-                    }}
-                  >
-                    {playersRefreshMutation.isPending && (
-                      <Spinner size="sm" animation="grow" role="status">
-                        <span className="visually-hidden">Loading...</span>
-                      </Spinner>
-                    )}
-                    Hard Refresh
-                  </Button>
-                </Col>
-                <Col xs="auto" style={{ textAlign: "right" }}>
-                  <Button size="sm" variant="secondary" onClick={toggleShowUserId}>
-                    {showUserId ? "Hide User ID" : "Show User ID"}
-                  </Button>
-                </Col>
-                <Col xs="auto" style={{ textAlign: "right" }}>
-                  <ConditionalWrap
-                    condition={!["production", "test"].includes(import.meta.env.MODE)}
-                    wrap={(children) => (
-                      <OverlayTrigger
-                        placement="bottom"
-                        delay={{ show: 100, hide: 400 }}
-                        overlay={<Tooltip id="NewPlayer">Players cannot be modified from Dev</Tooltip>}
-                      >
-                        <div>{children}</div>
-                      </OverlayTrigger>
-                    )}
-                  >
+            <Authenticated group={["admin"]}>
+              <Col>
+                <Row style={{ justifyContent: "right" }}>
+                  <Col xs="auto" style={{ textAlign: "right" }}>
                     <Button
+                      disabled={playersRefreshMutation.isPending}
+                      className="align-top"
                       size="sm"
-                      id="NewPlayer"
-                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
-                      variant="primary"
-                      onClick={() => handleShowManagePlayer({ task: "Create" })}
+                      variant="secondary"
+                      onClick={() => {
+                        playersRefreshMutation.mutate();
+                        allEmailAlertSubscriptionsQuery.refetch();
+                      }}
                     >
-                      New Player
+                      {playersRefreshMutation.isPending && (
+                        <Spinner size="sm" animation="grow" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </Spinner>
+                      )}
+                      Hard Refresh
                     </Button>
-                  </ConditionalWrap>
-                </Col>
-              </Row>
-            </Col>
+                  </Col>
+                  <Col xs="auto" style={{ textAlign: "right" }}>
+                    <Button size="sm" variant="secondary" onClick={toggleShowUserId}>
+                      {showUserId ? "Hide User ID" : "Show User ID"}
+                    </Button>
+                  </Col>
+                  <Col xs="auto" style={{ textAlign: "right" }}>
+                    <ConditionalWrap
+                      condition={!["production", "test"].includes(import.meta.env.MODE)}
+                      wrap={(children) => (
+                        <OverlayTrigger
+                          placement="bottom"
+                          delay={{ show: 100, hide: 400 }}
+                          overlay={<Tooltip id="NewPlayer">Players cannot be modified from Dev</Tooltip>}
+                        >
+                          <div>{children}</div>
+                        </OverlayTrigger>
+                      )}
+                    >
+                      <Button
+                        size="sm"
+                        id="NewPlayer"
+                        disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                        variant="primary"
+                        onClick={() => handleShowManagePlayer({ task: "Create" })}
+                      >
+                        New Player
+                      </Button>
+                    </ConditionalWrap>
+                  </Col>
+                </Row>
+              </Col>
+            </Authenticated>
           </Row>
         </Container>
         <Table responsive striped hover>
           <thead>
             <tr>
-              <th></th>
+              <Authenticated group={["admin"]}>
+                <th></th>
+              </Authenticated>
               <th>First Name</th>
               <th>Last Name</th>
               <th>Email</th>
               <th>Phone</th>
-              <th>Groups</th>
+              <Authenticated group={["admin", "host"]}>
+                <th>Groups</th>
+              </Authenticated>
               <th hidden={!showUserId}>User ID</th>
             </tr>
           </thead>
           <tbody>
-            {tabData.map((row, index) => (
+            {tableData.map((row, index) => (
               <tr key={index}>
-                <td>
-                  <ConditionalWrap
-                    condition={!["production", "test"].includes(import.meta.env.MODE)}
-                    wrap={(children) => (
-                      <OverlayTrigger
-                        placement="right"
-                        delay={{ show: 100, hide: 400 }}
-                        overlay={<Tooltip id="NewPlayer">Players cannot be modified from Dev</Tooltip>}
-                      >
-                        <span>{children}</span>
-                      </OverlayTrigger>
-                    )}
-                  >
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleShowManagePlayer({ task: "Modify", managedPlayer: row })}
-                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                <Authenticated group={["admin"]}>
+                  <td>
+                    <ConditionalWrap
+                      condition={!["production", "test"].includes(import.meta.env.MODE)}
+                      wrap={(children) => (
+                        <OverlayTrigger
+                          placement="right"
+                          delay={{ show: 100, hide: 400 }}
+                          overlay={<Tooltip id="NewPlayer">Players cannot be modified from Dev</Tooltip>}
+                        >
+                          <span>{children}</span>
+                        </OverlayTrigger>
+                      )}
                     >
-                      Edit
-                    </Button>
-                  </ConditionalWrap>
-                </td>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleShowManagePlayer({ task: "Modify", managedPlayer: row })}
+                        disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                      >
+                        Edit
+                      </Button>
+                    </ConditionalWrap>
+                  </td>
+                </Authenticated>
                 <td>{row.given_name}</td>
                 <td>{row.family_name}</td>
                 <td>{row.email}</td>
                 <td>{row.phone_number}</td>
-                <td>{row.groups.join(", ")}</td>
+                <Authenticated group={["admin", "host"]}>
+                  <td>{row.groups.join(", ")}</td>
+                </Authenticated>
                 <td hidden={!showUserId}>{row.user_id}</td>
               </tr>
             ))}
@@ -243,12 +240,18 @@ export default function Players() {
         </Table>
 
         <Modal show={showManagePlayer} onHide={handleCloseManagePlayer} backdrop="static" keyboard={false}>
-          <ManagePlayerModal
-            close={handleCloseManagePlayer}
-            task={managedPlayerTask}
-            playerAttrib={managedPlayerAttrib}
-            player={managedPlayer}
-          />
+          {managedPlayerTask == "Create" ? (
+            <ManagePlayerModal close={handleCloseManagePlayer} task={managedPlayerTask} />
+          ) : (
+            managedPlayerTask == "Modify" && (
+              <ManagePlayerModal
+                close={handleCloseManagePlayer}
+                task={managedPlayerTask}
+                playerAttrib={managedPlayerAttrib!}
+                player={managedPlayer!}
+              />
+            )
+          )}
         </Modal>
       </div>
     );
@@ -275,39 +278,81 @@ export default function Players() {
   }
 }
 
-interface ManagePlayerModalProps {
-  task: "Create" | "Modify" | "ModifySelf";
-  player?: Player;
-  playerAttrib?: PlayerGet;
-  resetManagePlayerModal?: () => void;
+type CreatePlayerModalProps = {
+  task: "Create";
   close: () => void;
-}
-export function ManagePlayerModal({
-  task,
-  player,
-  playerAttrib,
-  resetManagePlayerModal,
-  close,
-}: ManagePlayerModalProps) {
-  const { tokensParsed, refreshTokens } = usePasswordless();
+};
+type ModifyPlayerModalProps = {
+  task: "Modify";
+  player: PlayerExisting;
+  playerAttrib: PlayerGet;
+  close: () => void;
+};
+type ModifySelfPlayerModalProps = {
+  task: "ModifySelf";
+  player: PlayerModifySelf;
+  resetManagePlayerModal: () => void;
+  close: () => void;
+};
+type ManagePlayerModalProps = CreatePlayerModalProps | ModifyPlayerModalProps | ModifySelfPlayerModalProps;
+export function ManagePlayerModal(props: ManagePlayerModalProps) {
+  const { signInStatus, tokensParsed, refreshTokens } = usePasswordless();
+  const { task, close } = props;
   const method = task === "Create" ? "POST" : "PUT";
   const [playerForm, setPlayerForm] = useState<Player>(
-    player
-      ? player
-      : {
+    task === "Create"
+      ? {
           groups: ["player"],
           given_name: "",
           family_name: "",
           email: "",
           phone_number: "",
         }
+      : props.player
   );
   const [phone, setPhone] = useState(playerForm.phone_number ? playerForm.phone_number.replace("+1", "") : "");
 
   const playersQuery = useQuery(fetchPlayersApiOptions({ refresh: "no" }));
   const groups = playersQuery?.data?.Groups ?? [];
 
-  // validCode handleVerificationInput
+  const playerEmailAlertSubscriptionsQuery =
+    task !== "Create" ? useQuery(fetchPlayerEmailAlertSubscriptionsOptions(props.player.user_id)) : undefined;
+
+  const [alertSubs, setAlertSubs] = useState<PlayerEmailAlertPreferences>(
+    playerEmailAlertSubscriptionsQuery && playerEmailAlertSubscriptionsQuery.isSuccess
+      ? playerEmailAlertSubscriptionsQuery.data
+      : {
+          rsvp_all_debug: false,
+          rsvp_all: false,
+          rsvp_hosted: false,
+        }
+  );
+
+  useEffect(() => {
+    if (playerEmailAlertSubscriptionsQuery && playerEmailAlertSubscriptionsQuery.isSuccess) {
+      setAlertSubs(playerEmailAlertSubscriptionsQuery.data);
+    }
+  }, [playerEmailAlertSubscriptionsQuery?.data]);
+
+  const handleAlertsSubChange = (event: React.BaseSyntheticEvent) => {
+    const alertType = event.target.value;
+    const subscribed = event.target.checked;
+
+    // Admins can only be in one of the three following subscriptions
+    const adminSubs: { [key: string]: boolean } = {
+      rsvp_all_debug: false,
+      rsvp_all: false,
+      rsvp_hosted: false,
+    };
+    if (alertType in adminSubs) {
+      adminSubs[alertType] = subscribed;
+      setAlertSubs({ ...alertSubs, ...adminSubs });
+    } else {
+      setAlertSubs({ ...alertSubs, [alertType]: subscribed });
+    }
+  };
+
+  // Email Verification Code  Validation
   const [validCode, setValidCode] = useState(false);
   const handleVerificationInput = (e: React.BaseSyntheticEvent) => {
     setValidCode(/^\d{6}$/.test(e.target.value));
@@ -318,7 +363,6 @@ export function ManagePlayerModal({
     if (e.target.id === "phone_number") return;
     let value = e.target.value;
     if (e.target.id === "email") value = value.toLowerCase();
-    // console.log(value);
 
     setPlayerForm({ ...playerForm, [e.target.id]: value });
     console.log(e.target.id, value);
@@ -346,7 +390,8 @@ export function ManagePlayerModal({
       setSelectedGroupOptions(selectedGroupOptions.filter((id) => id !== optionId));
     }
   };
-  // when selectedGroupOptions changes, update playerForm.groups
+
+  // When selectedGroupOptions changes, update playerForm.groups
   useEffect(() => {
     setPlayerForm({ ...playerForm, groups: selectedGroupOptions });
   }, [selectedGroupOptions]);
@@ -369,13 +414,13 @@ export function ManagePlayerModal({
         if (data.response && data.response.CodeDeliveryDetailsList) {
           setVerifyAttribute(true);
         } else {
-          refreshTokens();
-          await playersQuery.refetch();
-          close();
+          let promiseStatus = await Promise.allSettled([refreshTokens(), playersQuery.refetch()]);
+          console.log(promiseStatus);
+          // close();
         }
       } else {
         queryClient.setQueryData(["players"], data);
-        close();
+        // close();
       }
     },
     onError: (error) => {
@@ -384,13 +429,53 @@ export function ManagePlayerModal({
     },
   });
 
-  function handleSubmit(event: React.BaseSyntheticEvent) {
+  interface IUpdatePlayerEmailAlertSubsMutation {
+    user_id: string;
+    alert_subscriptions: PlayerEmailAlertPreferences;
+  }
+  const updatePlayerEmailAlertSubsMutation = useMutation({
+    mutationFn: async ({ body }: { body: IUpdatePlayerEmailAlertSubsMutation }) => {
+      const url = "alerts/player";
+      try {
+        const response = await apiClient({
+          method: "PUT",
+          url: url,
+          data: body,
+        });
+        console.log(response);
+        return { status: "success", message: response.data.result };
+      } catch (err) {
+        console.error(err);
+        if (err instanceof AxiosError) {
+          return { status: "failed", message: err.message };
+        }
+        return { status: "failed", message: "unknown", err: err };
+      }
+    },
+  });
+  async function handleSubmit(event: React.BaseSyntheticEvent) {
     event.preventDefault();
     if (task == "Create" && !playerForm.family_name) delete playerForm.family_name;
     if (task == "Create" && !playerForm.phone_number) delete playerForm.phone_number;
     console.log(playerForm, task);
-    // managePlayer(playerForm, method);
-    managePlayerMutation.mutate({ body: playerForm, method: method });
+    if (task === "Create") {
+      managePlayerMutation.mutate({ body: playerForm, method: method });
+      close();
+    } else {
+      const awaitPromises = await Promise.allSettled([
+        updatePlayerEmailAlertSubsMutation.mutateAsync({
+          body: { user_id: props.player.user_id, alert_subscriptions: alertSubs },
+        }),
+        managePlayerMutation.mutateAsync({ body: playerForm, method: method }),
+      ]);
+      console.log(awaitPromises);
+      if (task === "ModifySelf") {
+        await playerEmailAlertSubscriptionsQuery!.refetch();
+      } else {
+        await queryClient.refetchQueries({ queryKey: ["AllEmailAlertSubscriptions"], exact: true });
+      }
+      if (!verifyAttribute) close();
+    }
   }
 
   const [verifyWaiting, setVerifyWaiting] = useState(false);
@@ -416,6 +501,8 @@ export function ManagePlayerModal({
   }
 
   const [areYouSure, setAreYouSure] = useState(false);
+
+  console.log(playerForm.groups);
 
   if (verifyAttribute) {
     return (
@@ -541,6 +628,72 @@ export function ManagePlayerModal({
               </Col>
             )}
           </Row>
+          {/* <Authenticated group={["admin", "host"]}> */}
+          {(task === "Create" || props.player.groups.includes("admin") || props.player.groups.includes("host")) && (
+            <>
+              <hr />
+              {task === "Create" ? (
+                <>
+                  <div>Email Alert Subscriptions</div>
+                  <div>(Configure Subscriptions after Player creation)</div>
+                </>
+              ) : playerEmailAlertSubscriptionsQuery!.isSuccess ? (
+                <Col med="true" style={{ minWidth: "18rem" }}>
+                  <Form.Group controlId="emailAlertSubs" className="mb-3">
+                    <Form.Label aria-label="Email Alert Subscriptions">Email Alert Subscriptions</Form.Label>
+                    <Row xs={2} className="justify-content-center">
+                      {Object.entries(alertSubs).map(([alertType, subscribed], index: number) => {
+                        // Only admins can subscribe to rsvp_all and rsvp_all_debug
+                        if (
+                          // !authenticated({ signInStatus, tokensParsed, group: ["admin"] }) &&
+                          !props.player.groups.includes("admin") &&
+                          ["rsvp_all", "rsvp_all_debug"].includes(alertType)
+                        )
+                          return;
+
+                        // Only admins or hosts can subscribe to rsvp_hosted
+                        if (
+                          // !authenticated({ signInStatus, tokensParsed, group: ["admin", "host"] }) &&
+                          !props.player.groups.includes("admin") &&
+                          !props.player.groups.includes("host") &&
+                          alertType == "rsvp_hosted"
+                        )
+                          return;
+
+                        return (
+                          <Col key={alertType} style={{ minWidth: "max-content", maxWidth: "max-content" }}>
+                            <Form.Check
+                              key={index}
+                              type="checkbox"
+                              id={alertType}
+                              label={emailAlertTypeReadble[alertType as keyof PlayerEmailAlertPreferences]}
+                              checked={subscribed}
+                              onChange={handleAlertsSubChange}
+                              value={alertType}
+                            />
+                          </Col>
+                        );
+                      })}
+                    </Row>
+                  </Form.Group>
+                </Col>
+              ) : playerEmailAlertSubscriptionsQuery && playerEmailAlertSubscriptionsQuery.isLoading ? (
+                <>
+                  <div>Email Alert Subscriptions</div>
+                  <div>Loading...</div>
+                </>
+              ) : (
+                playerEmailAlertSubscriptionsQuery &&
+                playerEmailAlertSubscriptionsQuery.isError && (
+                  <>
+                    <div>Email Alert Subscriptions</div>
+                    <div>Error Fetching Alert Subscriptions</div>
+                  </>
+                )
+              )}
+            </>
+          )}
+          {/* </Authenticated> */}
         </Modal.Body>
 
         {import.meta.env.MODE == "test" && (
@@ -548,35 +701,34 @@ export function ManagePlayerModal({
             <Accordion.Item eventKey="playerDebug">
               <Accordion.Header>Player Debug</Accordion.Header>
               <Accordion.Body>
-                <pre>{JSON.stringify(playerAttrib ? playerAttrib : playerForm, null, 2)}</pre>
+                <pre>
+                  {JSON.stringify(task === "Modify" && props.playerAttrib ? props.playerAttrib : playerForm, null, 2)}
+                </pre>
+                <pre>
+                  {JSON.stringify(
+                    playerEmailAlertSubscriptionsQuery
+                      ? { queryState: playerEmailAlertSubscriptionsQuery.status, ...alertSubs }
+                      : { queryState: !!playerEmailAlertSubscriptionsQuery, ...alertSubs },
+                    null,
+                    2
+                  )}
+                </pre>
               </Accordion.Body>
             </Accordion.Item>
           </Accordion>
         )}
         <Modal.Footer>
-          {/* import.meta.env.MODE == "test" */}
           <Container fluid>
             <Row style={{ justifyContent: "right", paddingLeft: 0, paddingRight: 0 }}>
-              {!!resetManagePlayerModal && (
+              {task === "ModifySelf" && !!props.resetManagePlayerModal && (
                 <Col xs="auto" style={{ justifyContent: "left", paddingLeft: 0, paddingRight: 4 }}>
-                  {/* <div className="d-block d-sm-none">
-                    <Button
-                      variant="secondary"
-                      onClick={() => resetManagePlayerModal()}
-                      disabled={managePlayerMutation.isPending}
-                    >
-                      <Icon path={mdiRefresh} size={1} />
-                    </Button>
-                  </div>
-                  <div className="d-none d-sm-block"> */}
                   <Button
                     variant="secondary"
-                    onClick={() => resetManagePlayerModal()}
+                    onClick={() => props.resetManagePlayerModal()}
                     disabled={managePlayerMutation.isPending}
                   >
                     Refresh
                   </Button>
-                  {/* </div> */}
                 </Col>
               )}
               <Col style={{ justifyContent: "left", paddingLeft: 4, paddingRight: 0 }}>
@@ -591,34 +743,10 @@ export function ManagePlayerModal({
                   </Button>
                 )}
               </Col>
-
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
                 <span>{errorMsg}</span>
               </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
-                {/* <div className="d-block d-sm-none">
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    disabled={
-                      managePlayerMutation.isPending ||
-                      !inputValidated ||
-                      (task !== "ModifySelf" && !["production", "test"].includes(import.meta.env.MODE))
-                    }
-                  >
-                    {managePlayerMutation.isPending && (
-                      <span className="spinner-grow spinner-grow-sm text-light" role="status"></span>
-                    )}
-                    {task == "Modify" ? (
-                      "Update Player"
-                    ) : task == "ModifySelf" ? (
-                      <Icon path={mdiCheck} size={1} />
-                    ) : (
-                      "Create Player"
-                    )}
-                  </Button>
-                </div>
-                <div className="d-none d-sm-block"> */}
                 <Button
                   variant="primary"
                   type="submit"
@@ -633,19 +761,11 @@ export function ManagePlayerModal({
                   )}
                   {task == "Modify" ? "Update Player" : task == "ModifySelf" ? "Update" : "Create Player"}
                 </Button>
-                {/* </div> */}
               </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 0 }}>
-                {/* <div className="d-none d-sm-none">
-                  <Button variant="secondary" onClick={close} disabled={managePlayerMutation.isPending}>
-                    <Icon path={mdiClose} size={1} />
-                  </Button>
-                </div>
-                <div className="d-block d-sm-block"> */}
                 <Button variant="secondary" onClick={close} disabled={managePlayerMutation.isPending}>
                   Cancel
                 </Button>
-                {/* </div> */}
               </Col>
             </Row>
           </Container>
