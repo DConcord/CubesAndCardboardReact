@@ -62,4 +62,4 @@ export const emailAlertTypeReadble = {
   rsvp_hosted: "RSVPs for Events I'm hosting",
 };
 
-export type EmailAlertType = Array<keyof AllEmailAlertPreferences>;
+export type EmailAlertType = Array<keyof AllEmailAlertPreferences & string>;

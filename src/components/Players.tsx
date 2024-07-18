@@ -1,9 +1,9 @@
 import { useState, useEffect, lazy, Suspense } from "react";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
-import Icon from "@mdi/react";
-import { mdiRefresh, mdiClose, mdiCheck } from "@mdi/js";
+// import Icon from "@mdi/react";
+// import { mdiRefresh, mdiClose, mdiCheck } from "@mdi/js";
 
 import { verifyUserAttribute, getUserAttributeVerificationCode } from "amazon-cognito-passwordless-auth/cognito-api";
 
@@ -24,7 +24,9 @@ import Alert from "react-bootstrap/Alert";
 
 import { PatternFormat } from "react-number-format";
 
-import Authenticated, { authenticated } from "../utilities/Authenticated";
+import Authenticated from "../utilities/Authenticated";
+import { isEqual } from "lodash";
+
 const TShoot = lazy(() => import("./TShoot"));
 import {
   fetchPlayersApiOptions,
@@ -415,7 +417,7 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
           setVerifyAttribute(true);
         } else {
           let promiseStatus = await Promise.allSettled([refreshTokens(), playersQuery.refetch()]);
-          console.log(promiseStatus);
+          // console.log(promiseStatus);
           // close();
         }
       } else {
@@ -460,12 +462,15 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
     console.log(playerForm, task);
     if (task === "Create") {
       managePlayerMutation.mutate({ body: playerForm, method: method });
-      close();
+      // while (managePlayerMutation.isIdle || managePlayerMutation.isPending) {}
+      if (managePlayerMutation.isSuccess || managePlayerMutation.isIdle) close();
     } else {
       const awaitPromises = await Promise.allSettled([
-        updatePlayerEmailAlertSubsMutation.mutateAsync({
-          body: { user_id: props.player.user_id, alert_subscriptions: alertSubs },
-        }),
+        playerEmailAlertSubscriptionsQuery &&
+          !isEqual(alertSubs, playerEmailAlertSubscriptionsQuery.data) &&
+          updatePlayerEmailAlertSubsMutation.mutateAsync({
+            body: { user_id: props.player.user_id, alert_subscriptions: alertSubs },
+          }),
         managePlayerMutation.mutateAsync({ body: playerForm, method: method }),
       ]);
       console.log(awaitPromises);
@@ -474,7 +479,11 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
       } else {
         await queryClient.refetchQueries({ queryKey: ["AllEmailAlertSubscriptions"], exact: true });
       }
-      if (!verifyAttribute) close();
+      if ((!verifyAttribute && managePlayerMutation.isSuccess) || managePlayerMutation.isIdle) {
+        close();
+      } else {
+        console.log({ verifyAttribute: verifyAttribute, managePlayerMutation: managePlayerMutation.status });
+      }
     }
   }
 
@@ -501,8 +510,6 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
   }
 
   const [areYouSure, setAreYouSure] = useState(false);
-
-  console.log(playerForm.groups);
 
   if (verifyAttribute) {
     return (
@@ -556,53 +563,72 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
       <Form onSubmit={handleSubmit}>
         <Modal.Body className="text-center">
           <Row>
-            <Col med="true" style={{ minWidth: "13rem" }}>
-              <FloatingLabel controlId="given_name" label="First Name" className="mb-3">
-                <Form.Control
-                  autoComplete="off"
-                  placeholder="first_name"
-                  as="textarea"
-                  onChange={handleInput}
-                  defaultValue={task.startsWith("Modify") ? playerForm.given_name : ""}
-                />
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "13rem" }}>
-              <FloatingLabel controlId="family_name" label="Last Name" className="mb-3">
-                <Form.Control
-                  autoComplete="off"
-                  placeholder="last_name"
-                  as="textarea"
-                  onChange={handleInput}
-                  defaultValue={task.startsWith("Modify") ? playerForm.family_name : ""}
-                />
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "18rem" }}>
-              <FloatingLabel controlId="email" label="Email" className="mb-3">
-                <Form.Control
-                  autoComplete="off"
-                  placeholder="email"
-                  type="email"
-                  as="textarea"
-                  onChange={handleInput}
-                  value={playerForm.email}
-                />
-              </FloatingLabel>
-            </Col>
-            <Col med="true" style={{ minWidth: "18rem" }}>
-              <FloatingLabel controlId="phone_number" label="Phone" className="mb-3">
-                <PatternFormat
-                  format="+1 (###) ###-####"
-                  defaultValue={phone}
-                  placeholder="phone"
-                  onValueChange={(value) => setPhone(value.value)}
-                  onChange={handleInput}
-                  customInput={CustomFormControl}
-                  valueIsNumericString={true}
-                />
-              </FloatingLabel>
-            </Col>
+            <ConditionalWrap
+              condition={!["production", "test"].includes(import.meta.env.MODE)}
+              wrap={(children) => (
+                <OverlayTrigger
+                  placement="bottom"
+                  delay={{ show: 100, hide: 400 }}
+                  overlay={<Tooltip id="NewPlayer">Players cannot be modified from Dev</Tooltip>}
+                >
+                  <div>{children}</div>
+                </OverlayTrigger>
+              )}
+            >
+              <>
+                <Col med="true" style={{ minWidth: "13rem" }}>
+                  <FloatingLabel controlId="given_name" label="First Name" className="mb-3">
+                    <Form.Control
+                      autoComplete="off"
+                      placeholder="first_name"
+                      as="textarea"
+                      onChange={handleInput}
+                      defaultValue={task.startsWith("Modify") ? playerForm.given_name : ""}
+                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                    />
+                  </FloatingLabel>
+                </Col>
+                <Col med="true" style={{ minWidth: "13rem" }}>
+                  <FloatingLabel controlId="family_name" label="Last Name" className="mb-3">
+                    <Form.Control
+                      autoComplete="off"
+                      placeholder="last_name"
+                      as="textarea"
+                      onChange={handleInput}
+                      defaultValue={task.startsWith("Modify") ? playerForm.family_name : ""}
+                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                    />
+                  </FloatingLabel>
+                </Col>
+                <Col med="true" style={{ minWidth: "18rem" }}>
+                  <FloatingLabel controlId="email" label="Email" className="mb-3">
+                    <Form.Control
+                      autoComplete="off"
+                      placeholder="email"
+                      type="email"
+                      as="textarea"
+                      onChange={handleInput}
+                      value={playerForm.email}
+                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                    />
+                  </FloatingLabel>
+                </Col>
+                <Col med="true" style={{ minWidth: "18rem" }}>
+                  <FloatingLabel controlId="phone_number" label="Phone" className="mb-3">
+                    <PatternFormat
+                      format="+1 (###) ###-####"
+                      defaultValue={phone}
+                      placeholder="phone"
+                      onValueChange={(value) => setPhone(value.value)}
+                      onChange={handleInput}
+                      customInput={CustomFormControl}
+                      valueIsNumericString={true}
+                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                    />
+                  </FloatingLabel>
+                </Col>
+              </>
+            </ConditionalWrap>
             {task !== "ModifySelf" && groups && (
               <Col med="true" style={{ minWidth: "18rem" }}>
                 <Form.Group controlId="chooseGroups" className="mb-3">
@@ -695,7 +721,6 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
           )}
           {/* </Authenticated> */}
         </Modal.Body>
-
         {import.meta.env.MODE == "test" && (
           <Accordion>
             <Accordion.Item eventKey="playerDebug">
@@ -719,7 +744,7 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
         )}
         <Modal.Footer>
           <Container fluid>
-            <Row style={{ justifyContent: "right", paddingLeft: 0, paddingRight: 0 }}>
+            <Row style={{ justifyContent: "right", paddingLeft: 0, paddingRight: 0 }} className="align-items-center">
               {task === "ModifySelf" && !!props.resetManagePlayerModal && (
                 <Col xs="auto" style={{ justifyContent: "left", paddingLeft: 0, paddingRight: 4 }}>
                   <Button
@@ -744,7 +769,7 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
                 )}
               </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
-                <span>{errorMsg}</span>
+                <span style={{ color: "red" }}>{errorMsg}</span>
               </Col>
               <Col xs="auto" style={{ paddingLeft: 4, paddingRight: 4 }}>
                 <Button
