@@ -24,6 +24,8 @@ import { parseISO } from "date-fns";
 const ManageEventModal = lazy(() => import("./EventManagement"));
 
 import { ManagedEventTask, GameKnightEvent, PlayerScore } from "../types/Events";
+import { AllEmailAlertPreferences } from "../types/Players";
+
 import { formatIsoDate } from "../utilities";
 import { fetchPlayersOptions, apiClient, publicClient } from "./Queries";
 
@@ -55,7 +57,8 @@ export default function Logs() {
 
   const [eventLog, setEventLog] = useState<EventLogType[]>([]);
   const [rsvpLog, setRsvpLog] = useState<RsvpLogType[]>([]);
-  const [playerLog, setPlayerLog] = useState<LogType[]>([]);
+  const [playerLog, setPlayerLog] = useState<PlayerLogType[]>([]);
+  const [emailSubscriptionLog, setEmailSubscriptionLog] = useState<EmailSubscriptionLogType[]>([]);
   useEffect(() => {
     setStartTime(String(Date.now() - timeInterval[startIntervalType] * startInterval).slice(0, 10));
     setEndTime(null);
@@ -73,6 +76,7 @@ export default function Logs() {
       let _eventLog = [];
       let _rsvpLog = [];
       let _playerLog = [];
+      let _emailSubscriptionLog = [];
       for (const log of response.data.results) {
         if (log.log_type === "event") {
           _eventLog.push(log);
@@ -80,11 +84,15 @@ export default function Logs() {
           _rsvpLog.push(log);
         } else if (log.log_type === "player") {
           _playerLog.push(log);
+        } else if (log.log_type === "email_subscription") {
+          _emailSubscriptionLog.push(log);
         }
       }
+      console.log({ _emailSubscriptionLog: _emailSubscriptionLog });
       setEventLog(_eventLog);
       setRsvpLog(_rsvpLog);
       setPlayerLog(_playerLog);
+      setEmailSubscriptionLog(_emailSubscriptionLog);
       return response.data.results;
     },
     staleTime: Infinity,
@@ -96,7 +104,8 @@ export default function Logs() {
     if (logsQuery.isSuccess) {
       let _eventLog: EventLogType[] = [];
       let _rsvpLog: RsvpLogType[] = [];
-      let _playerLog: LogType[] = [];
+      let _playerLog: PlayerLogType[] = [];
+      let _emailSubscriptionLog: EmailSubscriptionLogType[] = [];
       logsQuery.data.map((log: LogType) => {
         if (log.log_type === "event") {
           _eventLog.push(log);
@@ -104,11 +113,14 @@ export default function Logs() {
           _rsvpLog.push(log);
         } else if (log.log_type === "player") {
           _playerLog.push(log);
+        } else if (log.log_type === "email_subscription") {
+          _emailSubscriptionLog.push(log);
         }
       });
       setEventLog(_eventLog);
       setRsvpLog(_rsvpLog);
       setPlayerLog(_playerLog);
+      setEmailSubscriptionLog(_emailSubscriptionLog);
     }
   }, []);
   const queryClient = useQueryClient();
@@ -116,6 +128,15 @@ export default function Logs() {
   const [showTimeModal, setShowTimeModal] = useState(false);
   const handleShowTimeModal = () => {
     setShowTimeModal(true);
+  };
+  const handleRunQuery = () => {
+    if (!customTimeRange) {
+      setStartTime(String(Date.now() - timeInterval[startIntervalType] * startInterval).slice(0, 10));
+      console.log({ startTime: startTime });
+    }
+    setShowTimeModal(false);
+    queryClient.invalidateQueries({ queryKey: ["logs"] });
+    logsQuery.refetch();
   };
   const handleCloseTimeModal = () => {
     setShowTimeModal(false);
@@ -229,6 +250,9 @@ export default function Logs() {
           </Modal.Body>
         </Tab.Container>
         <Modal.Footer>
+          <Button variant="primary" onClick={handleRunQuery}>
+            Run
+          </Button>
           <Button variant="primary" onClick={handleCloseTimeModal}>
             Close
           </Button>
@@ -269,16 +293,18 @@ export default function Logs() {
                       {["production", "test"].includes(import.meta.env.MODE) && (
                         <Nav.Link eventKey="player">Players</Nav.Link>
                       )}
+                      <Nav.Link eventKey="email_subscription">Email Subscriptions</Nav.Link>
                     </Nav>
                   </Col>
                 )}
                 <Col xs="auto" style={{ textAlign: "right", padding: "4px" }}>
                   <Button
                     disabled={logsQuery.isFetching || logsQuery.isLoading}
-                    onClick={() => {
-                      queryClient.invalidateQueries({ queryKey: ["logs"] });
-                      logsQuery.refetch();
-                    }}
+                    onClick={handleRunQuery}
+                    // onClick={() => {
+                    //   queryClient.invalidateQueries({ queryKey: ["logs"] });
+                    //   logsQuery.refetch();
+                    // }}
                     size="sm"
                   >
                     {(logsQuery.isFetching || logsQuery.isLoading) && (
@@ -317,6 +343,9 @@ export default function Logs() {
               <Tab.Pane eventKey="player" title="Players">
                 <PlayerLog playerLog={playerLog} />
               </Tab.Pane>
+              <Tab.Pane eventKey="email_subscription" title="Email Subscriptions">
+                <EmailSubscriptionLog emailSubscriptionLog={emailSubscriptionLog} />
+              </Tab.Pane>
             </Tab.Content>
           ) : (
             logsQuery.isPending && null
@@ -327,23 +356,99 @@ export default function Logs() {
   );
 }
 
-type LogType = {
+// type LogType = {
+//   "@timestamp": string;
+//   log_type: "event" | "rsvp" | "player" | "email_subscription";
+//   date: string;
+//   action: "create" | "update" | "delete" | "modify" | "add";
+//   auth_sub: string;
+//   auth_type: "admin" | "self" | "host";
+//   previous: Object;
+//   new: Object;
+//   event_id: string;
+//   user_id: string;
+//   rsvp: "attending" | "not_attending";
+//   attrib: string;
+// };
+type LogType = RsvpLogType | EventLogType | PlayerLogType | EmailSubscriptionLogType;
+// type RsvpLogType = Omit<LogType, "previous" | "new" | "attrib"> & { log_type: "rsvp" };
+// type EventLogType = Omit<LogType, "user_id" | "rsvp" | "attrib"> & { log_type: "event" };
+// type PlayerLogType = Omit<LogType, "date" | "previous" | "new" | "event_id" | "rsvp"> & { log_type: "player" };
+// type EmailSubscriptionLogType = Omit<LogType, "date" | "previous" | "new" | "event_id" | "rsvp"> & {
+//   log_type: "email_subscription";
+
+type RsvpLogType = {
   "@timestamp": string;
-  log_type: "event" | "rsvp" | "player";
+  log_type: "rsvp";
   date: string;
-  action: "create" | "update" | "delete" | "modify" | "add";
+  action: "update" | "delete" | "add";
   auth_sub: string;
   auth_type: "admin" | "self" | "host";
-  previous: Object;
-  new: Object;
   event_id: string;
   user_id: string;
   rsvp: "attending" | "not_attending";
+};
+type EventLogType =
+  | {
+      "@timestamp": string;
+      log_type: "event";
+      auth_sub: string;
+      auth_type: "admin";
+      event_id: string;
+      date: string;
+      new: Object;
+      action: "create";
+    }
+  | {
+      "@timestamp": string;
+      log_type: "event";
+      auth_sub: string;
+      auth_type: "admin";
+      event_id: string;
+      date: string;
+      previous: Object;
+      action: "delete";
+    }
+  | {
+      "@timestamp": string;
+      log_type: "event";
+      auth_sub: string;
+      auth_type: "admin";
+      event_id: string;
+      date: string;
+      previous: Object;
+      new: Object;
+      action: "modify";
+    }
+  | {
+      "@timestamp": string;
+      log_type: "event";
+      auth_sub: string;
+      auth_type: "host";
+      event_id: string;
+      date: string;
+      previous: Object;
+      new: Object;
+      action: "update";
+    };
+type PlayerLogType = {
+  "@timestamp": string;
+  log_type: "player";
+  action: "create" | "update";
+  auth_sub: string;
+  auth_type: "admin" | "self";
+  user_id: string;
   attrib: string;
 };
-type RsvpLogType = Omit<LogType, "previous" | "new" | "attrib">;
-type EventLogType = Omit<LogType, "event_id" | "user_id" | "rsvp" | "attrib">;
-type PlayerLogType = Omit<LogType, "date" | "previous" | "new" | "event_id" | "rsvp">;
+type EmailSubscriptionLogType = {
+  "@timestamp": string;
+  log_type: "email_subscription";
+  action: "subscribe" | "unsubscribe";
+  auth_sub: string;
+  user_id: string;
+  auth_type: "admin" | "self";
+  attrib: keyof AllEmailAlertPreferences & string;
+};
 
 function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
   const playersQuery = useQuery(fetchPlayersOptions());
@@ -393,7 +498,7 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
               const stringKeysToNormalize = ["host", "organizer"];
               const actionTypesToConvert = ["update", "modify"];
               const event_prev =
-                log.previous && actionTypesToConvert.includes(log.action)
+                log.action != "create" && log.previous && actionTypesToConvert.includes(log.action)
                   ? Object.fromEntries(
                       Object.entries(log.previous).map(([key, value]) => {
                         if (listKeysToNormalize.includes(key)) {
@@ -423,9 +528,9 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
                         }
                       })
                     )
-                  : log.previous;
+                  : undefined; // log.previous;
               const event_new =
-                log.new && actionTypesToConvert.includes(log.action)
+                log.action != "delete" && log.new && actionTypesToConvert.includes(log.action)
                   ? Object.fromEntries(
                       Object.entries(log.new).map(([key, value]) => {
                         if (listKeysToNormalize.includes(key)) {
@@ -455,16 +560,16 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
                         }
                       })
                     )
-                  : log.new;
+                  : undefined; //log.new;
 
               return (
                 <tr key={index}>
-                  <td>{parseISO(log["@timestamp"] + "Z").toLocaleString("lt", { timeZoneName: "short" })}</td>
+                  <td>{parseISO(log["@timestamp"] + "Z").toLocaleString("US", { timeZoneName: "short" })}</td>
                   <td>{formatIsoDate(log.date)}</td>
                   <td>{`${playersDict[log.auth_sub]?.attrib?.given_name ?? log.auth_sub} (${log.auth_type})`}</td>
                   <td>{log.action}</td>
                   <td>
-                    {log.previous && actionTypesToConvert.includes(log.action) ? (
+                    {log.action != "create" && log.previous && actionTypesToConvert.includes(log.action) ? (
                       <pre>{yaml.dump(event_prev, { indent: 2 })}</pre>
                     ) : log.action === "delete" ? (
                       <Button
@@ -481,7 +586,7 @@ function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
                     )}
                   </td>
                   <td>
-                    {log.new && actionTypesToConvert.includes(log.action) ? (
+                    {log.action != "delete" && log.new && actionTypesToConvert.includes(log.action) ? (
                       <pre>{yaml.dump(event_new, { indent: 2 })}</pre>
                     ) : log.action === "create" ? (
                       <Button
@@ -535,7 +640,7 @@ function RsvpLog({ rsvpLog }: { rsvpLog: RsvpLogType[] }) {
         <tbody>
           {rsvpLog.map((log, index) => (
             <tr key={index}>
-              <td>{parseISO(log["@timestamp"] + "Z").toLocaleString("lt", { timeZoneName: "short" })}</td>
+              <td>{parseISO(log["@timestamp"] + "Z").toLocaleString("US", { timeZoneName: "short" })}</td>
               <td>{formatIsoDate(log.date)}</td>
               <td>{`${playersDict[log.auth_sub]?.attrib.given_name ?? log.auth_sub} (${log.auth_type})`}</td>
               <td>{log.action}</td>
@@ -579,11 +684,54 @@ function PlayerLog({ playerLog }: { playerLog: PlayerLogType[] }) {
             try {
               return (
                 <tr key={index}>
-                  <td>{parseISO(log["@timestamp"] + "Z").toLocaleString("lt", { timeZoneName: "short" })}</td>
+                  <td>{parseISO(log["@timestamp"] + "Z").toLocaleString("US", { timeZoneName: "short" })}</td>
                   <td>{`${playersDict[log.auth_sub].attrib.given_name} (${log.auth_type})`}</td>
                   <td>{log.action}</td>
                   <td>{playersDict[log.user_id].attrib.given_name}</td>
                   <td>{log && log.attrib ? log.attrib.replace("groups,", "groups:") : !log ? log : log.attrib}</td>
+                </tr>
+              );
+            } catch (e) {
+              console.log(log);
+              console.error(e);
+              return <></>;
+            }
+          })}
+        </tbody>
+      </Table>
+      // </div>
+    );
+  }
+}
+
+function EmailSubscriptionLog({ emailSubscriptionLog }: { emailSubscriptionLog: EmailSubscriptionLogType[] }) {
+  const playersQuery = useQuery(fetchPlayersOptions());
+  const playersDict = playersQuery?.data?.Users ?? {};
+  if (emailSubscriptionLog.length === 0) {
+    return <p>No logs to display</p>;
+  } else {
+    return (
+      // <div className="tableFixHead">
+      <Table striped bordered hover>
+        <thead>
+          <tr style={{ position: "sticky", top: "99px" }}>
+            <th>Log Time</th>
+            <th>Made By</th>
+            <th>Action</th>
+            <th>Player</th>
+            <th>Subscription Type</th>
+          </tr>
+        </thead>
+        <tbody>
+          {emailSubscriptionLog.map((log, index) => {
+            try {
+              return (
+                <tr key={index}>
+                  <td>{parseISO(log["@timestamp"] + "Z").toLocaleString("US", { timeZoneName: "short" })}</td>
+                  <td>{`${playersDict[log.auth_sub].attrib.given_name} (${log.auth_type})`}</td>
+                  <td>{log.action}</td>
+                  <td>{playersDict[log.user_id].attrib.given_name}</td>
+                  <td>{log.attrib}</td>
                 </tr>
               );
             } catch (e) {

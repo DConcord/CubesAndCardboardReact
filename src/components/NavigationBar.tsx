@@ -33,7 +33,6 @@ export default function NavigationBar() {
 
   const [showMenu, setShowMenu] = useState(false);
   const handleCloseMenu = () => setShowMenu(false);
-  const handleShowMenu = () => setShowMenu(true);
   const toggleMenu = () => setShowMenu(!showMenu);
 
   const {
