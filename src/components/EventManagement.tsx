@@ -537,7 +537,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                   onChange={handleInput}
                   defaultValue={task == "Create" ? "default" : eventForm.format}
                   disabled={!isAdmin || ["Read", "Restore"].includes(task)}
-                  isInvalid={!["Open", "Reserved", "Private"].includes(eventForm.format)}
+                  isInvalid={!["Open", "Reserved", "Private", "Placeholder"].includes(eventForm.format)}
                 >
                   <option hidden disabled value="default">
                     {" "}
@@ -546,6 +546,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                   <option value="Open">Open</option>
                   <option value="Reserved">Reserved</option>
                   <option value="Private">Private</option>
+                  <option value="Placeholder">Placeholder</option>
                 </Form.Select>
               </FloatingLabel>
             </Form.Group>

@@ -322,6 +322,12 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                             {"[Complete]"}
                           </Card.Title>
                         </Card.ImgOverlay>
+                      ) : event.format == "Placeholder" ? (
+                        <Card.ImgOverlay>
+                          <Card.Title className="topsecret" style={{ color: "orange" }}>
+                            {"[TBD]"}
+                          </Card.Title>
+                        </Card.ImgOverlay>
                       ) : (
                         <></>
                       )}
@@ -357,6 +363,8 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                                   ? "Spots: " + spots_available
                                   : event.format == "Reserved" && spots_available! < 1
                                   ? "Full"
+                                  : event.format == "Placeholder"
+                                  ? ""
                                   : event.format}
                               </span>
                             </OverlayTrigger>
@@ -381,25 +389,37 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                           </Col>
                         </Row>
                       </Card.Subtitle>
-                      <Card.Text as="div">
-                        <div>Host: {playersDict[event.host].attrib.given_name}</div>
-                        {event.format != "Open" && (
-                          <>
-                            <div>Max Players: {event.total_spots}</div>
-                          </>
-                        )}
-                        <div>
-                          {futureEvent
-                            ? "Attending: "
-                            : event.status && event.status == "Cancelled"
-                            ? "Registered: "
-                            : "Attended: "}
-                          {attending_names.join(", ")}
-                          {futureEvent && event.format == "Open" && (
-                            <div>Not Attending: {not_attending_names.join(", ")}</div>
+                      {event.format == "Placeholder" ? (
+                        <Card.Text as="div">
+                          <Container fluid>
+                            <Row className="align-items-center" style={{ paddingTop: "2rem" }}>
+                              <Col className="d-flex align-items-center justify-content-center h5">
+                                Details Coming Soon!
+                              </Col>
+                            </Row>
+                          </Container>
+                        </Card.Text>
+                      ) : (
+                        <Card.Text as="div">
+                          <div>Host: {playersDict[event.host].attrib.given_name}</div>
+                          {event.format != "Open" && (
+                            <>
+                              <div>Max Players: {event.total_spots}</div>
+                            </>
                           )}
-                        </div>
-                      </Card.Text>
+                          <div>
+                            {futureEvent
+                              ? "Attending: "
+                              : event.status && event.status == "Cancelled"
+                              ? "Registered: "
+                              : "Attended: "}
+                            {attending_names.join(", ")}
+                            {futureEvent && event.format == "Open" && (
+                              <div>Not Attending: {not_attending_names.join(", ")}</div>
+                            )}
+                          </div>
+                        </Card.Text>
+                      )}
                     </Card.Body>
                     {!futureEvent && event.finalScore && (
                       <Accordion
@@ -430,16 +450,22 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                         </Accordion.Item>
                       </Accordion>
                     )}
-                    <Authenticated group={["player"]}>
-                      {tokensParsed &&
-                        futureEvent &&
-                        event.host !== user_id &&
-                        !(event.format == "Reserved" && spots_available! < 1 && !event.attending.includes(user_id)) && (
-                          <Card.Footer>
-                            <RsvpFooter event={event} index={index} />
-                          </Card.Footer>
-                        )}
-                    </Authenticated>
+                    {event.format !== "Placeholder" && (
+                      <Authenticated group={["player"]}>
+                        {tokensParsed &&
+                          futureEvent &&
+                          event.host !== user_id &&
+                          !(
+                            event.format == "Reserved" &&
+                            spots_available! < 1 &&
+                            !event.attending.includes(user_id)
+                          ) && (
+                            <Card.Footer>
+                              <RsvpFooter event={event} index={index} />
+                            </Card.Footer>
+                          )}
+                      </Authenticated>
+                    )}
                     <Authenticated>
                       {(showAdmin && isAdmin) || (tokensParsed && !isAdmin && user_id == event.host) ? (
                         <Card.Footer>
