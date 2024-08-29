@@ -12,7 +12,7 @@ export type GameKnightEvent = {
   date: string;
   host: string;
   organizer: string;
-  format: "Open" | "Reserved" | "Private";
+  format: "Open" | "Reserved" | "Private" | "Placeholder";
   open_rsvp_eligibility?: boolean;
   game: string;
   bgg_id?: number;
