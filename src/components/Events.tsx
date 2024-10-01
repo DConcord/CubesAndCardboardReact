@@ -95,9 +95,7 @@ export default function UpcomingEvents() {
         return;
       }
     }, 5000);
-    console.log("refetch2");
-    // queryClient.invalidateQueries({ queryKey: ["events"] });
-    // eventsQuery.refetch();
+    // console.log("refetch2");
 
     return () => clearInterval(refetchEarly);
   }, [eventsQuery.data]);
