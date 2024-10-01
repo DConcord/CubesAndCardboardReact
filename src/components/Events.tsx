@@ -1,4 +1,4 @@
-import { useState, useEffect, lazy, Suspense } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 import Accordion from "react-bootstrap/Accordion";
@@ -11,17 +11,11 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 
-import { formatIsoDate } from "../utilities";
+import { formatIsoDate, humanTime_ms } from "../utilities";
 import "../assets/fonts/TopSecret.ttf";
 
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import {
-  fetchEventsOptions,
-  fetchEventsApiOptions,
-  fetchPlayersOptions,
-  fetchEventsApi,
-  fetchPlayersApiOptions,
-} from "./Queries";
+import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchEventsApi } from "./Queries";
 
 const TShoot = lazy(() => import("./TShoot"));
 const ManageEventModal = lazy(() => import("./EventManagement"));
@@ -52,6 +46,59 @@ export default function UpcomingEvents() {
   const eventsQuery =
     tokens && signInStatus == "SIGNED_IN" ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const playersQuery = useQuery(fetchPlayersOptions());
+  const queryClient = useQueryClient();
+
+  const earlyRefreshRef = useRef(Infinity);
+  useEffect(() => {
+    const now = Date.now();
+    const tenMinutesInMs = 10 * 60 * 1000;
+    const nextSundayMidnight = new Date(
+      new Date().setDate(new Date().getDate() + ((7 - new Date().getDay()) % 7))
+    ).setHours(0, 0, 0, 0);
+    const msUntilNextSundayMidnight = nextSundayMidnight - now;
+    const nextSundayMidnightWithinTenMin = msUntilNextSundayMidnight <= tenMinutesInMs;
+
+    const eventEarlyRefresh = eventsQuery.data
+      ? eventsQuery.data
+          .filter((event) => {
+            const timeDiff = Date.parse(event.date) - Date.now();
+            return timeDiff <= tenMinutesInMs && timeDiff >= 0;
+          })
+          .map((event) => Date.parse(event.date)) // - Date.now())
+      : [];
+    // console.log({ eventEarlyRefresh: eventEarlyRefresh });
+    earlyRefreshRef.current = Math.min(
+      nextSundayMidnightWithinTenMin ? nextSundayMidnight : Infinity,
+      ...(eventEarlyRefresh ?? Infinity)
+    );
+    if (earlyRefreshRef.current == Infinity) return;
+    // console.log({
+    //   earlyRefresh: new Date(earlyRefreshRef.current).toLocaleTimeString("en-US"),
+    //   nextSundayMidnight: new Date(nextSundayMidnight).toLocaleTimeString("en-US"),
+    //   now: new Date().toLocaleTimeString("en-US"),
+    // });
+    // setEarlyRefresh(_earlyRefresh);
+
+    const refetchEarly = setInterval(() => {
+      const earlyRefresh = earlyRefreshRef.current;
+      // console.log({
+      //   "refresh time": new Date(earlyRefresh).toLocaleTimeString("en-US"),
+      //   "time until refresh": humanTime_ms(earlyRefresh - Date.now()),
+      // });
+      if (earlyRefresh < Date.now()) {
+        queryClient.invalidateQueries({ queryKey: ["events"] });
+      }
+      if (earlyRefresh + 70000 < Date.now()) {
+        // console.log("End Refetch");
+        earlyRefreshRef.current = Infinity;
+        clearInterval(refetchEarly);
+        return;
+      }
+    }, 5000);
+    // console.log("refetch2");
+
+    return () => clearInterval(refetchEarly);
+  }, [eventsQuery.data]);
 
   // Create "Manage Event" PopUp ("Modal")
   const [managedEvent, setManagedEvent] = useState<GameKnightEvent | null>(null);
@@ -74,7 +121,6 @@ export default function UpcomingEvents() {
     setShowTransferProdEvents(true);
   };
 
-  const queryClient = useQueryClient();
   const eventsApiRefreshMutation = useMutation({
     mutationFn: () => fetchEventsApi({}),
     onSuccess: (data) => {
@@ -335,7 +381,9 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                     <Card.Body>
                       <Card.Title key={index}>
                         <Row>
-                          <Col className="d-flex justify-content-start">{event_date}</Col>
+                          <Col style={{ minWidth: "max-content" }} className="d-flex justify-content-start">
+                            {event_date}
+                          </Col>
                           <Col className="d-flex justify-content-end gap-1">
                             <OverlayTrigger
                               placement="left"
