@@ -17,16 +17,15 @@ import QueryClientProvider from "./components/Queries";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import { Passwordless } from "amazon-cognito-passwordless-auth";
-import { PasswordlessContextProvider /*Fido2Toast*/ } from "amazon-cognito-passwordless-auth/react";
-// import ThemeProvider from "react-bootstrap/ThemeProvider";
+import { PasswordlessContextProvider } from "amazon-cognito-passwordless-auth/react";
 import { RouterProvider } from "react-router-dom";
 
 Passwordless.configure({
-  clientId: "15bcvkbaclouojbupbsqa9ttfd",
+  clientId: import.meta.env.VITE_AUTH_CLIENT_ID,
   cognitoIdpEndpoint: "us-east-1",
   debug: console.trace,
   fido2: {
-    baseUrl: "https://events.cubesandcardboard.net/auth/",
+    baseUrl: `https://${import.meta.env.VITE_API_URL}/auth`,
     authenticatorSelection: {
       userVerification: "required",
     },

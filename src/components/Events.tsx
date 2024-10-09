@@ -155,8 +155,8 @@ export default function UpcomingEvents() {
                   </Col>
                   <Authenticated group={["admin"]}>
                     {showAdmin &&
-                      import.meta.env.MODE == "test" &&
-                      import.meta.env.VITE_API_URL == "eventsdev.dissonantconcord.com" && (
+                      (import.meta.env.MODE == "test" || import.meta.env.MODE == "sandbox") &&
+                      import.meta.env.VITE_API_URL !== "events.cubesandcardboard.net" && (
                         <>
                           <Col xs="auto" style={{ textAlign: "right", padding: 4 }}>
                             <Button size="sm" variant="secondary" onClick={handleShowTransferProdEvents}>
@@ -195,7 +195,7 @@ export default function UpcomingEvents() {
               <ManageEventModal close={handleCloseManageEvent} task={managedEventTask} gameKnightEvent={managedEvent} />
             </Suspense>
           </Modal>
-          {import.meta.env.MODE == "test" && (
+          {(import.meta.env.MODE == "test" || import.meta.env.MODE == "sandbox") && (
             <Modal
               show={showTransferProdEvents}
               onHide={handleCloseTransferProdEvents}
@@ -325,9 +325,9 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
             const futureEvent = Date.parse(event.date) >= Date.parse(new Date().toString());
             if (playersDict) {
               if (event.host && event.host in playersDict && event.attending.includes(event.host))
-                attending_names.push(`${playersDict[event.host].attrib.given_name} (H)`);
+                attending_names.push(`${playersDict[event.host]?.attrib.given_name || "unknown"} (H)`);
               if (event.organizer && event.organizer in playersDict && event.attending.includes(event.organizer))
-                attending_names.push(`${playersDict[event.organizer].attrib.given_name} (O)`);
+                attending_names.push(`${playersDict[event.organizer]?.attrib.given_name || "unknown"} (O)`);
               try {
                 attending_names.push(
                   ...event.attending
@@ -393,9 +393,8 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                                   {!futureEvent && event.format == "Open"
                                     ? "Open Event"
                                     : event.format == "Open"
-                                    ? "Open event! Let " +
-                                      playersDict[event.host].attrib.given_name +
-                                      " know if you can make it"
+                                    ? "Open event! Let " + playersDict[event.host]?.attrib.given_name ||
+                                      "unknown" + " know if you can make it"
                                     : !futureEvent
                                     ? spots_available + " spot(s) unfilled"
                                     : spots_available + " spot(s) remaining"}
@@ -449,7 +448,7 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                         </Card.Text>
                       ) : (
                         <Card.Text as="div">
-                          <div>Host: {playersDict[event.host].attrib.given_name}</div>
+                          <div>Host: {playersDict[event.host]?.attrib.given_name || "unknown"}</div>
                           {event.format != "Open" && (
                             <>
                               <div>Max Players: {event.total_spots}</div>
@@ -488,7 +487,7 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                                 {event.finalScore.map(({ place, player, score }, index) => (
                                   <tr key={index}>
                                     <td style={{ maxWidth: "min-content" }}>{place}</td>
-                                    <td>{playersDict[player]?.attrib.given_name ?? "Unknown"}</td>
+                                    <td>{playersDict[player]?.attrib.given_name || "Unknown"}</td>
                                     <td>{score}</td>
                                   </tr>
                                 ))}

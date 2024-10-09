@@ -24,10 +24,10 @@ import { parseISO } from "date-fns";
 const ManageEventModal = lazy(() => import("./EventManagement"));
 
 import { ManagedEventTask, GameKnightEvent, PlayerScore } from "../types/Events";
-import { AllEmailAlertPreferences } from "../types/Players";
+import { LogType, EventLogType, RsvpLogType, PlayerLogType, EmailSubscriptionLogType } from "../types/Logs";
 
 import { formatIsoDate } from "../utilities";
-import { fetchPlayersOptions, apiClient, publicClient } from "./Queries";
+import { fetchPlayersOptions, apiClient /*publicClient*/ } from "./Queries";
 
 const timeInterval: { [key in IntervalType]: number } = {
   Minutes: 60 * 1000,
@@ -356,100 +356,6 @@ export default function Logs() {
   );
 }
 
-// type LogType = {
-//   "@timestamp": string;
-//   log_type: "event" | "rsvp" | "player" | "email_subscription";
-//   date: string;
-//   action: "create" | "update" | "delete" | "modify" | "add";
-//   auth_sub: string;
-//   auth_type: "admin" | "self" | "host";
-//   previous: Object;
-//   new: Object;
-//   event_id: string;
-//   user_id: string;
-//   rsvp: "attending" | "not_attending";
-//   attrib: string;
-// };
-type LogType = RsvpLogType | EventLogType | PlayerLogType | EmailSubscriptionLogType;
-// type RsvpLogType = Omit<LogType, "previous" | "new" | "attrib"> & { log_type: "rsvp" };
-// type EventLogType = Omit<LogType, "user_id" | "rsvp" | "attrib"> & { log_type: "event" };
-// type PlayerLogType = Omit<LogType, "date" | "previous" | "new" | "event_id" | "rsvp"> & { log_type: "player" };
-// type EmailSubscriptionLogType = Omit<LogType, "date" | "previous" | "new" | "event_id" | "rsvp"> & {
-//   log_type: "email_subscription";
-
-type RsvpLogType = {
-  "@timestamp": string;
-  log_type: "rsvp";
-  date: string;
-  action: "update" | "delete" | "add";
-  auth_sub: string;
-  auth_type: "admin" | "self" | "host";
-  event_id: string;
-  user_id: string;
-  rsvp: "attending" | "not_attending";
-};
-type EventLogType =
-  | {
-      "@timestamp": string;
-      log_type: "event";
-      auth_sub: string;
-      auth_type: "admin";
-      event_id: string;
-      date: string;
-      new: Object;
-      action: "create";
-    }
-  | {
-      "@timestamp": string;
-      log_type: "event";
-      auth_sub: string;
-      auth_type: "admin";
-      event_id: string;
-      date: string;
-      previous: Object;
-      action: "delete";
-    }
-  | {
-      "@timestamp": string;
-      log_type: "event";
-      auth_sub: string;
-      auth_type: "admin";
-      event_id: string;
-      date: string;
-      previous: Object;
-      new: Object;
-      action: "modify";
-    }
-  | {
-      "@timestamp": string;
-      log_type: "event";
-      auth_sub: string;
-      auth_type: "host";
-      event_id: string;
-      date: string;
-      previous: Object;
-      new: Object;
-      action: "update";
-    };
-type PlayerLogType = {
-  "@timestamp": string;
-  log_type: "player";
-  action: "create" | "update";
-  auth_sub: string;
-  auth_type: "admin" | "self";
-  user_id: string;
-  attrib: string;
-};
-type EmailSubscriptionLogType = {
-  "@timestamp": string;
-  log_type: "email_subscription";
-  action: "subscribe" | "unsubscribe";
-  auth_sub: string;
-  user_id: string;
-  auth_type: "admin" | "self";
-  attrib: keyof AllEmailAlertPreferences & string;
-};
-
 function EventLog({ eventLog }: { eventLog: EventLogType[] }) {
   const playersQuery = useQuery(fetchPlayersOptions());
   const playersDict = playersQuery?.data?.Users ?? {};
@@ -668,7 +574,6 @@ function PlayerLog({ playerLog }: { playerLog: PlayerLogType[] }) {
     return <p>No logs to display</p>;
   } else {
     return (
-      // <div className="tableFixHead">
       <Table striped bordered hover>
         <thead>
           <tr style={{ position: "sticky", top: "99px" }}>
@@ -699,7 +604,6 @@ function PlayerLog({ playerLog }: { playerLog: PlayerLogType[] }) {
           })}
         </tbody>
       </Table>
-      // </div>
     );
   }
 }

@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 import { PlayersGroups, PlayerEmailAlertPreferences, AllEmailAlertPreferences } from "../types/Players";
-import { GameSearch, GameKnightEvent } from "../types/Events";
+import { GameSearch, GameKnightEvent, ExistingGameKnightEvent } from "../types/Events";
 
 import { queryOptions, QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -49,9 +49,16 @@ export function fetchEventsApiOptions(refetchInterval = 1000 * 60 * 10) {
 interface fetchEventsApiProps {
   dateLte?: string;
   dateGte?: string;
+  tableType?: string;
 }
-export const fetchEventsApi = async ({ dateLte, dateGte }: fetchEventsApiProps): Promise<GameKnightEvent[]> => {
-  const response = await apiClient.get(`/events`, { params: { dateLte: dateLte, dateGte: dateGte } });
+export const fetchEventsApi = async ({
+  dateLte,
+  dateGte,
+  tableType,
+}: fetchEventsApiProps): Promise<ExistingGameKnightEvent[]> => {
+  const response = await apiClient.get(`/events`, {
+    params: { dateLte: dateLte, dateGte: dateGte, tableType: tableType },
+  });
   return response.data;
 };
 
