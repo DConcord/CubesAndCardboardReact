@@ -21,6 +21,7 @@ export type PlayerGet = {
     family_name?: string;
     email: string;
     phone_number?: string;
+    "custom:prev_sub"?: string;
   };
 };
 
@@ -34,6 +35,7 @@ export type PlayerBase = {
   user_id: string;
   groups: PlayerGet["groups"];
   accessToken: string;
+  "custom:prev_sub"?: string;
 };
 
 export type PlayerCreate = Omit<PlayerBase, "user_id" | "accessToken">;

@@ -77,18 +77,22 @@ export const fetchPlayersJson = async (): Promise<PlayersGroups> => {
   return response.data;
 };
 
-export function fetchPlayersApiOptions({ refresh }: { refresh: "yes" | "no" }) {
+interface fetchPlayersApiProps {
+  refresh: "yes" | "no";
+  user_pool?: string;
+}
+// export function fetchPlayersApiOptions({ refresh }: { refresh: "yes" | "no" }) {
+export function fetchPlayersApiOptions({ refresh, user_pool }: fetchPlayersApiProps) {
   return queryOptions({
     queryKey: ["players", "api"],
-    queryFn: () => fetchPlayersApi(refresh),
+    queryFn: () => fetchPlayersApi({ refresh: refresh, user_pool: user_pool }),
     staleTime: 1000 * 60 * 10, // cache for 10 min before marking stale
     refetchInterval: 1000 * 60 * 20, // refetch every 20 min
   });
 }
-
-export const fetchPlayersApi = async (refresh: "yes" | "no"): Promise<PlayersGroups> => {
+export const fetchPlayersApi = async ({ refresh, user_pool }: fetchPlayersApiProps): Promise<PlayersGroups> => {
   const response = await apiClient.get(`/players`, {
-    params: { refresh: refresh },
+    params: { refresh: refresh, user_pool: user_pool },
   });
   queryClient.setQueryData(["players"], response.data);
   return response.data;

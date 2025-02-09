@@ -4,6 +4,7 @@ import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 // import Icon from "@mdi/react";
 // import { mdiRefresh, mdiClose, mdiCheck } from "@mdi/js";
+const TransferProdPlayersModal = lazy(() => import("./TransferProdPlayers"));
 
 import { verifyUserAttribute, getUserAttributeVerificationCode } from "amazon-cognito-passwordless-auth/cognito-api";
 
@@ -99,6 +100,12 @@ export default function Players() {
   const [showUserId, setShowUserId] = useState(false);
   const toggleShowUserId = () => setShowUserId(!showUserId);
 
+  const [showTransferProdPlayers, setShowTransferProdPlayers] = useState(false);
+  const handleCloseTransferProdPlayers = () => setShowTransferProdPlayers(false);
+  const handleShowTransferProdPlayers = () => {
+    setShowTransferProdPlayers(true);
+  };
+
   if (playersDict) {
     const tableData: PlayerTable = Object.entries(playersDict)
       .map(([player_id, player]) => ({
@@ -117,6 +124,19 @@ export default function Players() {
 
     return (
       <div className="margin-top-65">
+        {/* TransferProdPlayers modal in test/sandbox environements */}
+        {(import.meta.env.MODE == "test" || import.meta.env.MODE == "sandbox") && (
+          <Modal
+            show={showTransferProdPlayers}
+            onHide={handleCloseTransferProdPlayers}
+            backdrop="static"
+            keyboard={false}
+          >
+            <Suspense fallback={<>...</>}>
+              <TransferProdPlayersModal close={handleCloseTransferProdPlayers} />
+            </Suspense>
+          </Modal>
+        )}
         <Authenticated given_name={["Colten"]}>
           <Suspense fallback={<>...</>}>
             <TShoot />
@@ -179,6 +199,17 @@ export default function Players() {
                       </Button>
                     </ConditionalWrap>
                   </Col>
+                  {/* Offer Transfer button to admins in test/sandbox environment */}
+                  {(import.meta.env.MODE == "test" || import.meta.env.MODE == "sandbox") &&
+                    import.meta.env.VITE_API_URL !== "events.cubesandcardboard.net" && (
+                      <Authenticated group={["admin"]}>
+                        <Col xs="auto" style={{ textAlign: "right" }}>
+                          <Button size="sm" variant="secondary" onClick={handleShowTransferProdPlayers}>
+                            Transfer
+                          </Button>
+                        </Col>
+                      </Authenticated>
+                    )}
                 </Row>
               </Col>
             </Authenticated>

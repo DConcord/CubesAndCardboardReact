@@ -17,13 +17,13 @@ export type GameKnightEvent = {
   game: string;
   bgg_id?: number;
   total_spots?: number;
-  registered?: string[];
+  // registered?: string[]; // deprecated. moved to 'attending'
   attending: string[];
   not_attending: string[];
   player_pool: string[];
   organizer_pool: string[];
   tbd_pic?: string;
-  migrated?: boolean;
+  migrated?: boolean; // deprecated
   status?: "Normal" | "Cancelled";
   finalScore?: PlayerScore[];
 };

@@ -250,6 +250,22 @@ export function PreviousEvents({ showAdmin }: { showAdmin: boolean }) {
         {[...years].map((year: string) => (
           <Accordion.Item key={year + "_item"} eventKey={year}>
             <Accordion.Header key={year + "_header"}>{year} Events</Accordion.Header>
+            {/* <Accordion.Header key={year + "_header"}>
+              <Row className="align-items-center justify-content-end w-100">
+                <Col style={{ minWidth: "max-content" }}>
+                  <div>{year} Events</div>
+                </Col>
+                <Authenticated group={["admin"]}>
+                  {showAdmin && (
+                    <Col xs="auto" style={{ textAlign: "right", padding: 4, marginRight: 12 }}>
+                      <Button size="sm" variant="secondary" onClick={() => exportToCSV(eventsQuery.data)}>
+                        Export JSON
+                      </Button>
+                    </Col>
+                  )}
+                </Authenticated>
+              </Row>
+            </Accordion.Header> */}
             <Accordion.Body key={year + "_body"}>
               <EventCards
                 events={eventsQuery.data.filter((event: GameKnightEvent) => event.date.startsWith(year))}
@@ -277,6 +293,15 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
   const queryClient = useQueryClient();
   const playersQuery: PlayersGroups | undefined = queryClient.getQueryData(["players"]);
   const playersDict = playersQuery?.Users ?? {};
+
+  // Create a dictionary of previous subs from players with custom:prev_sub if present
+  const playersPrevSubDict =
+    playersQuery &&
+    Object.fromEntries(
+      Object.entries(playersQuery.Users)
+        .filter(([player_id, info]) => info.attrib["custom:prev_sub"])
+        .map(([player_id, info]) => [info.attrib["custom:prev_sub"], player_id])
+    );
 
   // Create "Manage Event" PopUp ("Modal")
   const [managedEvent, setManagedEvent] = useState<GameKnightEvent | null>(null);
@@ -324,17 +349,36 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
 
             const futureEvent = Date.parse(event.date) >= Date.parse(new Date().toString());
             if (playersDict) {
-              if (event.host && event.host in playersDict && event.attending.includes(event.host))
-                attending_names.push(`${playersDict[event.host]?.attrib.given_name || "unknown"} (H)`);
-              if (event.organizer && event.organizer in playersDict && event.attending.includes(event.organizer))
+              if (event.host && event.host in playersDict && event.attending.includes(event.host)) {
+                attending_names.push(`${playersDict[event.host]?.attrib.given_name || "unknown host"} (H)`);
+              } else if (event.host && event.host in playersPrevSubDict) {
+                // if player in playersPrevSubDict, use that name
+                attending_names.push(
+                  `${playersDict[playersPrevSubDict[event.host]]?.attrib.given_name || "unknown host"} (H)`
+                );
+              }
+              if (event.organizer && event.organizer in playersDict && event.attending.includes(event.organizer)) {
                 attending_names.push(`${playersDict[event.organizer]?.attrib.given_name || "unknown"} (O)`);
+              } else if (
+                event.organizer &&
+                event.organizer in playersPrevSubDict &&
+                event.attending.includes(event.organizer)
+              ) {
+                attending_names.push(
+                  `${playersDict[playersPrevSubDict[event.organizer]]?.attrib.given_name || "unknown"} (O)`
+                );
+              }
               try {
                 attending_names.push(
                   ...event.attending
                     .map((player_id) => {
                       if (event.organizer && event.organizer == player_id) return "";
                       if (event.host && event.host == player_id) return "";
-                      return playersDict[player_id]?.attrib.given_name || "unknown";
+                      return playersDict[player_id]
+                        ? playersDict[player_id]?.attrib.given_name
+                        : playersPrevSubDict[player_id]
+                        ? playersDict[playersPrevSubDict[player_id]]?.attrib.given_name
+                        : "unknown";
                     })
                     .filter((player) => player != "")
                     .sort()
@@ -563,3 +607,34 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
     </>
   );
 }
+
+// const exportToCSV = (events: GameKnightEvent[]) => {
+//   // Define CSV headers
+//   const headers = ["Date", "Game", "Host", "Location", "Max Players", "Current Players"].join(",");
+
+//   // Convert events to CSV rows
+//   const rows = events.map((event) => {
+//     return [
+//       formatIsoDate(event.date),
+//       `"${event.game.replace(/"/g, '""')}"`, // Escape quotes in title
+//       `"${event.description?.replace(/"/g, '""') || ""}"`,
+//       `"${event.location?.replace(/"/g, '""') || ""}"`,
+//       event.maxPlayers || "",
+//       event.players?.length || 0,
+//     ].join(",");
+//   });
+
+//   // Combine headers and rows
+//   const csv = [headers, ...rows].join("\n");
+
+//   // Create and trigger download
+//   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+//   const link = document.createElement("a");
+//   const url = URL.createObjectURL(blob);
+//   link.setAttribute("href", url);
+//   link.setAttribute("download", `game-nights-${new Date().toISOString().split("T")[0]}.csv`);
+//   link.style.visibility = "hidden";
+//   document.body.appendChild(link);
+//   link.click();
+//   document.body.removeChild(link);
+// };

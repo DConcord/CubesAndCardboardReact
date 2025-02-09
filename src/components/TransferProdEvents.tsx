@@ -11,7 +11,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, fetchEventsApi } from "./Queries";
 
 import { formatIsoDate } from "../utilities";
-import { ExistingGameKnightEvent, EventDict, GameKnightEvent } from "../types/Events";
+import { ExistingGameKnightEvent } from "../types/Events";
+import { PlayersGroups, PlayersDict } from "../types/Players";
 
 import { queryOptions } from "@tanstack/react-query";
 import { AxiosError } from "axios";
@@ -33,13 +34,9 @@ export default function TransferProdEventsModal({ close }: TransferProdEventsMod
   const toggleShowEventId = () => setShowEventId(!showEventId);
 
   const prodEventsQuery = useQuery(fetchProdEventsApiOptions());
-
-  let prodEventDict: EventDict = {};
-  if (prodEventsQuery.isSuccess) {
-    for (let event of prodEventsQuery.data as ExistingGameKnightEvent[]) {
-      prodEventDict[event["event_id"]] = event;
-    }
-  }
+  const prodEventDict = prodEventsQuery?.data
+    ? Object.fromEntries(prodEventsQuery?.data?.map((event) => [event.event_id, event]))
+    : {};
 
   const devEventsQuery = useQuery({
     queryKey: ["events", "all"],
@@ -47,15 +44,24 @@ export default function TransferProdEventsModal({ close }: TransferProdEventsMod
     staleTime: 1000 * 60 * 60 * 6, // stale after 6 h
     refetchInterval: 1000 * 60 * 60 * 6,
   });
-
-  let devEventDict: EventDict = {};
-  if (devEventsQuery.isSuccess) {
-    for (let event of devEventsQuery.data as ExistingGameKnightEvent[]) {
-      devEventDict[event["event_id"]] = event;
-    }
-  }
+  const devEventDict = devEventsQuery?.data
+    ? Object.fromEntries(devEventsQuery?.data?.map((event) => [event.event_id, event]))
+    : {};
 
   const queryClient = useQueryClient();
+  const playersQuery: PlayersGroups | undefined = queryClient.getQueryData(["players"]);
+  const playersDict = playersQuery?.Users ?? {};
+  const playersPrevSubDict: { [key: string]: string } =
+    playersQuery &&
+    Object.fromEntries(
+      Object.entries(playersQuery.Users)
+        .filter(([player_id, info]) => info.attrib["custom:prev_sub"])
+        .map(([player_id, info]) => [info.attrib["custom:prev_sub"], player_id])
+    );
+
+  const [updatePlayerSub, setUpdatePlayerSub] = useState(
+    playersPrevSubDict && Object.keys(playersPrevSubDict).length > 0 ? true : false
+  );
 
   // Handle Transfer Event Checkboxes
   const [selectedTransferOptions, setSelectedTransferOptions] = useState<string[]>([]);
@@ -89,6 +95,58 @@ export default function TransferProdEventsModal({ close }: TransferProdEventsMod
       }
     },
   });
+  // interface ExistingGameKnightEventX extends ExistingGameKnightEvent {
+  //   [key: string]: any; // Index signature
+  // }
+  // <T extends object, U extends keyof T>
+  function updatePrevSubEvents<T extends ExistingGameKnightEvent>(
+    event: T,
+    playersDict: PlayersDict,
+    playersPrevSubDict: { [key: string]: string }
+  ) {
+    // const skipKeys: (keyof ExistingGameKnightEvent)[] = [
+    const skipKeys = [
+      "event_id",
+      "event_type",
+      "date",
+      "format",
+      "open_rsvp_eligibility",
+      "game",
+      "bgg_id",
+      "total_spots",
+      "tbd_pic",
+      "migrated",
+      "status",
+    ];
+
+    for (const [k, v] of Object.entries(event)) {
+      if (skipKeys.includes(k)) continue;
+
+      if (k === "finalScore") {
+        for (const score of v) {
+          if (score.player in playersPrevSubDict && !(score.player in playersDict)) {
+            score.player = playersPrevSubDict[score.player];
+          }
+        }
+      } else if (Array.isArray(v)) {
+        const newSet = new Set(v);
+        for (const playerId of newSet) {
+          if (playerId in playersPrevSubDict && !(playerId in playersDict)) {
+            newSet.delete(playerId);
+            newSet.add(playersPrevSubDict[playerId]);
+          }
+        }
+        (event[k as keyof T] as string[]) = Array.from(newSet);
+      } else if (typeof v === "string") {
+        if (v in playersPrevSubDict && !(v in playersDict)) {
+          (event[k as keyof T] as string) = playersPrevSubDict[v];
+        }
+      } else {
+        throw new Error(`Unhandled type ${typeof v} for ${k}: ${v}`);
+      }
+    }
+    return event;
+  }
 
   async function handleSubmit(event: React.BaseSyntheticEvent) {
     setWaiting(true);
@@ -97,6 +155,9 @@ export default function TransferProdEventsModal({ close }: TransferProdEventsMod
 
     const transferMutationsSettled = await Promise.allSettled(
       selectedTransferOptions.map((event_id) => {
+        if (updatePlayerSub && Object.keys(playersPrevSubDict).length > 0) {
+          prodEventDict[event_id] = updatePrevSubEvents(prodEventDict[event_id], playersDict, playersPrevSubDict);
+        }
         const body: ExistingGameKnightEvent = { ...prodEventDict[event_id] };
         const method = event_id in devEventDict ? "PUT" : "POST";
         return transferEventMutation.mutateAsync({ method: method, body: body });
@@ -120,14 +181,34 @@ export default function TransferProdEventsModal({ close }: TransferProdEventsMod
 
   if (prodEventsQuery.isLoading) return <Modal.Body>Loading Prod Events</Modal.Body>;
   if (prodEventsQuery.isError) return <Modal.Body>Error Loading Prod Events</Modal.Body>;
-  if (devEventsQuery.isLoading) return <Modal.Body>Loading Dev Events</Modal.Body>;
-  if (devEventsQuery.isError) return <Modal.Body>Error Loading Dev Events</Modal.Body>;
+  if (devEventsQuery.isLoading) return <Modal.Body>Loading {import.meta.env.VITE_ENV_TITLE} Events</Modal.Body>;
+  if (devEventsQuery.isError) return <Modal.Body>Error Loading {import.meta.env.VITE_ENV_TITLE} Events</Modal.Body>;
   if (prodEventsQuery.isSuccess && devEventsQuery.isSuccess) {
     return (
       <Form onSubmit={handleSubmit}>
-        <Modal.Header className="text-center">Transfer selected events to the Dev DB:</Modal.Header>
+        <Modal.Header className="text-center">
+          Transfer selected events to the {import.meta.env.VITE_ENV_TITLE} DB:
+        </Modal.Header>
         <Modal.Body className="text-center">
           <Row xs={1} style={{ justifyContent: "right", padding: 4 }}>
+            <Col
+              className="middle"
+              xs="auto"
+              style={{
+                textAlign: "right",
+                padding: ".5rem",
+                display: "flex",
+                alignItems: "center",
+              }}
+            >
+              <Form.Check
+                type="checkbox"
+                id={`option_updatePlayerSub`}
+                checked={updatePlayerSub}
+                onChange={() => setUpdatePlayerSub(!updatePlayerSub)}
+                label={"Foreign Player ID"}
+              />
+            </Col>
             <Col xs="auto" style={{ textAlign: "right", padding: ".5rem" }}>
               <Button size="sm" variant="secondary" onClick={toggleShowEventId}>
                 {showEventId ? "Hide Event ID" : "Show Event ID"}
