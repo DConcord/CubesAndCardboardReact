@@ -14,6 +14,8 @@ npm run dev
 
 npm run test
 
+npm run sandbox
+
 Toggle VITE_API_URL in ./src/env/.env.development
 
 ## Build and Deploy to S3
@@ -28,7 +30,7 @@ OR
 
 npm run build
 
-npx s3-spa-upload dist cdkstack-bucket83908e77-7tr0zgs93uwh
+npx s3-spa-upload dist cnc-game-knights-frontend-prod
 
 ### DEV
 
@@ -38,4 +40,8 @@ OR
 
 npm run build -- --mode development
 
-npx s3-spa-upload dist cdkstack-bucketdevff8a9acd-pine3ubqpres
+npx s3-spa-upload dist cnc-game-knights-frontend-dev
+
+### Sandbox
+
+npm run deploy-sandbox

@@ -157,7 +157,7 @@ export default function Players() {
                   </Col>
                   <Col xs="auto" style={{ textAlign: "right" }}>
                     <ConditionalWrap
-                      condition={!["production", "test"].includes(import.meta.env.MODE)}
+                      condition={!["production", "test", "sandbox"].includes(import.meta.env.MODE)}
                       wrap={(children) => (
                         <OverlayTrigger
                           placement="bottom"
@@ -171,7 +171,7 @@ export default function Players() {
                       <Button
                         size="sm"
                         id="NewPlayer"
-                        disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                        disabled={!["production", "test", "sandbox"].includes(import.meta.env.MODE)}
                         variant="primary"
                         onClick={() => handleShowManagePlayer({ task: "Create" })}
                       >
@@ -206,7 +206,7 @@ export default function Players() {
                 <Authenticated group={["admin"]}>
                   <td>
                     <ConditionalWrap
-                      condition={!["production", "test"].includes(import.meta.env.MODE)}
+                      condition={!["production", "test", "sandbox"].includes(import.meta.env.MODE)}
                       wrap={(children) => (
                         <OverlayTrigger
                           placement="right"
@@ -221,7 +221,7 @@ export default function Players() {
                         size="sm"
                         variant="secondary"
                         onClick={() => handleShowManagePlayer({ task: "Modify", managedPlayer: row })}
-                        disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                        disabled={!["production", "test", "sandbox"].includes(import.meta.env.MODE)}
                       >
                         Edit
                       </Button>
@@ -422,6 +422,7 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
         }
       } else {
         queryClient.setQueryData(["players"], data);
+        queryClient.setQueryData(["players", "api"], data);
         // close();
       }
     },
@@ -564,7 +565,7 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
         <Modal.Body className="text-center">
           <Row>
             <ConditionalWrap
-              condition={!["production", "test"].includes(import.meta.env.MODE)}
+              condition={!["production", "test", "sandbox"].includes(import.meta.env.MODE)}
               wrap={(children) => (
                 <OverlayTrigger
                   placement="bottom"
@@ -584,7 +585,7 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
                       as="textarea"
                       onChange={handleInput}
                       defaultValue={task.startsWith("Modify") ? playerForm.given_name : ""}
-                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                      disabled={!["production", "test", "sandbox"].includes(import.meta.env.MODE)}
                     />
                   </FloatingLabel>
                 </Col>
@@ -596,7 +597,7 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
                       as="textarea"
                       onChange={handleInput}
                       defaultValue={task.startsWith("Modify") ? playerForm.family_name : ""}
-                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                      disabled={!["production", "test", "sandbox"].includes(import.meta.env.MODE)}
                     />
                   </FloatingLabel>
                 </Col>
@@ -609,7 +610,7 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
                       as="textarea"
                       onChange={handleInput}
                       value={playerForm.email}
-                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                      disabled={!["production", "test", "sandbox"].includes(import.meta.env.MODE)}
                     />
                   </FloatingLabel>
                 </Col>
@@ -623,7 +624,7 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
                       onChange={handleInput}
                       customInput={CustomFormControl}
                       valueIsNumericString={true}
-                      disabled={!["production", "test"].includes(import.meta.env.MODE)}
+                      disabled={!["production", "test", "sandbox"].includes(import.meta.env.MODE)}
                     />
                   </FloatingLabel>
                 </Col>
@@ -778,7 +779,7 @@ export function ManagePlayerModal(props: ManagePlayerModalProps) {
                   disabled={
                     managePlayerMutation.isPending ||
                     !inputValidated ||
-                    (task !== "ModifySelf" && !["production", "test"].includes(import.meta.env.MODE))
+                    (task !== "ModifySelf" && !["production", "test", "sandbox"].includes(import.meta.env.MODE))
                   }
                 >
                   {managePlayerMutation.isPending && (

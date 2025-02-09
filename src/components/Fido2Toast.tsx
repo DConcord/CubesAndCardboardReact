@@ -49,7 +49,8 @@ function Fido2Recommendation() {
         {(status === "IDLE" || status === "STARTING") && (
           <>
             <div className="passwordless-fido-recommendation-text">
-              We recommend increasing the security of your account by adding face or touch unlock for this website.
+              We recommend increasing the security and convenience of your account by adding face or touch unlock for
+              this website.
             </div>
             <button
               className="passwordless-button passwordless-button-add-face-touch-unlock"

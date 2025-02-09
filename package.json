@@ -6,10 +6,12 @@
   "scripts": {
     "test": "vite --mode test",
     "dev": "vite",
+    "sandbox": "vite --mode sandbox",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "deploy-prod": "tsc && vite build && npx s3-spa-upload dist cdkstack-bucket83908e77-7tr0zgs93uwh && date",
-    "deploy-dev": "tsc && vite build --mode development && npx s3-spa-upload dist cdkstack-bucketdevff8a9acd-pine3ubqpres && date"
+    "deploy-prod": "tsc && vite build && npx s3-spa-upload dist cnc-game-knights-frontend-prod && date",
+    "deploy-dev": "tsc && vite build --mode development && npx s3-spa-upload dist cnc-game-knights-frontend-dev && date",
+    "deploy-sandbox": "tsc && vite build --mode sandbox && npx s3-spa-upload dist cnc-game-knights-frontend-sandbox && date"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",

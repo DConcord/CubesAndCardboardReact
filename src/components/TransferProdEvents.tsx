@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 import Button from "react-bootstrap/Button";
 import Row from "react-bootstrap/Row";
@@ -7,50 +7,28 @@ import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
 import Table from "react-bootstrap/Table";
 
-import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, fetchEventsApi } from "./Queries";
 
 import { formatIsoDate } from "../utilities";
-import { ExistingGameKnightEvent, EventDict } from "../types/Events";
+import { ExistingGameKnightEvent, EventDict, GameKnightEvent } from "../types/Events";
 
 import { queryOptions } from "@tanstack/react-query";
-import axios, { AxiosError } from "axios";
-
-export const prodApiClient = axios.create({
-  baseURL: `https://${import.meta.env.VITE_PROD_API_URL}/api`,
-});
+import { AxiosError } from "axios";
 
 ///// Events /////
 export function fetchProdEventsApiOptions(refetchInterval = 1000 * 60 * 10) {
   return queryOptions({
     queryKey: ["prod_events"],
-    queryFn: () => fetchProdEventsApi({}),
+    queryFn: () => fetchEventsApi({ tableType: "prod" }),
     refetchInterval: refetchInterval,
   });
 }
-
-interface fetchProdEventsApiProps {
-  dateLte?: string;
-  dateGte?: string;
-}
-export const fetchProdEventsApi = async ({ dateLte, dateGte }: fetchProdEventsApiProps): Promise<[]> => {
-  const response = await prodApiClient.get(`/events`, { params: { dateLte: dateLte, dateGte: dateGte } });
-  return response.data;
-};
 
 interface TransferProdEventsModalProps {
   close: () => void;
 }
 export default function TransferProdEventsModal({ close }: TransferProdEventsModalProps) {
-  const { tokens } = usePasswordless();
-  useEffect(() => {
-    if (tokens) {
-      prodApiClient.defaults.headers.common["Authorization"] = "Bearer " + tokens.idToken;
-    }
-  }, [tokens]);
-
   const [showEventId, setShowEventId] = useState(false);
   const toggleShowEventId = () => setShowEventId(!showEventId);
 
