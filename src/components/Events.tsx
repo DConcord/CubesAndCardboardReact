@@ -19,10 +19,11 @@ import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchEv
 
 const TShoot = lazy(() => import("./TShoot"));
 const ManageEventModal = lazy(() => import("./EventManagement"));
+const EventsSummaryModal = lazy(() => import("./EventsSummary"));
 const TransferProdEventsModal = lazy(() => import("./TransferProdEvents"));
 const RsvpFooter = lazy(() => import("./EventManagement").then((module) => ({ default: module.RsvpFooter })));
 
-import { ManagedEventTask, GameKnightEvent } from "../types/Events";
+import { ManagedEventTask, GameKnightEvent, ExistingGameKnightEvent } from "../types/Events";
 import { PlayersGroups } from "../types/Players";
 
 import Authenticated, { authenticated } from "../utilities/Authenticated";
@@ -235,9 +236,26 @@ export default function UpcomingEvents() {
 
 export function PreviousEvents({ showAdmin }: { showAdmin: boolean }) {
   const { tokensParsed } = usePasswordless();
+
+  const [targetEvents, setTargetEvents] = useState<ExistingGameKnightEvent[]>([]);
+  const [targetYear, setTargetYear] = useState("");
+  const [showEventsSummary, setShowEventsSummary] = useState(false);
+  const handleEventsSummary = () => setShowEventsSummary(false);
+  interface ShowEventsSummaryProps {
+    summarizeEvents: ExistingGameKnightEvent[];
+    year: string;
+  }
+  const handleShowEventsSummary = ({ summarizeEvents, year }: ShowEventsSummaryProps) => {
+    setTargetEvents(summarizeEvents);
+    setTargetYear(year);
+    setShowEventsSummary(true);
+  };
+
   const eventsQuery = useQuery({
-    queryKey: ["events", "all", "14d"],
-    queryFn: () => fetchEventsApi({ dateGte: "all", dateLte: "14d" }),
+    // queryKey: ["events", "all", "14d"],
+    // queryFn: () => fetchEventsApi({ dateGte: "all", dateLte: "14d" }),
+    queryKey: ["events", "all", "today"],
+    queryFn: () => fetchEventsApi({ dateGte: "all", dateLte: "today" }),
     staleTime: 1000 * 60 * 60 * 6, // stale after 6 h
     refetchInterval: 1000 * 60 * 60 * 6,
   });
@@ -246,35 +264,46 @@ export function PreviousEvents({ showAdmin }: { showAdmin: boolean }) {
   if (eventsQuery.isSuccess && tokensParsed) {
     const years = new Set(eventsQuery.data.map((event: GameKnightEvent) => event.date.slice(0, 4)));
     return (
-      <Accordion defaultActiveKey={[...years].slice(-1)} style={{ paddingBottom: ".5rem" }}>
-        {[...years].map((year: string) => (
-          <Accordion.Item key={year + "_item"} eventKey={year}>
-            <Accordion.Header key={year + "_header"}>{year} Events</Accordion.Header>
-            {/* <Accordion.Header key={year + "_header"}>
-              <Row className="align-items-center justify-content-end w-100">
-                <Col style={{ minWidth: "max-content" }}>
-                  <div>{year} Events</div>
-                </Col>
-                <Authenticated group={["admin"]}>
-                  {showAdmin && (
-                    <Col xs="auto" style={{ textAlign: "right", padding: 4, marginRight: 12 }}>
-                      <Button size="sm" variant="secondary" onClick={() => exportToCSV(eventsQuery.data)}>
-                        Export JSON
-                      </Button>
+      <>
+        <Modal show={showEventsSummary} onHide={handleEventsSummary}>
+          <Suspense fallback={<>...</>}>
+            <EventsSummaryModal close={handleEventsSummary} gameKnightEvents={targetEvents} year={targetYear} />
+          </Suspense>
+        </Modal>
+        <Accordion defaultActiveKey={[...years].slice(-1)} style={{ paddingBottom: ".5rem" }}>
+          {[...years].map((year: string) => {
+            const yearsEvents = eventsQuery.data.filter((event: GameKnightEvent) => event.date.startsWith(year));
+            return (
+              <Accordion.Item key={year + "_item"} eventKey={year}>
+                {/* <Accordion.Header key={year + "_header"}>{year} Events</Accordion.Header> */}
+                <Accordion.Header key={year + "_header"}>
+                  <Row className="align-items-center justify-content-end w-100">
+                    <Col style={{ minWidth: "max-content" }}>
+                      <div>{year} Events</div>
                     </Col>
-                  )}
-                </Authenticated>
-              </Row>
-            </Accordion.Header> */}
-            <Accordion.Body key={year + "_body"}>
-              <EventCards
-                events={eventsQuery.data.filter((event: GameKnightEvent) => event.date.startsWith(year))}
-                showAdmin={showAdmin}
-              />
-            </Accordion.Body>
-          </Accordion.Item>
-        ))}
-      </Accordion>
+                    <Authenticated group={["admin"]}>
+                      {showAdmin && (
+                        <Col xs="auto" style={{ textAlign: "right", padding: 4, marginRight: 12 }}>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => handleShowEventsSummary({ summarizeEvents: yearsEvents, year: year })}
+                          >
+                            Summary
+                          </Button>
+                        </Col>
+                      )}
+                    </Authenticated>
+                  </Row>
+                </Accordion.Header>
+                <Accordion.Body key={year + "_body"}>
+                  <EventCards events={yearsEvents} showAdmin={showAdmin} />
+                </Accordion.Body>
+              </Accordion.Item>
+            );
+          })}
+        </Accordion>
+      </>
     );
   } else {
     return <div>Loading...</div>;
