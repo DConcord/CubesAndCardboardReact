@@ -19,7 +19,6 @@ import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchEv
 
 const TShoot = lazy(() => import("./TShoot"));
 const ManageEventModal = lazy(() => import("./EventManagement"));
-/* @ts-ignore Cannot find module './EventsSummary' - module exists but TS can't find it*/
 const EventsSummaryModal = lazy(() => import("./EventsSummary"));
 const TransferProdEventsModal = lazy(() => import("./TransferProdEvents"));
 const RsvpFooter = lazy(() => import("./EventManagement").then((module) => ({ default: module.RsvpFooter })));
