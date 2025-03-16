@@ -24,7 +24,14 @@ import { parseISO } from "date-fns";
 const ManageEventModal = lazy(() => import("./EventManagement"));
 
 import { ManagedEventTask, GameKnightEvent, PlayerScore } from "../types/Events";
-import { LogType, EventLogType, RsvpLogType, PlayerLogType, EmailSubscriptionLogType } from "../types/Logs";
+import {
+  LogType,
+  EventLogType,
+  RsvpLogType,
+  PlayerLogType,
+  EmailSubscriptionLogType,
+  GameTutorialLogType,
+} from "../types/Logs";
 
 import { formatIsoDate } from "../utilities";
 import { fetchPlayersOptions, apiClient /*publicClient*/ } from "./Queries";
@@ -59,6 +66,7 @@ export default function Logs() {
   const [rsvpLog, setRsvpLog] = useState<RsvpLogType[]>([]);
   const [playerLog, setPlayerLog] = useState<PlayerLogType[]>([]);
   const [emailSubscriptionLog, setEmailSubscriptionLog] = useState<EmailSubscriptionLogType[]>([]);
+  const [gameTutorialLog, setGameTutorialLog] = useState<GameTutorialLogType[]>([]);
   useEffect(() => {
     setStartTime(String(Date.now() - timeInterval[startIntervalType] * startInterval).slice(0, 10));
     setEndTime(null);
@@ -77,6 +85,7 @@ export default function Logs() {
       let _rsvpLog = [];
       let _playerLog = [];
       let _emailSubscriptionLog = [];
+      let _gameTutorialLog = [];
       for (const log of response.data.results) {
         if (log.log_type === "event") {
           _eventLog.push(log);
@@ -86,13 +95,16 @@ export default function Logs() {
           _playerLog.push(log);
         } else if (log.log_type === "email_subscription") {
           _emailSubscriptionLog.push(log);
+        } else if (log.log_type === "game_tutorial") {
+          _gameTutorialLog.push(log);
         }
       }
-      console.log({ _emailSubscriptionLog: _emailSubscriptionLog });
+
       setEventLog(_eventLog);
       setRsvpLog(_rsvpLog);
       setPlayerLog(_playerLog);
       setEmailSubscriptionLog(_emailSubscriptionLog);
+      setGameTutorialLog(_gameTutorialLog);
       return response.data.results;
     },
     staleTime: Infinity,
@@ -106,6 +118,7 @@ export default function Logs() {
       let _rsvpLog: RsvpLogType[] = [];
       let _playerLog: PlayerLogType[] = [];
       let _emailSubscriptionLog: EmailSubscriptionLogType[] = [];
+      let _gameTutorialLog: GameTutorialLogType[] = [];
       logsQuery.data.map((log: LogType) => {
         if (log.log_type === "event") {
           _eventLog.push(log);
@@ -115,12 +128,15 @@ export default function Logs() {
           _playerLog.push(log);
         } else if (log.log_type === "email_subscription") {
           _emailSubscriptionLog.push(log);
+        } else if (log.log_type === "game_tutorial") {
+          _gameTutorialLog.push(log);
         }
       });
       setEventLog(_eventLog);
       setRsvpLog(_rsvpLog);
       setPlayerLog(_playerLog);
       setEmailSubscriptionLog(_emailSubscriptionLog);
+      setGameTutorialLog(_gameTutorialLog);
     }
   }, []);
   const queryClient = useQueryClient();
@@ -294,6 +310,7 @@ export default function Logs() {
                         <Nav.Link eventKey="player">Players</Nav.Link>
                       )}
                       <Nav.Link eventKey="email_subscription">Email Subscriptions</Nav.Link>
+                      <Nav.Link eventKey="game_tutorial">Game Tutorials</Nav.Link>
                     </Nav>
                   </Col>
                 )}
@@ -345,6 +362,9 @@ export default function Logs() {
               </Tab.Pane>
               <Tab.Pane eventKey="email_subscription" title="Email Subscriptions">
                 <EmailSubscriptionLog emailSubscriptionLog={emailSubscriptionLog} />
+              </Tab.Pane>
+              <Tab.Pane eventKey="game_tutorial" title="Game Tutorials">
+                <GameTutorialLog gameTutorialLog={gameTutorialLog} />
               </Tab.Pane>
             </Tab.Content>
           ) : (
@@ -636,6 +656,55 @@ function EmailSubscriptionLog({ emailSubscriptionLog }: { emailSubscriptionLog: 
                   <td>{log.action}</td>
                   <td>{playersDict[log.user_id].attrib.given_name}</td>
                   <td>{log.attrib}</td>
+                </tr>
+              );
+            } catch (e) {
+              console.log(log);
+              console.error(e);
+              return <></>;
+            }
+          })}
+        </tbody>
+      </Table>
+      // </div>
+    );
+  }
+}
+
+function GameTutorialLog({ gameTutorialLog }: { gameTutorialLog: GameTutorialLogType[] }) {
+  const playersQuery = useQuery(fetchPlayersOptions());
+  const playersDict = playersQuery?.data?.Users ?? {};
+  console.log({ gameTutorialLog: gameTutorialLog });
+  if (gameTutorialLog.length === 0) {
+    return <p>No logs to display</p>;
+  } else {
+    return (
+      <Table striped bordered hover>
+        <thead>
+          <tr style={{ position: "sticky", top: "99px" }}>
+            <th>Log Time</th>
+            <th>Made By</th>
+            <th>Action</th>
+            <th>Previous</th>
+            <th>New</th>
+          </tr>
+        </thead>
+        <tbody>
+          {gameTutorialLog.map((log, index) => {
+            try {
+              return (
+                <tr key={index}>
+                  <td>{parseISO(log["@timestamp"] + "Z").toLocaleString("US", { timeZoneName: "short" })}</td>
+                  <td>{`${playersDict[log.auth_sub].attrib.given_name} (${log.auth_type})`}</td>
+                  <td>{log.action}</td>
+                  <td>
+                    <pre>{yaml.dump(log.previous, { indent: 2 })}</pre>
+                  </td>
+                  <td>
+                    <pre>{yaml.dump(log.new, { indent: 2 })}</pre>
+                  </td>
+                  {/* <td>{JSON.parse(log.previous)}</td>
+                  <td>{JSON.parse(log.new)}</td> */}
                 </tr>
               );
             } catch (e) {

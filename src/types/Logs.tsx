@@ -1,25 +1,6 @@
 import { AllEmailAlertPreferences } from "../types/Players";
 
-// type LogType = {
-//   "@timestamp": string;
-//   log_type: "event" | "rsvp" | "player" | "email_subscription";
-//   date: string;
-//   action: "create" | "update" | "delete" | "modify" | "add";
-//   auth_sub: string;
-//   auth_type: "admin" | "self" | "host";
-//   previous: Object;
-//   new: Object;
-//   event_id: string;
-//   user_id: string;
-//   rsvp: "attending" | "not_attending";
-//   attrib: string;
-// };
-export type LogType = RsvpLogType | EventLogType | PlayerLogType | EmailSubscriptionLogType;
-// type RsvpLogType = Omit<LogType, "previous" | "new" | "attrib"> & { log_type: "rsvp" };
-// type EventLogType = Omit<LogType, "user_id" | "rsvp" | "attrib"> & { log_type: "event" };
-// type PlayerLogType = Omit<LogType, "date" | "previous" | "new" | "event_id" | "rsvp"> & { log_type: "player" };
-// type EmailSubscriptionLogType = Omit<LogType, "date" | "previous" | "new" | "event_id" | "rsvp"> & {
-//   log_type: "email_subscription";
+export type LogType = RsvpLogType | EventLogType | PlayerLogType | EmailSubscriptionLogType | GameTutorialLogType;
 
 export type RsvpLogType = {
   "@timestamp": string;
@@ -92,4 +73,13 @@ export type EmailSubscriptionLogType = {
   user_id: string;
   auth_type: "admin" | "self";
   attrib: keyof AllEmailAlertPreferences & string;
+};
+export type GameTutorialLogType = {
+  "@timestamp": string;
+  log_type: "game_tutorial";
+  action: "create" | "update" | "delete";
+  auth_sub: string;
+  auth_type: "admin";
+  previous: string;
+  new: string;
 };
