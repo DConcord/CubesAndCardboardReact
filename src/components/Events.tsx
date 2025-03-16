@@ -11,7 +11,7 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import Modal from "react-bootstrap/Modal";
 
-import { formatIsoDate, humanTime_ms } from "../utilities";
+import { formatIsoDate } from "../utilities";
 import "../assets/fonts/TopSecret.ttf";
 
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
@@ -74,36 +74,23 @@ export default function UpcomingEvents() {
           })
           .map((event) => Date.parse(event.date)) // - Date.now())
       : [];
-    // console.log({ eventEarlyRefresh: eventEarlyRefresh });
     earlyRefreshRef.current = Math.min(
       nextSundayMidnightWithinTenMin ? nextSundayMidnight : Infinity,
       ...(eventEarlyRefresh ?? Infinity)
     );
     if (earlyRefreshRef.current == Infinity) return;
-    // console.log({
-    //   earlyRefresh: new Date(earlyRefreshRef.current).toLocaleTimeString("en-US"),
-    //   nextSundayMidnight: new Date(nextSundayMidnight).toLocaleTimeString("en-US"),
-    //   now: new Date().toLocaleTimeString("en-US"),
-    // });
-    // setEarlyRefresh(_earlyRefresh);
 
     const refetchEarly = setInterval(() => {
       const earlyRefresh = earlyRefreshRef.current;
-      // console.log({
-      //   "refresh time": new Date(earlyRefresh).toLocaleTimeString("en-US"),
-      //   "time until refresh": humanTime_ms(earlyRefresh - Date.now()),
-      // });
       if (earlyRefresh < Date.now()) {
         queryClient.invalidateQueries({ queryKey: ["events"] });
       }
       if (earlyRefresh + 70000 < Date.now()) {
-        // console.log("End Refetch");
         earlyRefreshRef.current = Infinity;
         clearInterval(refetchEarly);
         return;
       }
     }, 5000);
-    // console.log("refetch2");
 
     return () => clearInterval(refetchEarly);
   }, [eventsQuery.data]);

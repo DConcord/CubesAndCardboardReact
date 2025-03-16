@@ -2,7 +2,6 @@ import { useState } from "react";
 
 import Modal from "react-bootstrap/Modal";
 
-import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchPlayersOptions } from "./Queries";
 import yaml from "js-yaml";

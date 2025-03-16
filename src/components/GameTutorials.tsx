@@ -1,11 +1,6 @@
 import { useState, useEffect } from "react";
 
-// import { AxiosError } from "axios";
-
-// import Alert from "react-bootstrap/Alert";
-// import Accordion from "react-bootstrap/Accordion";
 import Button from "react-bootstrap/Button";
-// import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Container from "react-bootstrap/Container";
 import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
@@ -14,13 +9,12 @@ import Table from "react-bootstrap/Table";
 import FloatingLabel from "react-bootstrap/FloatingLabel";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
-import Feedback from "react-bootstrap/Feedback";
 import InputGroup from "react-bootstrap/InputGroup";
 import ListGroup from "react-bootstrap/ListGroup";
 import Image from "react-bootstrap/Image";
 
 import Icon from "@mdi/react";
-import { mdiMagnify, mdiClose, mdiPlus } from "@mdi/js";
+import { mdiMagnify, mdiClose } from "@mdi/js";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient, fetchGameTutorialsOptions, fetchGameSearchOptions, fetchBggThumbnailOptions } from "./Queries";

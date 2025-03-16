@@ -25,7 +25,6 @@ import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchEventsApiOptions,
-  fetchEventsOptions,
   apiClient,
   fetchBggThumbnailOptions,
   fetchGameSearchOptions,
