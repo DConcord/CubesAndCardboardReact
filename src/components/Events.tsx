@@ -15,7 +15,13 @@ import { formatIsoDate, humanTime_ms } from "../utilities";
 import "../assets/fonts/TopSecret.ttf";
 
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions, fetchEventsApi } from "./Queries";
+import {
+  fetchEventsOptions,
+  fetchEventsApiOptions,
+  fetchPlayersOptions,
+  fetchGameTutorialsOptions,
+  fetchEventsApi,
+} from "./Queries";
 
 const TShoot = lazy(() => import("./TShoot"));
 const ManageEventModal = lazy(() => import("./EventManagement"));
@@ -47,6 +53,7 @@ export default function UpcomingEvents() {
   const eventsQuery =
     tokens && signInStatus == "SIGNED_IN" ? useQuery(fetchEventsApiOptions()) : useQuery(fetchEventsOptions());
   const playersQuery = useQuery(fetchPlayersOptions());
+  const gameTutorialsQuery = useQuery(fetchGameTutorialsOptions());
   const queryClient = useQueryClient();
 
   const earlyRefreshRef = useRef(Infinity);
@@ -116,6 +123,12 @@ export default function UpcomingEvents() {
     setShowManageEvent(true);
   };
 
+  const [showGameTutorials, setShoGameTutorials] = useState(false);
+  const handleCloseGameTutorials = () => setShoGameTutorials(false);
+  const handleShowGameTutorials = () => {
+    setShoGameTutorials(true);
+  };
+
   const [showTransferProdEvents, setShowTransferProdEvents] = useState(false);
   const handleCloseTransferProdEvents = () => setShowTransferProdEvents(false);
   const handleShowTransferProdEvents = () => {
@@ -136,7 +149,7 @@ export default function UpcomingEvents() {
     if (!authenticated({ signInStatus, tokensParsed, group: ["admin"] })) setShowAdmin(true);
   }, [tokens]);
 
-  if (playersQuery.isSuccess && eventsQuery.isSuccess && signInStatus !== "CHECKING") {
+  if (playersQuery.isSuccess && eventsQuery.isSuccess && gameTutorialsQuery.isSuccess && signInStatus !== "CHECKING") {
     return (
       <div className="margin-top-65">
         <Container fluid>
@@ -213,15 +226,16 @@ export default function UpcomingEvents() {
       </div>
     );
   } else {
-    if (playersQuery.isLoading || eventsQuery.isLoading) {
+    if (playersQuery.isLoading || eventsQuery.isLoading || gameTutorialsQuery.isLoading) {
       if (eventsQuery.isLoading) return <div className="margin-top-65">Loading Events...</div>;
       if (playersQuery.isLoading) return <div className="margin-top-65">Loading Players...</div>;
       return <div className="margin-top-65">Loading...</div>;
     }
 
-    if (playersQuery.isError || eventsQuery.isError) {
+    if (playersQuery.isError || eventsQuery.isError || gameTutorialsQuery.isError) {
       console.error(playersQuery.error);
       console.error(eventsQuery.error);
+      console.error(gameTutorialsQuery.error);
       return (
         <div className="margin-top-65">
           {eventsQuery.isError && <div>Error Retreiving Events</div>}
@@ -323,6 +337,8 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
   const playersQuery: PlayersGroups | undefined = queryClient.getQueryData(["players"]);
   const playersDict = playersQuery?.Users ?? {};
 
+  const gameTutorialsQuery = useQuery(fetchGameTutorialsOptions());
+
   // Create a dictionary of previous subs from players with custom:prev_sub if present
   const playersPrevSubDict =
     playersQuery &&
@@ -377,7 +393,7 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
             var not_attending_names: string[] = [];
 
             const futureEvent = Date.parse(event.date) >= Date.parse(new Date().toString());
-            if (playersDict) {
+            if (playersDict && gameTutorialsQuery.isSuccess) {
               if (event.host && event.host in playersDict && event.attending.includes(event.host)) {
                 attending_names.push(`${playersDict[event.host]?.attrib.given_name || "unknown host"} (H)`);
               } else if (event.host && event.host in playersPrevSubDict) {
@@ -506,6 +522,22 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                             ) : (
                               event.game
                             )}
+                            {event.bgg_id &&
+                              event.bgg_id > 0 &&
+                              event.game !== "TBD" &&
+                              gameTutorialsQuery.data[event.bgg_id] && (
+                                <div style={{ paddingLeft: "10px" }}>
+                                  {"("}
+                                  <a
+                                    href={gameTutorialsQuery.data[event.bgg_id].url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    How To Play
+                                  </a>
+                                  {")"}
+                                </div>
+                              )}
                           </Col>
                         </Row>
                       </Card.Subtitle>

@@ -308,9 +308,9 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
     }
   };
 
-  function assignBggId(event: React.BaseSyntheticEvent, bgg_id: number) {
+  function assignBggId(event: React.BaseSyntheticEvent, bgg_id: number, game: string) {
     event.preventDefault();
-    setEventForm({ ...eventForm, bgg_id: bgg_id });
+    setEventForm({ ...eventForm, bgg_id: bgg_id, game: game });
   }
 
   function handleSubmit(event: React.BaseSyntheticEvent) {
@@ -450,7 +450,8 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                 <Form.Control
                   as="textarea"
                   onChange={handleInput}
-                  defaultValue={task == "Create" ? "TBD" : eventForm.game}
+                  // defaultValue={task == "Create" ? "TBD" : eventForm.game}
+                  value={eventForm.game}
                   disabled={["Read", "Restore"].includes(task)}
                   isInvalid={eventForm.game === "" || eventForm.game == undefined}
                 />
@@ -503,7 +504,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                       <ListGroup.Item
                         action
                         onClickCapture={(event: React.BaseSyntheticEvent) =>
-                          assignBggId(event, parseInt(result.id ?? 0))
+                          assignBggId(event, parseInt(result.id ?? 0), result.name ?? "")
                         }
                         key={index}
                       >

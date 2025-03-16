@@ -128,9 +128,12 @@ export default function NavigationBar() {
                     <Nav.Link eventKey="/logs" as={NavLink} to="/logs" className="navLink">
                       Logs
                     </Nav.Link>
-                    <Nav.Link eventKey="/tbd" as={NavLink} to="/tbd" className="navLink">
-                      TBD Gallery
+                    <Nav.Link eventKey="/tutorials" as={NavLink} to="/tutorials" className="navLink">
+                      Tutorials
                     </Nav.Link>
+                    {/* <Nav.Link eventKey="/tbd" as={NavLink} to="/tbd" className="navLink">
+                      TBD Gallery
+                    </Nav.Link> */}
                   </Nav>
                 </div>
                 <div className="d-none d-md-block d-xl-none">
@@ -147,6 +150,9 @@ export default function NavigationBar() {
                       </NavDropdown.Item>
                       <NavDropdown.Item as={NavLink} to="/logs" className="navLink">
                         Logs
+                      </NavDropdown.Item>
+                      <NavDropdown.Item as={NavLink} to="/tutorials" className="navLink">
+                        Tutorials
                       </NavDropdown.Item>
                       <NavDropdown.Item as={NavLink} to="tbd" className="navLink">
                         TBD Gallery
@@ -283,5 +289,6 @@ const pathMap = {
   "/": { title: "Events" },
   "/players": { title: "Players" },
   "/logs": { title: "Logs" },
+  "/tutorials": { title: "Tutorials" },
   "/tbd": { title: "TBD Gallery" },
 };

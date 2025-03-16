@@ -3,6 +3,7 @@ import Authenticated from "./utilities/Authenticated";
 const UpcomingEvents = React.lazy(() => import("./components/Events"));
 const NavigationBar = React.lazy(() => import("./components/NavigationBar"));
 const TbdGallery = React.lazy(() => import("./components/TbdGallery"));
+const GameTutorials = React.lazy(() => import("./components/GameTutorials"));
 const Players = React.lazy(() => import("./components/Players"));
 const Logs = React.lazy(() => import("./components/Logs"));
 
@@ -34,6 +35,16 @@ export const router = createBrowserRouter(
             <Authenticated unauthPath="/">
               <React.Suspense fallback={<>...</>}>
                 <Players />
+              </React.Suspense>
+            </Authenticated>
+          }
+        />
+        <Route
+          path="/tutorials"
+          element={
+            <Authenticated unauthPath="/">
+              <React.Suspense fallback={<>...</>}>
+                <GameTutorials />
               </React.Suspense>
             </Authenticated>
           }

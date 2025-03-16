@@ -3,6 +3,7 @@ import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 
 import { PlayersGroups, PlayerEmailAlertPreferences, AllEmailAlertPreferences } from "../types/Players";
 import { GameSearch, GameKnightEvent, ExistingGameKnightEvent } from "../types/Events";
+import { GameTutorials } from "../types/GameTutorials";
 
 import { queryOptions, QueryClientProvider, QueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -95,6 +96,22 @@ export const fetchPlayersApi = async ({ refresh, user_pool }: fetchPlayersApiPro
     params: { refresh: refresh, user_pool: user_pool },
   });
   queryClient.setQueryData(["players"], response.data);
+  return response.data;
+};
+
+///// game Tutorials /////
+export function fetchGameTutorialsOptions() {
+  return queryOptions({
+    queryKey: ["gametutorials"],
+    queryFn: () => fetchGameTutorials(),
+    staleTime: 1000 * 60 * 10, // cache for 10 min before marking stale
+    refetchInterval: 1000 * 60 * 20, // refetch every 20 min
+  });
+}
+export const fetchGameTutorials = async (): Promise<GameTutorials> => {
+  const response = await publicClient.get(`/game_tutorials.json`);
+  // const response = await apiClient.get(`/gametutorial`);
+  queryClient.setQueryData(["gametutorials"], response.data);
   return response.data;
 };
 
