@@ -93,7 +93,8 @@ export default function GameTutorialsPage() {
               <th></th>
               <th>Game</th>
               <th>BGG ID</th>
-              <th>URL</th>
+              <th>Type</th>
+              <th>Value</th>
             </tr>
           </thead>
           <tbody>
@@ -120,7 +121,8 @@ export default function GameTutorialsPage() {
                 </td>
                 <td>{row.game}</td>
                 <td>{row.bgg_id}</td>
-                <td>{row.url}</td>
+                <td>{row.type}</td>
+                <td>{row.content}</td>
               </tr>
             ))}
           </tbody>
@@ -180,7 +182,8 @@ export function ManageGameTutorialModal({ close, task, gameTutorial }: ManageEve
       : {
           bgg_id: 0,
           game: "",
-          url: "",
+          type: "url",
+          content: "",
         }
   );
   const [isValid, setIsValid] = useState(() => {
@@ -194,8 +197,9 @@ export function ManageGameTutorialModal({ close, task, gameTutorial }: ManageEve
       tutorialForm.game !== "" &&
       tutorialForm.game !== undefined &&
       tutorialForm.bgg_id !== 0 &&
-      tutorialForm.bgg_id !== undefined &&
-      tutorialForm.url.startsWith("https://")
+      tutorialForm.bgg_id !== undefined
+      // &&
+      // tutorialForm.url.startsWith("https://")
     );
   }
 
@@ -248,8 +252,8 @@ export function ManageGameTutorialModal({ close, task, gameTutorial }: ManageEve
       } else {
         setTutorialForm({ ...tutorialForm, [e.target.id]: parseInt(e.target.value) });
       }
-    } else if (e.target.id == "url") {
-      setTutorialForm({ ...tutorialForm, [e.target.id]: e.target.value.toLowerCase() });
+      // } else if (tutorialForm.type == "url" && e.target.id == "content") {
+      //   setTutorialForm({ ...tutorialForm, [e.target.id]: e.target.value.toLowerCase() });
     } else {
       setTutorialForm({ ...tutorialForm, [e.target.id]: e.target.value });
     }
@@ -420,25 +424,36 @@ export function ManageGameTutorialModal({ close, task, gameTutorial }: ManageEve
                 )}
               </div>
             )}
-            {/* <Row style={{ padding: 4 }}> */}
-            <Col med="true" style={{ minWidth: "18rem", padding: 4 }}>
-              <FloatingLabel controlId="url" label="Tutorial URL">
+            <Col med="true" style={{ minWidth: "13rem", padding: 4 }}>
+              <FloatingLabel controlId="content" label="Value">
                 <Form.Control
                   as="textarea"
                   onChange={handleInput}
-                  value={tutorialForm.url}
+                  value={tutorialForm.content}
                   isInvalid={
-                    tutorialForm.url === "" || tutorialForm.url == undefined || !tutorialForm.url.startsWith("https://")
+                    tutorialForm.content === "" ||
+                    tutorialForm.content == undefined ||
+                    (tutorialForm.type == "url" && !tutorialForm.content.startsWith("https://"))
                   }
                 />
               </FloatingLabel>
 
-              {!(tutorialForm.url == "" || tutorialForm.url == undefined) &&
-                !tutorialForm.url.startsWith("https://") && (
+              {!(tutorialForm.content == "" || tutorialForm.content == undefined) &&
+                tutorialForm.type == "url" &&
+                !tutorialForm.content.startsWith("https://") && (
                   <div className="text-center" style={{ color: "red" }}>
                     URL must start with https://
                   </div>
                 )}
+            </Col>
+
+            <Col med="true" style={{ minWidth: "9rem", maxWidth: "9rem", padding: 4 }}>
+              <FloatingLabel controlId="type" label="Type" className="mb-1">
+                <Form.Select aria-label="Status" onChange={handleInput} defaultValue={tutorialForm.type}>
+                  <option value="url">URL Link</option>
+                  <option value="youtube">YouTube Video Code</option>
+                </Form.Select>
+              </FloatingLabel>
             </Col>
           </Row>
         </Modal.Body>

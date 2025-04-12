@@ -2,7 +2,8 @@
 export type GameTutorial = {
   bgg_id: number;
   game: string;
-  url: string;
+  type: "url" | "youtube";
+  content: string;
 };
 
 export type GameTutorials = {

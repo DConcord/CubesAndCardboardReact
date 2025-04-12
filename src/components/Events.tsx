@@ -34,6 +34,7 @@ import { PlayersGroups } from "../types/Players";
 
 import Authenticated, { authenticated } from "../utilities/Authenticated";
 import { Table } from "react-bootstrap";
+import { set } from "lodash";
 
 export default function UpcomingEvents() {
   const { signInStatus, tokensParsed, tokens } = usePasswordless();
@@ -108,12 +109,6 @@ export default function UpcomingEvents() {
     setManagedEvent(managedEvent ? managedEvent : null);
     setManagedEventTask(task);
     setShowManageEvent(true);
-  };
-
-  const [showGameTutorials, setShoGameTutorials] = useState(false);
-  const handleCloseGameTutorials = () => setShoGameTutorials(false);
-  const handleShowGameTutorials = () => {
-    setShoGameTutorials(true);
   };
 
   const [showTransferProdEvents, setShowTransferProdEvents] = useState(false);
@@ -350,6 +345,14 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
     setShowManageEvent(true);
   };
 
+  const [showTutorialModal, setShowTutorialModal] = useState(false);
+  const handleCloseTutorialModal = () => setShowTutorialModal(false);
+  const [tutorialVideoCode, setTutorialVideoCode] = useState("");
+  const handleShowTutorialModal = (videoCode: string) => {
+    setTutorialVideoCode(videoCode);
+    setShowTutorialModal(true);
+  };
+
   return (
     <>
       <Authenticated>
@@ -359,6 +362,20 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
           </Suspense>
         </Modal>
       </Authenticated>
+      <Modal show={showTutorialModal} onHide={handleCloseTutorialModal} backdrop="static" keyboard={false}>
+        <Modal.Header closeButton>
+          <Modal.Title>How To Play</Modal.Title>
+        </Modal.Header>
+        <div style={{ position: "relative", paddingBottom: "56.25%", height: 0, overflow: "hidden" }}>
+          <iframe
+            style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}
+            src={`https://www.youtube.com/embed/${tutorialVideoCode}`}
+            title="YouTube video player"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          ></iframe>
+        </div>
+      </Modal>
       <Container fluid>
         <Row xs={1} sm={1} md={2} lg={2} xl={3} xxl={4} className="g-4 justify-content-center">
           {events.map((event: GameKnightEvent, index) => {
@@ -512,11 +529,12 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                             {event.bgg_id &&
                               event.bgg_id > 0 &&
                               event.game !== "TBD" &&
-                              gameTutorialsQuery.data[event.bgg_id] && (
+                              gameTutorialsQuery.data[event.bgg_id] &&
+                              (gameTutorialsQuery.data[event.bgg_id].type == "url" ? (
                                 <div style={{ paddingLeft: "10px" }}>
                                   {"("}
                                   <a
-                                    href={gameTutorialsQuery.data[event.bgg_id].url}
+                                    href={gameTutorialsQuery.data[event.bgg_id].content}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                   >
@@ -524,7 +542,24 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                                   </a>
                                   {")"}
                                 </div>
-                              )}
+                              ) : (
+                                <div style={{ paddingLeft: "10px" }}>
+                                  {"("}
+                                  <span
+                                    style={{
+                                      cursor: "pointer",
+                                      color: "var(--bs-link-color)",
+                                      textDecoration: "underline",
+                                    }}
+                                    onClick={() =>
+                                      handleShowTutorialModal(gameTutorialsQuery.data[event.bgg_id!].content)
+                                    }
+                                  >
+                                    How To Play
+                                  </span>
+                                  {")"}
+                                </div>
+                              ))}
                           </Col>
                         </Row>
                       </Card.Subtitle>
