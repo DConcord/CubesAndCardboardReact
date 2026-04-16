@@ -62,7 +62,7 @@ export default function UpcomingEvents() {
     const now = Date.now();
     const tenMinutesInMs = 10 * 60 * 1000;
     const nextSundayMidnight = new Date(
-      new Date().setDate(new Date().getDate() + ((7 - new Date().getDay()) % 7))
+      new Date().setDate(new Date().getDate() + ((7 - new Date().getDay()) % 7)),
     ).setHours(0, 0, 0, 0);
     const msUntilNextSundayMidnight = nextSundayMidnight - now;
     const nextSundayMidnightWithinTenMin = msUntilNextSundayMidnight <= tenMinutesInMs;
@@ -77,7 +77,7 @@ export default function UpcomingEvents() {
       : [];
     earlyRefreshRef.current = Math.min(
       nextSundayMidnightWithinTenMin ? nextSundayMidnight : Infinity,
-      ...(eventEarlyRefresh ?? Infinity)
+      ...(eventEarlyRefresh ?? Infinity),
     );
     if (earlyRefreshRef.current == Infinity) return;
 
@@ -327,7 +327,7 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
     Object.fromEntries(
       Object.entries(playersQuery.Users)
         .filter(([player_id, info]) => info.attrib["custom:prev_sub"])
-        .map(([player_id, info]) => [info.attrib["custom:prev_sub"], player_id])
+        .map(([player_id, info]) => [info.attrib["custom:prev_sub"], player_id]),
     );
 
   // Create "Manage Event" PopUp ("Modal")
@@ -403,7 +403,7 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
               } else if (event.host && event.host in playersPrevSubDict) {
                 // if player in playersPrevSubDict, use that name
                 attending_names.push(
-                  `${playersDict[playersPrevSubDict[event.host]]?.attrib.given_name || "unknown host"} (H)`
+                  `${playersDict[playersPrevSubDict[event.host]]?.attrib.given_name || "unknown host"} (H)`,
                 );
               }
               if (event.organizer && event.organizer in playersDict && event.attending.includes(event.organizer)) {
@@ -414,7 +414,7 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                 event.attending.includes(event.organizer)
               ) {
                 attending_names.push(
-                  `${playersDict[playersPrevSubDict[event.organizer]]?.attrib.given_name || "unknown"} (O)`
+                  `${playersDict[playersPrevSubDict[event.organizer]]?.attrib.given_name || "unknown"} (O)`,
                 );
               }
               try {
@@ -426,14 +426,14 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                       return playersDict[player_id]
                         ? playersDict[player_id]?.attrib.given_name
                         : playersPrevSubDict[player_id]
-                        ? playersDict[playersPrevSubDict[player_id]]?.attrib.given_name
-                        : "unknown";
+                          ? playersDict[playersPrevSubDict[player_id]]?.attrib.given_name
+                          : "unknown";
                     })
                     .filter((player) => player != "")
-                    .sort()
+                    .sort(),
                 );
                 not_attending_names = event.not_attending.map(
-                  (player_id) => playersDict[player_id]?.attrib.given_name || "unknown"
+                  (player_id) => playersDict[player_id]?.attrib.given_name || "unknown",
                 );
               } catch (error) {
                 console.error(event);
@@ -445,7 +445,13 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                   <Card style={{ minWidth: "20rem", maxWidth: "35rem", height: "100%" }}>
                     <a className="position-relative">
                       {event.bgg_id && event.bgg_id > 0 ? (
-                        <Card.Img variant="top" src={`https://${import.meta.env.VITE_API_URL}/${event.bgg_id}.png`} />
+                        <Card.Img
+                          variant="top"
+                          src={`https://${import.meta.env.VITE_API_URL}/${event.bgg_id}.png`}
+                          onError={(e) => {
+                            e.currentTarget.src = "/coming_soon.png";
+                          }}
+                        />
                       ) : (
                         <Card.Img variant="top" src={"/" + event.tbd_pic} />
                       )}
@@ -486,11 +492,11 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                                   {!futureEvent && event.format == "Open"
                                     ? "Open Event"
                                     : event.format == "Open"
-                                    ? "Open event! Let " + playersDict[event.host]?.attrib.given_name ||
-                                      "unknown" + " know if you can make it"
-                                    : !futureEvent
-                                    ? spots_available + " spot(s) unfilled"
-                                    : spots_available + " spot(s) remaining"}
+                                      ? "Open event! Let " + playersDict[event.host]?.attrib.given_name ||
+                                        "unknown" + " know if you can make it"
+                                      : !futureEvent
+                                        ? spots_available + " spot(s) unfilled"
+                                        : spots_available + " spot(s) remaining"}
                                 </Tooltip>
                               }
                             >
@@ -498,14 +504,14 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                                 {event.format == "Open"
                                   ? "Open Event"
                                   : !futureEvent && event.format == "Reserved"
-                                  ? "Reserved"
-                                  : event.format == "Reserved" && spots_available! >= 1
-                                  ? "Spots: " + spots_available
-                                  : event.format == "Reserved" && spots_available! < 1
-                                  ? "Full"
-                                  : event.format == "Placeholder"
-                                  ? ""
-                                  : event.format}
+                                    ? "Reserved"
+                                    : event.format == "Reserved" && spots_available! >= 1
+                                      ? "Spots: " + spots_available
+                                      : event.format == "Reserved" && spots_available! < 1
+                                        ? "Full"
+                                        : event.format == "Placeholder"
+                                          ? ""
+                                          : event.format}
                               </span>
                             </OverlayTrigger>
                           </Col>
@@ -585,8 +591,8 @@ function EventCards({ events, showAdmin }: EventCardsProps) {
                             {futureEvent
                               ? "Attending: "
                               : event.status && event.status == "Cancelled"
-                              ? "Registered: "
-                              : "Attended: "}
+                                ? "Registered: "
+                                : "Attended: "}
                             {attending_names.join(", ")}
                             {futureEvent && event.format == "Open" && (
                               <div>Not Attending: {not_attending_names.join(", ")}</div>
