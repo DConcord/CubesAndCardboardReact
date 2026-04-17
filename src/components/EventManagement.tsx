@@ -225,6 +225,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
       if (body.total_spots == null) body.total_spots = undefined;
       if (body.bgg_id == null) body.bgg_id = undefined;
       if (body.game === "TBD" && (body.bgg_id || eventForm.bgg_id === 0)) body.bgg_id = undefined;
+      if (body.game === "TBD") body.pic_url = undefined;
       if (body.game == "TBD" && eventForm && eventForm.tbd_pic && task !== "Clone") {
         body.tbd_pic = eventForm.tbd_pic;
       } else if (body.game == "TBD" && (!body.tbd_pic || body.tbd_pic == "")) {
@@ -528,6 +529,23 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                 </ListGroup>
               )}
             </div>
+          )}
+          {isAdmin && eventForm.game !== "TBD" && (
+            <>
+              <div className="w-100" />
+              <Col med="true" style={{ width: "100%", padding: 4 }}>
+                <FloatingLabel controlId="pic_url" label="Game Image URL (optional)" className="mb-1">
+                  <Form.Control
+                    type="url"
+                    placeholder="https://"
+                    disabled={["Read", "Restore"].includes(task)}
+                    onChange={handleInput}
+                    value={eventForm.pic_url ?? ""}
+                  />
+                </FloatingLabel>
+              </Col>
+              <div className="w-100" />
+            </>
           )}
           <Col med="true" style={{ minWidth: "13rem", padding: 4 }}>
             <Form.Group>
