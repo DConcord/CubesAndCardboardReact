@@ -103,7 +103,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
     setIsValid(validateEventForm());
   }, [eventForm]);
   const handleInput = (e: React.BaseSyntheticEvent) => {
-    if (e.target.id == "open_rsvp_eligibility") {
+    if (e.target.id == "open_rsvp_eligibility" || e.target.id == "refresh_image") {
       console.log(e.target.id, e.target.checked, e.target.checked === true);
       setEventForm({ ...eventForm, [e.target.id]: e.target.checked });
     } else if (e.target.id === "delete_event" && e.target.value == "DELETE") {
@@ -226,6 +226,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
       if (body.bgg_id == null) body.bgg_id = undefined;
       if (body.game === "TBD" && (body.bgg_id || eventForm.bgg_id === 0)) body.bgg_id = undefined;
       if (body.game === "TBD") body.pic_url = undefined;
+      if (body.game === "TBD" || task !== "Modify") body.refresh_image = undefined;
       if (body.game == "TBD" && eventForm && eventForm.tbd_pic && task !== "Clone") {
         body.tbd_pic = eventForm.tbd_pic;
       } else if (body.game == "TBD" && (!body.tbd_pic || body.tbd_pic == "")) {
@@ -533,7 +534,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
           {isAdmin && eventForm.game !== "TBD" && (
             <>
               <div className="w-100" />
-              <Col med="true" style={{ width: "100%", padding: 4 }}>
+              <Col xs={task === "Modify" && (eventForm.bgg_id ?? 0) > 0 ? 9 : 12} style={{ padding: 4 }}>
                 <FloatingLabel controlId="pic_url" label="Game Image URL (optional)" className="mb-1">
                   <Form.Control
                     type="url"
@@ -544,6 +545,17 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                   />
                 </FloatingLabel>
               </Col>
+              {task === "Modify" && (eventForm.bgg_id ?? 0) > 0 && (
+                <Col xs={3} style={{ padding: 4, display: "flex", alignItems: "center" }}>
+                  <Form.Check
+                    type="checkbox"
+                    id="refresh_image"
+                    label="Refresh Image"
+                    checked={eventForm.refresh_image ?? false}
+                    onChange={handleInput}
+                  />
+                </Col>
+              )}
               <div className="w-100" />
             </>
           )}
