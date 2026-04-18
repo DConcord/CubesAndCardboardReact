@@ -264,6 +264,13 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
         console.log(body);
       }
 
+      if (body.finalScore) {
+        body.finalScore = body.finalScore.map((entry) => ({
+          ...entry,
+          place: parseInt(String(entry.place)) || 0,
+        }));
+      }
+
       const response = await apiClient({
         method: method,
         url: "event",
@@ -358,7 +365,8 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
 
   const onChangeTableInput = (e: React.BaseSyntheticEvent, index: number) => {
     const { id, value } = e.target;
-    const editData = finalScore.map((item, _index) => (_index === index && id ? { ...item, [id]: value } : item));
+    const parsed = id === "place" ? parseInt(value) || 0 : value;
+    const editData = finalScore.map((item, _index) => (_index === index && id ? { ...item, [id]: parsed } : item));
     setFinalScore(editData);
   };
   const [refresh, setRefresh] = useState(0);
@@ -754,6 +762,8 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                         id="place"
                         value={place == 0 ? "" : place}
                         type="number"
+                        min={1}
+                        step={1}
                         onChange={(e: React.BaseSyntheticEvent) => onChangeTableInput(e, index)}
                         onBlur={sortFinalScore}
                         placeholder="Place"
