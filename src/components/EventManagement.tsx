@@ -103,7 +103,7 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
     setIsValid(validateEventForm());
   }, [eventForm]);
   const handleInput = (e: React.BaseSyntheticEvent) => {
-    if (e.target.id == "open_rsvp_eligibility") {
+    if (e.target.id == "open_rsvp_eligibility" || e.target.id == "refresh_image") {
       console.log(e.target.id, e.target.checked, e.target.checked === true);
       setEventForm({ ...eventForm, [e.target.id]: e.target.checked });
     } else if (e.target.id === "delete_event" && e.target.value == "DELETE") {
@@ -225,6 +225,8 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
       if (body.total_spots == null) body.total_spots = undefined;
       if (body.bgg_id == null) body.bgg_id = undefined;
       if (body.game === "TBD" && (body.bgg_id || eventForm.bgg_id === 0)) body.bgg_id = undefined;
+      if (body.game === "TBD") body.pic_url = undefined;
+      if (body.game === "TBD" || task !== "Modify") body.refresh_image = undefined;
       if (body.game == "TBD" && eventForm && eventForm.tbd_pic && task !== "Clone") {
         body.tbd_pic = eventForm.tbd_pic;
       } else if (body.game == "TBD" && (!body.tbd_pic || body.tbd_pic == "")) {
@@ -260,6 +262,13 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
         }
         body.migrated = true;
         console.log(body);
+      }
+
+      if (body.finalScore) {
+        body.finalScore = body.finalScore.map((entry) => ({
+          ...entry,
+          place: parseInt(String(entry.place)) || 0,
+        }));
       }
 
       const response = await apiClient({
@@ -356,7 +365,8 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
 
   const onChangeTableInput = (e: React.BaseSyntheticEvent, index: number) => {
     const { id, value } = e.target;
-    const editData = finalScore.map((item, _index) => (_index === index && id ? { ...item, [id]: value } : item));
+    const parsed = id === "place" ? parseInt(value) || 0 : value;
+    const editData = finalScore.map((item, _index) => (_index === index && id ? { ...item, [id]: parsed } : item));
     setFinalScore(editData);
   };
   const [refresh, setRefresh] = useState(0);
@@ -528,6 +538,34 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                 </ListGroup>
               )}
             </div>
+          )}
+          {isAdmin && eventForm.game !== "TBD" && (
+            <>
+              <div className="w-100" />
+              <Col xs={task === "Modify" && (eventForm.bgg_id ?? 0) > 0 ? 9 : 12} style={{ padding: 4 }}>
+                <FloatingLabel controlId="pic_url" label="Game Image URL (optional)" className="mb-1">
+                  <Form.Control
+                    type="url"
+                    placeholder="https://"
+                    disabled={["Read", "Restore"].includes(task)}
+                    onChange={handleInput}
+                    value={eventForm.pic_url ?? ""}
+                  />
+                </FloatingLabel>
+              </Col>
+              {task === "Modify" && (eventForm.bgg_id ?? 0) > 0 && (
+                <Col xs={3} style={{ padding: 4, display: "flex", alignItems: "center" }}>
+                  <Form.Check
+                    type="checkbox"
+                    id="refresh_image"
+                    label="Refresh Image"
+                    checked={eventForm.refresh_image ?? false}
+                    onChange={handleInput}
+                  />
+                </Col>
+              )}
+              <div className="w-100" />
+            </>
           )}
           <Col med="true" style={{ minWidth: "13rem", padding: 4 }}>
             <Form.Group>
@@ -724,6 +762,8 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
                         id="place"
                         value={place == 0 ? "" : place}
                         type="number"
+                        min={1}
+                        step={1}
                         onChange={(e: React.BaseSyntheticEvent) => onChangeTableInput(e, index)}
                         onBlur={sortFinalScore}
                         placeholder="Place"

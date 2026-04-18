@@ -23,6 +23,8 @@ export type GameKnightEvent = {
   player_pool: string[];
   organizer_pool: string[];
   tbd_pic?: string;
+  pic_url?: string;
+  refresh_image?: boolean;
   migrated?: boolean; // deprecated
   status?: "Normal" | "Cancelled";
   finalScore?: PlayerScore[];
