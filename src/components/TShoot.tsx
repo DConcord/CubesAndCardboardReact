@@ -7,7 +7,7 @@ import Button from "react-bootstrap/Button";
 import { usePasswordless } from "amazon-cognito-passwordless-auth/react";
 import { PlayersDict } from "../types/Players";
 
-import { apiClient, fetchBggThumbnailOptions } from "./Queries";
+import { apiClient } from "./Queries";
 
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { fetchEventsOptions, fetchEventsApiOptions, fetchPlayersOptions } from "./Queries";
@@ -42,29 +42,15 @@ export default function TShoot() {
 
   const queryClient = useQueryClient();
 
-  // const playersQuery = useQuery(fetchBggThumbnailOptions(143741));
   const [eventsTest, setEventsTest] = useState({});
   const fetchTest = async () => {
     try {
-      const data = await queryClient.fetchQuery(fetchBggThumbnailOptions(143741));
-      setEventsTest(data);
+      const response = await apiClient.get(`/events`);
+      setEventsTest(response.data);
     } catch (error) {
       console.log(error);
+      setEventsTest(JSON.parse(JSON.stringify(error)));
     }
-
-    // try {
-    //   let response = await apiClient.get(`/gamesearch`, {
-    //     params: {
-    //       game: "Bang!",
-    //     },
-    //   });
-
-    //   console.log(response.data);
-    //   setEventsTest(response.data);
-    // } catch (error) {
-    //   console.log(error);
-    //   setEventsTest(JSON.parse(JSON.stringify(error)));
-    // }
   };
 
   const [width, setWidth] = useState(window.innerWidth);

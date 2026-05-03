@@ -26,7 +26,6 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchEventsApiOptions,
   apiClient,
-  fetchBggThumbnailOptions,
   fetchGameSearchOptions,
   fetchPlayersOptions,
 } from "./Queries";
@@ -301,14 +300,6 @@ export default function ManageEventModal({ close, task, gameKnightEvent }: Manag
 
     try {
       const data = await queryClient.fetchQuery(fetchGameSearchOptions(eventForm.game.toLowerCase()));
-      try {
-        for (let result of data.slice(0, 5)) {
-          const _thumb = await queryClient.fetchQuery(fetchBggThumbnailOptions(parseInt(result.id)));
-          result.thumbnail = _thumb;
-        }
-      } catch (error) {
-        console.log(error);
-      }
       setBggSearchResults(data.slice(0, 5));
     } catch (error) {
       setBggSearchError("BGG Search Failed");
