@@ -133,23 +133,6 @@ export const fetchGameSearch = async (game: string): Promise<GameSearch[]> => {
   return response.data;
 };
 
-///// BGG Thumbnail /////
-export function fetchBggThumbnailOptions(bgg_id: number) {
-  return queryOptions({
-    queryKey: ["bgg_thumbnail", bgg_id],
-    queryFn: () => fetchBggThumbnail(bgg_id),
-    staleTime: Infinity, // cache for 10 min before refetching
-    refetchInterval: false, // refetch every 20 min
-  });
-}
-
-export const fetchBggThumbnail = async (bgg_id: number): Promise<string> => {
-  const response = await axios.get(`https://boardgamegeek.com/xmlapi2/thing?id=${bgg_id}`, {
-    responseType: "document",
-  });
-  return response.data.getElementsByTagName("thumbnail")[0].textContent;
-};
-
 ///// Player Email Alert Subscriptions /////
 queryClient.setQueryDefaults(["PlayerEmailAlertSubscriptions"], { gcTime: Infinity });
 

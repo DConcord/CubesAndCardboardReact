@@ -17,7 +17,7 @@ import Icon from "@mdi/react";
 import { mdiMagnify, mdiClose } from "@mdi/js";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient, fetchGameTutorialsOptions, fetchGameSearchOptions, fetchBggThumbnailOptions } from "./Queries";
+import { apiClient, fetchGameTutorialsOptions, fetchGameSearchOptions } from "./Queries";
 import Authenticated from "../utilities/Authenticated";
 
 import { GameSearch } from "../types/Events";
@@ -269,14 +269,6 @@ export function ManageGameTutorialModal({ close, task, gameTutorial }: ManageEve
 
     try {
       const data = await queryClient.fetchQuery(fetchGameSearchOptions(tutorialForm.game.toLowerCase()));
-      try {
-        for (let result of data.slice(0, 5)) {
-          const _thumb = await queryClient.fetchQuery(fetchBggThumbnailOptions(parseInt(result.id)));
-          result.thumbnail = _thumb;
-        }
-      } catch (error) {
-        console.log(error);
-      }
       setBggSearchResults(data.slice(0, 5));
     } catch (error) {
       setBggSearchError("BGG Search Failed");
